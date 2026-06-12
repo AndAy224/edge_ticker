@@ -49,7 +49,14 @@ export function SystemTab() {
               {action}
             </button>
           ))}
+          <button class="ghost celebrate" onClick={() => control("celebrate_test")}>
+            🎉 Test score alert
+          </button>
         </div>
+        <p class="hint">
+          Test alert replays the last touchdown from the latest Packers game of
+          last season on the display.
+        </p>
       </section>
 
       <section>

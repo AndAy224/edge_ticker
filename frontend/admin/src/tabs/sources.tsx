@@ -144,6 +144,16 @@ export function SourcesTab() {
           />
           Jump to sports and pin while a followed team's game is live
         </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.celebrations !== false}
+            onChange={(e) =>
+              patch((c) => (c.modules.sports.celebrations = e.currentTarget.checked))
+            }
+          />
+          Full-screen celebration when a followed team scores
+        </label>
         <h2>Sports — leagues</h2>
         <div class="rows">
           {(sports.leagues ?? []).map((league: any, i: number) => (

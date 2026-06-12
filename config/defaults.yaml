@@ -14,6 +14,7 @@ modules:
   sports:
     enabled: true
     auto_feature: false   # jump to sports + pin while a followed game is live
+    celebrations: true    # full-screen alert when a followed team scores
     poll_seconds_live: 30
     poll_seconds_idle: 600
     leagues:

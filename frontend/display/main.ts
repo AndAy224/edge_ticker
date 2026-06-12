@@ -10,6 +10,7 @@ import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
 import "./modules/weather";
+import { Celebration } from "./celebrate";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
@@ -56,6 +57,10 @@ function anyDetailOpen(): boolean {
 }
 
 const tape = new Tape(document.getElementById("tape-track")!);
+const celebration = new Celebration(
+  document.getElementById("celebration")!,
+  () => blanked,
+);
 const overlay = new HAOverlay(
   document.getElementById("overlay")!,
   (domain, service, entityId, data) =>
@@ -152,6 +157,9 @@ function handleMessage(msg: any): void {
       break;
     case "control":
       handleControl(msg.action);
+      break;
+    case "sport_event":
+      if (config.modules?.sports?.celebrations !== false) celebration.show(msg.event);
       break;
     case "ha_state":
       overlay.updateState(msg.entity_id, { state: msg.state, attributes: msg.attributes });
