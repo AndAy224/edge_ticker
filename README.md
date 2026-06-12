@@ -38,8 +38,14 @@ Secrets go in `.env` (copy from [.env.example](.env.example)). Without
 Markets note: the keyless Yahoo Finance path gets rate-limited (HTTP 429) on
 some networks — Yahoo fingerprints non-browser clients. If the markets module
 sits stale, grab a free key at finnhub.io and set `FINNHUB_KEY` in `.env`;
-the collector switches to Finnhub quotes automatically (sparklines return
-with the Phase 6 Finnhub WebSocket upgrade).
+the collector switches to Finnhub REST quotes *and* streams real-time prices
+over the Finnhub WebSocket between polls.
+
+Stretch modules (Proxmox node stats, ADS-B overhead aircraft, astro
+conditions) ship disabled. Enable them in the admin Modules tab, add them to
+the rotation, and — for proxmox/adsb — set their env vars (see
+[.env.example](.env.example)). Collectors missing required env are skipped
+at startup, never errored.
 
 Config is seeded from [config/defaults.yaml](config/defaults.yaml) into
 SQLite on first boot; after that, edit via the admin page (or

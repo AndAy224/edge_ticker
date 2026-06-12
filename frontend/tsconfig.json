@@ -6,6 +6,8 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "strict": true,
     "noImplicitAny": false,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true

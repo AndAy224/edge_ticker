@@ -52,8 +52,12 @@ chown -R ticker:ticker "$APP_DIR/data"
 echo "==> systemd units"
 cp "$APP_DIR/deploy/ticker-backend.service" /etc/systemd/system/
 cp "$APP_DIR/deploy/kiosk.service" /etc/systemd/system/
+cp "$APP_DIR/deploy/ticker-watchdog.service" /etc/systemd/system/
+cp "$APP_DIR/deploy/ticker-watchdog.timer" /etc/systemd/system/
+chmod +x "$APP_DIR/deploy/watchdog.sh" "$APP_DIR/deploy/update.sh"
 systemctl daemon-reload
 systemctl enable --now ticker-backend.service
+systemctl enable --now ticker-watchdog.timer
 systemctl enable kiosk.service
 
 echo "==> disable console blanking & suspend"

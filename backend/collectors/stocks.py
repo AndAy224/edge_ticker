@@ -1,23 +1,30 @@
 """Markets collector.
 
-Two upstream strategies, picked automatically:
+Polling baseline, picked automatically:
 - FINNHUB_KEY set  → Finnhub REST /quote per symbol (no sparkline on free tier)
 - otherwise        → Yahoo Finance chart API (keyless, includes sparkline)
+
+With FINNHUB_KEY, a Finnhub WebSocket stream also runs alongside the poll
+loop and publishes real-time price updates between polls (throttled to one
+publish per ~2s). Crypto symbols like BTC-USD map to Binance pairs on the
+stream.
 
 Yahoo aggressively rate-limits non-browser clients, so we keep one persistent
 client (cookies survive between polls) and warm it up against finance.yahoo.com
 when a 401/429 appears. Persistent failures degrade to a stale module via the
-base-class backoff — never a crash. Phase 6 adds the Finnhub WebSocket primary.
+base-class backoff — never a crash.
 """
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 
 import httpx
+import websockets
 
-from ..state import ModulePayload, TapeItem
+from ..state import Bus, ModulePayload, TapeItem
 from .base import Collector
 
 log = logging.getLogger(__name__)
@@ -29,6 +36,8 @@ USER_AGENT = (
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 YAHOO_WARMUP_URL = "https://finance.yahoo.com"
 FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote"
+FINNHUB_WS_URL = "wss://ws.finnhub.io"
+STREAM_PUBLISH_INTERVAL = 2.0
 
 
 class MarketsCollector(Collector):
@@ -41,6 +50,81 @@ class MarketsCollector(Collector):
         self.finnhub_key = os.environ.get("FINNHUB_KEY", "").strip()
         self._client: httpx.AsyncClient | None = None
         self._warmed_up = False
+        self._quotes: dict[str, dict] = {}  # latest shaped quote per symbol
+        # stream symbol ↔ config symbol (BTC-USD ↔ BINANCE:BTCUSDT)
+        self._stream_map = {self._stream_symbol(s): s for s in self.symbols}
+
+    @staticmethod
+    def _stream_symbol(symbol: str) -> str:
+        if symbol.endswith("-USD"):
+            return f"BINANCE:{symbol[:-4]}USDT"
+        return symbol
+
+    async def start(self, bus: Bus) -> None:
+        if not self.finnhub_key:
+            await super().start(bus)
+            return
+        stream = asyncio.create_task(self._stream(bus), name="markets-stream")
+        try:
+            await super().start(bus)
+        finally:
+            stream.cancel()
+            await asyncio.gather(stream, return_exceptions=True)
+
+    async def _stream(self, bus: Bus) -> None:
+        backoff = 1.0
+        while True:
+            try:
+                async with websockets.connect(
+                    f"{FINNHUB_WS_URL}?token={self.finnhub_key}"
+                ) as ws:
+                    for stream_symbol in self._stream_map:
+                        await ws.send(
+                            json.dumps({"type": "subscribe", "symbol": stream_symbol})
+                        )
+                    backoff = 1.0
+                    pending: dict[str, float] = {}
+                    last_publish = 0.0
+                    async for raw in ws:
+                        message = json.loads(raw)
+                        if message.get("type") != "trade":
+                            continue
+                        for trade in message.get("data", []):
+                            symbol = self._stream_map.get(trade.get("s"))
+                            if symbol and trade.get("p"):
+                                pending[symbol] = trade["p"]
+                        now = asyncio.get_running_loop().time()
+                        if pending and now - last_publish >= STREAM_PUBLISH_INTERVAL:
+                            payload = self._apply_live(pending)
+                            pending.clear()
+                            last_publish = now
+                            if payload is not None:
+                                self._last_payload = payload
+                                await bus.publish(payload)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log.debug("markets stream error: %s", exc)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60.0)
+
+    def _apply_live(self, prices: dict[str, float]) -> ModulePayload | None:
+        """Fold streamed trade prices into the last polled quotes and reshape."""
+        if not self._quotes:
+            return None
+        changed = False
+        for symbol, price in prices.items():
+            quote = self._quotes.get(symbol)
+            if quote is None or quote["price"] == price:
+                continue
+            previous = quote["price"] - quote["change"]  # poll-time prev close
+            quote["price"] = price
+            quote["change"] = price - previous
+            quote["pct"] = (quote["change"] / previous * 100) if previous else 0.0
+            changed = True
+        if not changed:
+            return None
+        return self.shape([self._quotes[s] for s in self.symbols if s in self._quotes])
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -125,6 +209,7 @@ class MarketsCollector(Collector):
         }
 
     def shape(self, quotes: list[dict]) -> ModulePayload:
+        self._quotes = {q["symbol"]: q for q in quotes}
         tape = []
         for q in quotes:
             up = q["change"] >= 0

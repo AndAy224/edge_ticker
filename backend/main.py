@@ -37,6 +37,7 @@ from .api.control import router as control_router  # noqa: E402
 from .api.ha import router as ha_router  # noqa: E402
 from .collectors import discover_collectors  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
+from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
 from .ws import router as ws_router  # noqa: E402
 
@@ -83,10 +84,15 @@ async def lifespan(app: FastAPI):
     app.state.ha = bridge
 
     await manager.start(bus, config)
-    bridge_task = asyncio.create_task(bridge.run(), name="ha-bridge")
+    scheduler = NightScheduler(bus, lambda: app.state.config)
+    background = [
+        asyncio.create_task(bridge.run(), name="ha-bridge"),
+        asyncio.create_task(scheduler.run(), name="night-scheduler"),
+    ]
     yield
-    bridge_task.cancel()
-    await asyncio.gather(bridge_task, return_exceptions=True)
+    for task in background:
+        task.cancel()
+    await asyncio.gather(*background, return_exceptions=True)
     await manager.stop()
     await db.close()
 

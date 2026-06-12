@@ -38,10 +38,27 @@ modules:
     latitude: 27.9659
     longitude: -82.8001
 
+  # Stretch modules — flip enabled and add to rotation.order to use.
+  # proxmox and adsb also need their env vars in .env (see .env.example).
+  proxmox:
+    enabled: false
+    poll_seconds: 60
+
+  adsb:
+    enabled: false
+    poll_seconds: 15
+    radius_km: 40
+
+  astro:
+    enabled: false
+    poll_seconds: 1800
+
 night:
   dim_at: "23:00"
   wake_at: "07:00"
   dim_level: 10
+  day_level: 100
+  method: ddc        # ddc → ddcutil; falls back to a software dim overlay
   nightly_reload_at: "04:00"
 
 ha:

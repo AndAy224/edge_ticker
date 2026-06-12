@@ -34,6 +34,9 @@ class Bus:
 
     def __init__(self) -> None:
         self.payloads: dict[str, ModulePayload] = {}
+        # Last state report from the display (current module, pinned, blanked),
+        # kept so late-joining admin clients get it in their snapshot.
+        self.display_state: dict = {}
         self._subscribers: set[asyncio.Queue] = set()
 
     @property

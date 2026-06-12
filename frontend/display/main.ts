@@ -6,6 +6,9 @@ import { getRenderer, hasRenderer } from "./modules/registry";
 import "./modules/markets";
 import "./modules/news";
 import "./modules/sports";
+import "./modules/adsb";
+import "./modules/astro";
+import "./modules/proxmox";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
@@ -18,6 +21,7 @@ const clockEl = document.getElementById("clock")!;
 const dateEl = document.getElementById("date")!;
 const weatherEl = document.getElementById("weather")!;
 const blanker = document.getElementById("blanker")!;
+const dimmer = document.getElementById("dimmer")!;
 const connDot = document.getElementById("conn-dot")!;
 
 const modules = new Map<string, ModulePayload>();
@@ -37,6 +41,8 @@ const overlay = new HAOverlay(
 
 let ws: WebSocket | null = null;
 let reconnectDelay = 1000;
+let lastMessageAt = Date.now();
+let disconnectedSince = 0;
 
 function sendWs(message: Record<string, unknown>): void {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
@@ -47,14 +53,45 @@ function connect(): void {
   ws = new WebSocket(`${proto}://${location.host}/ws/display`);
   ws.onopen = () => {
     reconnectDelay = 1000;
+    disconnectedSince = 0;
+    lastMessageAt = Date.now();
     connDot.classList.add("hidden");
+    reportDisplayState();
   };
   ws.onclose = () => {
     connDot.classList.remove("hidden");
+    if (!disconnectedSince) disconnectedSince = Date.now();
     setTimeout(connect, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, 15_000);
   };
-  ws.onmessage = (event) => handleMessage(JSON.parse(event.data));
+  ws.onmessage = (event) => {
+    lastMessageAt = Date.now();
+    handleMessage(JSON.parse(event.data));
+  };
+}
+
+// Connection watchdog: a socket that's open but silent past the heartbeat
+// window is dead — force-close it to trigger the reconnect path. If we can't
+// reconnect for 10 minutes, hard-reload the page (Chromium self-heal).
+setInterval(() => {
+  if (ws?.readyState === WebSocket.OPEN && Date.now() - lastMessageAt > 45_000) {
+    ws.close();
+  }
+  if (disconnectedSince && Date.now() - disconnectedSince > 600_000) {
+    location.reload();
+  }
+}, 15_000);
+
+function reportDisplayState(): void {
+  sendWs({
+    type: "display_state",
+    state: {
+      module: rotation.current() ?? null,
+      pinned: rotation.pinned,
+      blanked,
+      overlay: overlay.isOpen(),
+    },
+  });
 }
 
 function handleMessage(msg: any): void {
@@ -95,6 +132,11 @@ function handleMessage(msg: any): void {
     case "ha_status":
       overlay.setStatus(msg.status);
       break;
+    case "night":
+      // Software dim fallback when DDC/CI isn't available.
+      dimmer.style.opacity =
+        msg.mode === "dim" ? String(1 - (msg.level ?? 10) / 100) : "0";
+      break;
   }
 }
 
@@ -123,16 +165,19 @@ const rotation = {
     this.index = (this.index + 1) % this.order.length;
     closeDetail();
     renderStage();
+    reportDisplayState();
   },
   prev(): void {
     if (!this.order.length) return;
     this.index = (this.index - 1 + this.order.length) % this.order.length;
     closeDetail();
     renderStage();
+    reportDisplayState();
   },
   togglePin(): void {
     this.pinned = !this.pinned;
     pinBadge.classList.toggle("hidden", !this.pinned);
+    reportDisplayState();
   },
 };
 
@@ -279,11 +324,13 @@ function renderWeather(): void {
 function blank(): void {
   blanked = true;
   blanker.classList.remove("hidden");
+  reportDisplayState();
 }
 
 function wake(): void {
   blanked = false;
   blanker.classList.add("hidden");
+  reportDisplayState();
 }
 
 // ---- Remote control ----------------------------------------------------------------

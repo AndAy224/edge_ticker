@@ -22,6 +22,10 @@ MAX_BACKOFF_SECONDS = 300.0
 class Collector(ABC):
     name: str = "base"
     interval: float = 60.0
+    # Stretch modules opt out of auto-enable so a fresh install only runs v1 modules.
+    enabled_by_default: bool = True
+    # Env vars that must be set for this collector to be viable (else skipped).
+    required_env: tuple[str, ...] = ()
 
     def __init__(self, config: dict) -> None:
         self.config = config

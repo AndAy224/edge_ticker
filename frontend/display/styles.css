@@ -549,7 +549,282 @@ body {
   margin: auto;
 }
 
+/* ---- proxmox ---- */
+
+.pve-layout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.pve-nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.pve-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pve-card {
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+
+.pve-card.offline {
+  border: 2px solid var(--down);
+}
+
+.pve-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.pve-name {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.pve-up {
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+.pve-card.offline .pve-up {
+  color: var(--down);
+}
+
+.pve-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.pve-bar-label {
+  font-size: 20px;
+  color: var(--text-dim);
+  min-width: 64px;
+}
+
+.pve-bar {
+  flex: 1;
+  height: 18px;
+  background: #1d242e;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.pve-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 9px;
+}
+
+.pve-bar-fill.hot {
+  background: var(--down);
+}
+
+.pve-bar-pct {
+  font-size: 20px;
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pve-big {
+  font-size: 56px;
+  font-weight: 700;
+}
+
+.pve-dim {
+  color: var(--text-dim);
+  font-size: 32px;
+}
+
+.pve-meta {
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+/* ---- adsb ---- */
+
+.adsb-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adsb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 26px;
+  color: var(--text-dim);
+  padding: 0 8px;
+}
+
+.adsb-count {
+  font-size: 20px;
+}
+
+.adsb-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: var(--panel-raised);
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adsb-flight {
+  font-weight: 700;
+  min-width: 200px;
+}
+
+.adsb-alt,
+.adsb-speed {
+  color: var(--text-dim);
+  min-width: 170px;
+}
+
+.adsb-dist {
+  flex: 1;
+}
+
+.adsb-track {
+  color: var(--accent);
+  font-size: 32px;
+  display: inline-block;
+}
+
+/* ---- astro ---- */
+
+.astro-layout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+}
+
+.astro-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.astro-title {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.astro-avg {
+  font-size: 24px;
+  color: var(--text-dim);
+}
+
+.astro-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 220px;
+  margin: 20px 0 8px;
+}
+
+.astro-hour {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.astro-hour-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+}
+
+.astro-hour-bar[data-quality="good"] {
+  background: var(--up);
+}
+
+.astro-hour-bar[data-quality="ok"] {
+  background: var(--alert);
+}
+
+.astro-hour-bar[data-quality="bad"] {
+  background: #2a313c;
+}
+
+.astro-hour-label {
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.astro-sun {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.astro-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.astro-moon {
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+
+.astro-moon-pct {
+  font-size: 56px;
+  font-weight: 700;
+}
+
+.astro-moon-phase {
+  font-size: 24px;
+  color: var(--text-dim);
+}
+
+.astro-targets {
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.astro-target {
+  font-size: 26px;
+}
+
 /* ---- chrome ---- */
+
+#dimmer {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none; /* taps pass through to wake gestures */
+  transition: opacity 2s ease;
+  z-index: 90;
+}
 
 #blanker {
   position: absolute;

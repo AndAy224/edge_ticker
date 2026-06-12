@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import logging
+import os
 import pkgutil
 
 from .base import Collector
@@ -32,6 +33,15 @@ def discover_collectors(config: dict) -> list[Collector]:
                 and cls.__module__ == module.__name__
             ):
                 module_config = config.get("modules", {}).get(cls.name, {})
-                if module_config.get("enabled", True):
-                    collectors.append(cls(config))
+                if not module_config.get("enabled", cls.enabled_by_default):
+                    continue
+                missing = [e for e in cls.required_env if not os.environ.get(e)]
+                if missing:
+                    log.info(
+                        "skipping collector %s (missing env: %s)",
+                        cls.name,
+                        ", ".join(missing),
+                    )
+                    continue
+                collectors.append(cls(config))
     return collectors

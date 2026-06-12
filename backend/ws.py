@@ -23,6 +23,7 @@ async def _serve(websocket: WebSocket) -> None:
                 "modules": bus.snapshot(),
                 "config": app.state.config,
                 "ha": {"status": bridge.status, "states": bridge.mapped_states()},
+                "display_state": bus.display_state,
             }
         )
 
@@ -52,6 +53,11 @@ async def _handle(app, queue: asyncio.Queue, message: dict) -> None:
         queue.put_nowait({"type": "pong"})
     elif kind == "control":
         await app.state.bus.broadcast({"type": "control", "action": message.get("action")})
+    elif kind == "display_state":
+        # Display reports what it's showing; admin clients render a live preview.
+        state = message.get("state") or {}
+        app.state.bus.display_state = state
+        await app.state.bus.broadcast({"type": "display_state", "state": state})
     elif kind == "ha_action":
         try:
             await app.state.ha.call_service(

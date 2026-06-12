@@ -1,0 +1,6 @@
+[Unit]
+Description=Edge ticker health watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/opt/edge-ticker/deploy/watchdog.sh

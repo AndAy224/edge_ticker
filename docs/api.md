@@ -68,10 +68,12 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `snapshot` | `modules` (name → payload), `config`, `ha.status`, `ha.states` | Full state on connect |
+| `snapshot` | `modules` (name → payload), `config`, `ha.status`, `ha.states`, `display_state` | Full state on connect |
 | `module` | `payload` | One module's latest payload |
 | `config` | `config` | Config changed (re-apply rotation, HA mapping) |
 | `control` | `action` | Remote control command |
+| `night` | `mode` (`dim`\|`wake`), `level` | Software dim fallback (DDC/CI unavailable) |
+| `display_state` | `state` | What the display is showing (admin live preview) |
 | `ha_state` | `entity_id`, `state`, `attributes` | One mapped entity changed |
 | `ha_states` | `status`, `states` | All mapped entity states (reconnect / remap) |
 | `ha_status` | `status` | HA bridge connection status changed |
@@ -85,6 +87,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 | `ping` | — | Heartbeat (display sends every 10 s) |
 | `control` | `action` | Gesture-originated control |
 | `ha_action` | `domain`, `service`, `entity_id`, `data` | Tile tap service call |
+| `display_state` | `state` (`module`, `pinned`, `blanked`, `overlay`) | Display state report |
 
 ### Module payload
 
