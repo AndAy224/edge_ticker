@@ -19,6 +19,9 @@ TTYVHangup=yes
 # seatless and cage can't take DRM master. Pin it to seat0 / VT 1 explicitly.
 Environment=XDG_SEAT=seat0
 Environment=XDG_VTNR=1
+# The touch controller exposes mouse handlers, so cage parks a cursor at the
+# output center. The blank theme (installed from deploy/cursor/) hides it.
+Environment=XCURSOR_THEME=blank
 StandardInput=tty-force
 StandardOutput=journal
 StandardError=journal

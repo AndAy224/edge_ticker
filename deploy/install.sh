@@ -49,6 +49,10 @@ chmod 640 "$APP_DIR/.env"
 mkdir -p "$APP_DIR/data"
 chown -R ticker:ticker "$APP_DIR/data"
 
+echo "==> blank cursor theme (kiosk.service sets XCURSOR_THEME=blank)"
+mkdir -p /usr/share/icons/blank
+cp -a "$APP_DIR/deploy/cursor/blank/." /usr/share/icons/blank/
+
 echo "==> systemd units"
 cp "$APP_DIR/deploy/ticker-backend.service" /etc/systemd/system/
 cp "$APP_DIR/deploy/kiosk.service" /etc/systemd/system/
