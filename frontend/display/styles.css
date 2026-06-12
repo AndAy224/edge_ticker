@@ -275,6 +275,7 @@ body {
   padding: 32px 48px 40px;
   opacity: 1;
   transition: opacity 300ms ease;
+  overflow: hidden; /* bottom-aligned content must clip at the top, not bleed */
 }
 
 .stage-layer.enter {
@@ -521,21 +522,24 @@ body {
 
 /* ---- news ---- */
 
+/* two-column grid: one headline per row wastes the 2560px width and tall
+   lists overflow off the top of the bottom-aligned stage (kiosk — no scroll) */
 .news-list {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
 }
 
 .news-row {
   background: var(--panel-raised);
   border-radius: 12px;
-  padding: 14px 24px;
+  padding: 12px 20px;
+  min-width: 0;
 }
 
 .news-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -543,7 +547,7 @@ body {
 }
 
 .news-meta {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-dim);
   margin-top: 4px;
 }
@@ -607,6 +611,17 @@ body {
    pane (stage layers bottom-align and would overflow out the top) */
 [data-panes="2"] .sports-list .game-row:nth-child(n + 6),
 [data-panes="3"] .sports-list .game-row:nth-child(n + 6) {
+  display: none;
+}
+
+/* news drops to one column in narrow panes, with caps to fit pane height */
+[data-panes="2"] .news-list,
+[data-panes="3"] .news-list {
+  grid-template-columns: 1fr;
+}
+
+[data-panes="2"] .news-row:nth-child(n + 6),
+[data-panes="3"] .news-row:nth-child(n + 5) {
   display: none;
 }
 

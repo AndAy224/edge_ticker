@@ -23,7 +23,7 @@ register({
     el.innerHTML =
       `<div class="news-list">` +
       items
-        .slice(0, 6)
+        .slice(0, 10) // CSS caps what's visible per pane width (data-panes)
         .map(
           (item, i) => `<div class="news-row" data-detail="${i}">
             <div class="news-title">${escapeHtml(item.title)}</div>
