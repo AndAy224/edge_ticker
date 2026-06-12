@@ -33,19 +33,100 @@ function gameRow(game: any, index: number): string {
   </div>`;
 }
 
+// Live game mode: render a full-screen tracker (instead of the list) while a
+// followed team's game is in progress. Toggled from config via main.ts.
+let liveModeEnabled = true;
+
+export function setSportsLiveMode(enabled: boolean): void {
+  liveModeEnabled = enabled;
+}
+
+function listHtml(games: any[]): string {
+  return games.length
+    ? `<div class="sports-list">${games.slice(0, 8).map(gameRow).join("")}</div>`
+    : `<div class="empty">No games today</div>`;
+}
+
+function linescoreHtml(g: any): string {
+  const away: any[] = g.away?.linescores ?? [];
+  const home: any[] = g.home?.linescores ?? [];
+  const n = Math.max(away.length, home.length);
+  if (!n) return "";
+  const head = Array.from({ length: n }, (_, i) => `<th>${i + 1}</th>`).join("");
+  const row = (team: any, scores: any[]) =>
+    `<tr><td class="lg-abbr">${escapeHtml(team?.abbrev)}</td>` +
+    Array.from({ length: n }, (_, i) => `<td>${scores[i] ?? ""}</td>`).join("") +
+    `<td class="lg-total">${escapeHtml(team?.score ?? "")}</td></tr>`;
+  return `<table class="lg-linescore">
+    <tr><th></th>${head}<th>T</th></tr>${row(g.away, away)}${row(g.home, home)}
+  </table>`;
+}
+
+function gameTracker(g: any, compact: boolean): string {
+  return `<div class="live-game ${compact ? "compact" : ""}" data-detail="__list">
+    ${teamBlock(g.away)}
+    <div class="lg-center">
+      <div class="lg-score">${escapeHtml(g.away?.score ?? "")} — ${escapeHtml(g.home?.score ?? "")}</div>
+      <div class="lg-status"><span class="live-dot"></span>${escapeHtml(g.detail ?? "")}</div>
+      ${compact ? "" : linescoreHtml(g)}
+      <div class="lg-extra" data-lg="${escapeHtml(g.id)}"></div>
+      ${compact ? "" : `<div class="lg-hint">tap for all scores</div>`}
+    </div>
+    ${teamBlock(g.home)}
+  </div>`;
+}
+
+/** Win probability + last play for a tracker, via the cached detail proxy. */
+function enrichTracker(el: HTMLElement, item: any): void {
+  const params = new URLSearchParams({
+    sport: item.sport ?? "",
+    league: item.league ?? "",
+    event: String(item.id ?? ""),
+  });
+  fetch(`/api/sports/detail?${params}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      if (!d || !el.isConnected) return;
+      const extra = el.querySelector(`.lg-extra[data-lg="${CSS.escape(String(item.id))}"]`);
+      if (!extra) return;
+      const rows: string[] = [];
+      const prob = probBarHtml(d, item);
+      if (prob) rows.push(prob);
+      if (d.last_play) rows.push(`<div class="lg-lastplay">${escapeHtml(d.last_play)}</div>`);
+      extra.innerHTML = rows.join("");
+    })
+    .catch(() => {});
+}
+
 register({
   id: "sports",
   renderStage(el, data) {
     const games: any[] = data?.games ?? [];
-    el.innerHTML = games.length
-      ? `<div class="sports-list">${games.slice(0, 8).map(gameRow).join("")}</div>`
-      : `<div class="empty">No games today</div>`;
+    const live = liveModeEnabled
+      ? games.filter((g) => g.followed && g.state === "in")
+      : [];
+    if (live.length) {
+      const tracked = live.slice(0, 2);
+      el.innerHTML =
+        tracked.length === 1
+          ? gameTracker(tracked[0], false)
+          : `<div class="live-game-grid">${tracked.map((g) => gameTracker(g, true)).join("")}</div>`;
+      for (const g of tracked) enrichTracker(el, g);
+      return;
+    }
+    el.innerHTML = listHtml(games);
   },
   getDetailItem(stage, key) {
+    if (key === "__list") return { __list: true, games: stage?.games ?? [] };
     return stage?.games?.[Number(key)];
   },
   renderDetail(el, item: any) {
     if (!item) return;
+    if (item.__list) {
+      // Live mode peek: show the regular scores list as the "detail".
+      el.innerHTML = listHtml(item.games ?? []);
+      return;
+    }
     const pre = item.state === "pre";
     const live = item.state === "in";
     const center = pre
@@ -83,6 +164,19 @@ function formLine(games: any[]): string {
     .join("  ·  ");
 }
 
+function probBarHtml(d: any, item: any): string {
+  if (!d.probability) return "";
+  const hp = d.probability.home_pct;
+  const ap = d.probability.away_pct;
+  const homeColor = item.home?.color ? `#${item.home.color}` : "#4da3ff";
+  const awayColor = item.away?.color ? `#${item.away.color}` : "#8a94a3";
+  return `<div class="gd-prob">
+    <span class="gd-prob-pct">${Math.round(ap)}%</span>
+    <span class="gd-prob-bar"><span style="width:${ap}%;background:${awayColor}"></span><span style="width:${hp}%;background:${homeColor}"></span></span>
+    <span class="gd-prob-pct">${Math.round(hp)}%</span>
+  </div>`;
+}
+
 /** Fetch the on-demand detail (win prob, odds, form…) and fill the card. */
 function enrichDetail(el: HTMLElement, item: any, live: boolean): void {
   const params = new URLSearchParams({
@@ -97,17 +191,8 @@ function enrichDetail(el: HTMLElement, item: any, live: boolean): void {
       const extra = el.querySelector(".game-detail-extra");
       if (!extra) return;
       const rows: string[] = [];
-      if (d.probability) {
-        const hp = d.probability.home_pct;
-        const ap = d.probability.away_pct;
-        const homeColor = item.home?.color ? `#${item.home.color}` : "#4da3ff";
-        const awayColor = item.away?.color ? `#${item.away.color}` : "#8a94a3";
-        rows.push(`<div class="gd-prob">
-          <span class="gd-prob-pct">${Math.round(ap)}%</span>
-          <span class="gd-prob-bar"><span style="width:${ap}%;background:${awayColor}"></span><span style="width:${hp}%;background:${homeColor}"></span></span>
-          <span class="gd-prob-pct">${Math.round(hp)}%</span>
-        </div>`);
-      }
+      const prob = probBarHtml(d, item);
+      if (prob) rows.push(prob);
       if (d.odds) {
         const parts = [d.odds.details, d.odds.over_under != null ? `O/U ${d.odds.over_under}` : ""];
         rows.push(`<div class="gd-line">${escapeHtml(parts.filter(Boolean).join(" · "))}</div>`);

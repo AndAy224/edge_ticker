@@ -5,7 +5,7 @@ import { attachGestures } from "./gestures";
 import { getRenderer, hasRenderer } from "./modules/registry";
 import "./modules/markets";
 import "./modules/news";
-import "./modules/sports";
+import { setSportsLiveMode } from "./modules/sports";
 import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
@@ -241,6 +241,7 @@ const rotation = {
 
 function applyConfig(): void {
   applyAppearance();
+  setSportsLiveMode((config.modules?.sports as any)?.live_mode !== false);
   rotation.order = (config.rotation?.order ?? []).filter(
     (id) => hasRenderer(id) && config.modules?.[id]?.enabled !== false,
   );
@@ -531,6 +532,13 @@ function updateScoreChip(): void {
     <span class="sc-detail">${live.detail ?? ""}</span>`;
   scoreChip.classList.remove("hidden");
 }
+
+// Debug/test hook: replace the sports payload entirely and re-render.
+(window as any).__sportsfake = (games: any[]) => {
+  modules.set("sports", { module: "sports", stage: { games }, tape: [] } as any);
+  renderStage();
+  updateScoreChip();
+};
 
 // Debug/test hook: inject a fabricated live game and refresh the chip.
 (window as any).__scorechip = (game: any) => {

@@ -270,6 +270,10 @@ class SportsCollector(Collector):
                     "logo": team.get("logo"),
                     "color": team.get("color"),
                     "record": records[0].get("summary") if records else None,
+                    # per-period scores; ESPN populates these once the game is live
+                    "linescores": [
+                        v.get("value") for v in competitor.get("linescores") or []
+                    ],
                 }
             if "home" not in teams or "away" not in teams:
                 return None

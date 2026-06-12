@@ -154,6 +154,16 @@ export function SourcesTab() {
           />
           Full-screen celebration when a followed team scores
         </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.live_mode !== false}
+            onChange={(e) =>
+              patch((c) => (c.modules.sports.live_mode = e.currentTarget.checked))
+            }
+          />
+          Full-screen game tracker while a followed team is live
+        </label>
         <h2>Sports — leagues</h2>
         <div class="rows">
           {(sports.leagues ?? []).map((league: any, i: number) => (
