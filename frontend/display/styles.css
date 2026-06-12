@@ -1710,8 +1710,9 @@ body {
   left: 0;
   width: 170px;
   height: 170px;
-  color: var(--celebrate-color, var(--accent));
-  filter: drop-shadow(0 0 30px var(--celebrate-color, var(--accent)));
+  /* white so it stays visible against the team-colored field */
+  color: #fff;
+  filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 34px #fff);
   animation: celebrate-flight 2.2s ease-in-out forwards;
 }
 
@@ -1829,4 +1830,148 @@ body {
 
 .celebrate-dash {
   color: rgba(255, 255, 255, 0.45);
+}
+
+/* flight scene: full team-color sport field under the ball + fireworks,
+   crossfading into the card */
+
+.celebrate-scene {
+  position: absolute;
+  inset: 0;
+  transition: opacity 500ms ease;
+}
+
+.celebrate-scene.fade-out {
+  opacity: 0;
+}
+
+.celebrate-field {
+  position: absolute;
+  inset: 0;
+  background-color: var(--celebrate-color, var(--accent));
+  animation: field-in 300ms ease-out;
+}
+
+@keyframes field-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* football: turf stripes + yard lines */
+.sport-football .celebrate-field {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0 160px,
+      rgba(0, 0, 0, 0.08) 160px 320px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 314px,
+      rgba(255, 255, 255, 0.55) 314px 320px
+    );
+}
+
+/* baseball: infield dirt + foul lines radiating from bottom center */
+.sport-baseball .celebrate-field {
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 3px),
+      rgba(255, 255, 255, 0.6) calc(50% - 3px) calc(50% + 3px),
+      transparent calc(50% + 3px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 3px),
+      rgba(255, 255, 255, 0.6) calc(50% - 3px) calc(50% + 3px),
+      transparent calc(50% + 3px)
+    ),
+    radial-gradient(
+      ellipse 62% 58% at 50% 106%,
+      rgba(168, 120, 72, 0.9) 0 60%,
+      transparent 61%
+    );
+  background-size:
+    100% 200%,
+    100% 200%,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* hockey: blue lines, red center line, center circle */
+.sport-hockey .celebrate-field {
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 130px,
+      rgba(255, 255, 255, 0.65) 130px 137px,
+      transparent 137px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 calc(50% - 5px),
+      rgba(225, 60, 60, 0.85) calc(50% - 5px) calc(50% + 5px),
+      transparent calc(50% + 5px)
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 30%,
+      rgba(70, 120, 235, 0.8) 30% calc(30% + 10px),
+      transparent calc(30% + 10px) 70%,
+      rgba(70, 120, 235, 0.8) 70% calc(70% + 10px),
+      transparent calc(70% + 10px)
+    );
+}
+
+/* basketball: half-court line, center circle, three-point arcs */
+.sport-basketball .celebrate-field {
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 130px,
+      rgba(255, 255, 255, 0.6) 130px 136px,
+      transparent 136px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 calc(50% - 3px),
+      rgba(255, 255, 255, 0.6) calc(50% - 3px) calc(50% + 3px),
+      transparent calc(50% + 3px)
+    ),
+    radial-gradient(
+      circle at 0% 50%,
+      transparent 0 420px,
+      rgba(255, 255, 255, 0.6) 420px 426px,
+      transparent 426px
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      transparent 0 420px,
+      rgba(255, 255, 255, 0.6) 420px 426px,
+      transparent 426px
+    );
+}
+
+/* soccer: turf stripes + halfway line + center circle */
+.sport-soccer .celebrate-field {
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 150px,
+      rgba(255, 255, 255, 0.6) 150px 156px,
+      transparent 156px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 calc(50% - 3px),
+      rgba(255, 255, 255, 0.6) calc(50% - 3px) calc(50% + 3px),
+      transparent calc(50% + 3px)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0 200px,
+      rgba(0, 0, 0, 0.05) 200px 400px
+    );
 }

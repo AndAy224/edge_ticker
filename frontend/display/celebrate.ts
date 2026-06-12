@@ -41,6 +41,7 @@ export class Celebration {
 
   show(event: any): void {
     if (!event || this.isBlanked()) return;
+    this.preload(event); // warm image cache during the flight phase
     if (this.active) {
       if (this.queue.length < MAX_QUEUE) this.queue.push(event);
       return;
@@ -48,22 +49,44 @@ export class Celebration {
     this.play(event);
   }
 
+  private preload(event: any): void {
+    for (const url of [
+      event.scorer?.headshot,
+      event.team?.logo,
+      event.opponent?.logo,
+    ]) {
+      if (url) new Image().src = url;
+    }
+  }
+
   private later(fn: () => void, ms: number): void {
     this.timers.push(window.setTimeout(fn, ms));
+  }
+
+  private scene(): HTMLElement | null {
+    return this.el.querySelector<HTMLElement>(".celebrate-scene");
   }
 
   private play(event: any): void {
     this.active = true;
     const color = event.team?.color ? `#${event.team.color}` : "#4da3ff";
+    const sport = String(event.sport ?? "").replace(/[^a-z]/g, "") || "generic";
     this.el.style.setProperty("--celebrate-color", color);
     this.el.classList.remove("hidden");
-    this.el.innerHTML = `<div class="celebrate-ball">${sportIcon(event.sport)}</div>`;
+    this.el.classList.add(`sport-${sport}`);
+    // The full-screen team-colored field is the stage: ball + fireworks play
+    // on top of it, then the whole scene crossfades into the card.
+    this.el.innerHTML = `<div class="celebrate-scene">
+      <div class="celebrate-field"></div>
+      <div class="celebrate-ball">${sportIcon(event.sport)}</div>
+    </div>`;
     for (const b of BURSTS) this.later(() => this.burst(b.x, b.y, color), b.at);
     this.later(() => this.showCard(event), FLIGHT_MS);
   }
 
   private burst(xPct: number, yPct: number, color: string): void {
-    if (!this.active) return;
+    const scene = this.scene();
+    if (!this.active || !scene) return;
     const palette = [color, "#ffffff", "#ffd24d"];
     for (let i = 0; i < PARTICLES_PER_BURST; i++) {
       const p = document.createElement("span");
@@ -75,7 +98,7 @@ export class Celebration {
       p.style.background = palette[i % palette.length];
       p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
       p.style.setProperty("--dy", `${Math.sin(angle) * dist - 90}px`);
-      this.el.appendChild(p);
+      scene.appendChild(p);
       requestAnimationFrame(() =>
         requestAnimationFrame(() => p.classList.add("fly")),
       );
@@ -85,10 +108,18 @@ export class Celebration {
 
   private showCard(event: any): void {
     if (!this.active) return;
+    // Crossfade: flight scene out, card in (over the dark backdrop).
+    const scene = this.scene();
+    if (scene) {
+      scene.classList.add("fade-out");
+      this.later(() => scene.remove(), 600);
+    }
     const away = event.team_is_home ? event.opponent : event.team;
     const home = event.team_is_home ? event.team : event.opponent;
     const photo = event.scorer?.headshot ?? event.team?.logo ?? "";
-    this.el.innerHTML = `<div class="celebrate-card">
+    const card = document.createElement("div");
+    card.className = "celebrate-card";
+    card.innerHTML = `
       ${photo ? `<img class="celebrate-photo" src="${esc(photo)}" alt="">` : ""}
       <div class="celebrate-info">
         <div class="celebrate-label">${esc(event.label ?? "SCORE")}!</div>
@@ -101,9 +132,9 @@ export class Celebration {
           <span>${esc(event.home_score)} ${esc(home?.abbrev)}</span>
           ${home?.logo ? `<img src="${esc(home.logo)}" alt="">` : ""}
         </div>
-      </div>
-    </div>`;
-    const img = this.el.querySelector<HTMLImageElement>(".celebrate-photo");
+      </div>`;
+    this.el.appendChild(card);
+    const img = card.querySelector<HTMLImageElement>(".celebrate-photo");
     if (img && event.team?.logo && img.src !== event.team.logo) {
       img.addEventListener("error", () => (img.src = event.team.logo), { once: true });
     }
@@ -115,7 +146,7 @@ export class Celebration {
     for (const t of this.timers) clearTimeout(t);
     this.timers = [];
     this.active = false;
-    this.el.classList.add("hidden");
+    this.el.className = "hidden"; // also drops the sport-* class
     this.el.innerHTML = "";
     const next = this.queue.shift();
     if (next) this.later(() => this.show(next), 500);

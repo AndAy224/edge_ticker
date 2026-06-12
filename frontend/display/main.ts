@@ -61,6 +61,8 @@ const celebration = new Celebration(
   document.getElementById("celebration")!,
   () => blanked,
 );
+// Debug/test hook: lets devtools (or CDP) fire arbitrary celebration events.
+(window as any).__celebrate = (event: any) => celebration.show(event);
 const overlay = new HAOverlay(
   document.getElementById("overlay")!,
   (domain, service, entityId, data) =>
