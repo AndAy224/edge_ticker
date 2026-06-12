@@ -1438,6 +1438,21 @@ body {
   font-size: 26px;
 }
 
+.astro-target-name {
+  font-weight: 600;
+}
+
+.astro-target-times {
+  font-size: 19px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-panes="3"] .astro-target-times {
+  font-size: 16px;
+}
+
 /* ---- chrome ---- */
 
 #dimmer {
