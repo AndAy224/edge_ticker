@@ -72,3 +72,4 @@ ha:
   lights: []        # up to 8 light entity_ids
   climate: null     # one climate entity_id
   media: null       # one media_player entity_id
+  alerts: []        # [{entity, state, text?}] → alert-colored tape items while matched

@@ -71,9 +71,19 @@ async def _handle(app, queue: asyncio.Queue, message: dict) -> None:
             queue.put_nowait({"type": "error", "error": str(exc)})
 
 
+# Connected display-channel sockets — the watchdog uses this to detect a
+# hung kiosk (backend healthy but no panel attached).
+display_clients = 0
+
+
 @router.websocket("/ws/display")
 async def ws_display(websocket: WebSocket) -> None:
-    await _serve(websocket)
+    global display_clients
+    display_clients += 1
+    try:
+        await _serve(websocket)
+    finally:
+        display_clients -= 1
 
 
 @router.websocket("/ws/admin")

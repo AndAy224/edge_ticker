@@ -41,6 +41,7 @@ from .collectors import discover_collectors  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
+from . import ws as ws_channels  # noqa: E402
 from .ws import router as ws_router  # noqa: E402
 
 DIST = ROOT / "frontend" / "dist"
@@ -118,6 +119,7 @@ def health(request: Request) -> dict:
         "collectors": [c.status() for c in request.app.state.manager.collectors],
         "ha": bridge.status,
         "ws_clients": bus.subscriber_count,
+        "display_clients": ws_channels.display_clients,
     }
 
 

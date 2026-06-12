@@ -161,6 +161,71 @@ export function HATab() {
         selected={ha.media ?? null}
         onSelect={(id) => patch((c) => (c.ha.media = id))}
       />
+
+      <section>
+        <h2>Alert tape items</h2>
+        <p class="hint">
+          While an entity is in the given state, an alert-colored item scrolls
+          on the ticker tape (e.g. garage door left open).
+        </p>
+        <div class="rows">
+          {(ha.alerts ?? []).map((alert: any, i: number) => (
+            <div class="row" key={i}>
+              <input
+                class="wide"
+                list="ha-alert-entities"
+                value={alert.entity}
+                placeholder="entity_id"
+                onInput={(e) =>
+                  patch((c) => (c.ha.alerts[i].entity = e.currentTarget.value))
+                }
+              />
+              <input
+                value={alert.state}
+                placeholder="state (e.g. on, open)"
+                onInput={(e) =>
+                  patch((c) => (c.ha.alerts[i].state = e.currentTarget.value))
+                }
+              />
+              <input
+                class="wide"
+                value={alert.text ?? ""}
+                placeholder="tape text (optional)"
+                onInput={(e) =>
+                  patch((c) => (c.ha.alerts[i].text = e.currentTarget.value))
+                }
+              />
+              <button
+                class="ghost danger"
+                onClick={() => patch((c) => c.ha.alerts.splice(i, 1))}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            class="ghost"
+            onClick={() =>
+              patch((c) => {
+                (c.ha.alerts ?? (c.ha.alerts = [])).push({
+                  entity: "",
+                  state: "on",
+                  text: "",
+                });
+              })
+            }
+          >
+            + add alert
+          </button>
+        </div>
+        <datalist id="ha-alert-entities">
+          {entities.value.map((e) => (
+            <option key={e.entity_id} value={e.entity_id}>
+              {String(e.name)}
+            </option>
+          ))}
+        </datalist>
+      </section>
     </div>
   );
 }

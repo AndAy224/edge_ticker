@@ -2292,3 +2292,81 @@ body {
 [data-panes="3"] .wx-hourly {
   display: none;
 }
+
+/* ---- live score chip (followed game, shown on non-sports pages) ---- */
+
+#score-chip {
+  position: absolute;
+  right: 24px;
+  bottom: 18px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#score-chip img {
+  width: 40px;
+  height: 40px;
+}
+
+#score-chip .sc-team {
+  color: var(--text-dim);
+  font-size: 22px;
+}
+
+#score-chip .sc-dash {
+  color: var(--muted);
+}
+
+#score-chip .sc-detail {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--alert);
+  margin-left: 8px;
+}
+
+/* ---- division standings in the game detail ---- */
+
+.gd-standings {
+  display: flex;
+  gap: 40px;
+  margin-top: 6px;
+}
+
+.gd-standing {
+  min-width: 280px;
+}
+
+.gd-standing-head {
+  font-size: 17px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.gd-standing-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  font-size: 19px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.gd-standing-row.mine {
+  color: var(--text);
+  font-weight: 700;
+}
+
+[data-panes="2"] .gd-standings,
+[data-panes="3"] .gd-standings {
+  display: none;
+}

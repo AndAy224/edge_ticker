@@ -30,8 +30,10 @@ const dimmer = document.getElementById("dimmer")!;
 const connDot = document.getElementById("conn-dot")!;
 
 const modules = new Map<string, ModulePayload>();
+const haStates = new Map<string, any>(); // alert entities (and mapped) by id
 let config: Config = {};
 let blanked = false;
+const scoreChip = document.getElementById("score-chip")!;
 
 // Multi-pane stage: layouts can show a window of 1–3 consecutive rotation
 // modules side by side. Pane i shows rotation.order[(index + i) % length].
@@ -136,14 +138,20 @@ function handleMessage(msg: any): void {
       config = msg.config ?? {};
       overlay.setMapping(config.ha);
       overlay.setStates(msg.ha?.states ?? {}, msg.ha?.status);
+      haStates.clear();
+      for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
       applyConfig();
       renderWeather();
+      updateScoreChip();
       break;
     case "module": {
       const payload: ModulePayload = msg.payload;
       modules.set(payload.module, payload);
       if (payload.module === "weather") renderWeather();
-      if (payload.module === "sports") autoFeatureSports(payload);
+      if (payload.module === "sports") {
+        autoFeatureSports(payload);
+        updateScoreChip();
+      }
       rebuildTape();
       for (let i = 0; i < paneEls.length; i++) {
         if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
@@ -165,9 +173,14 @@ function handleMessage(msg: any): void {
       break;
     case "ha_state":
       overlay.updateState(msg.entity_id, { state: msg.state, attributes: msg.attributes });
+      haStates.set(msg.entity_id, { state: msg.state, attributes: msg.attributes });
+      rebuildTape(); // alert items may have changed
       break;
     case "ha_states":
       overlay.setStates(msg.states ?? {}, msg.status);
+      haStates.clear();
+      for (const [id, s] of Object.entries(msg.states ?? {})) haStates.set(id, s);
+      rebuildTape();
       break;
     case "ha_status":
       overlay.setStatus(msg.status);
@@ -283,6 +296,7 @@ function renderStage(): void {
   for (let i = 0; i < paneEls.length; i++) {
     if (!paneDetailTimers.has(i)) renderPane(i);
   }
+  updateScoreChip(); // visibility depends on whether sports is on screen
 }
 
 function renderPane(i: number): void {
@@ -413,14 +427,67 @@ function autoFeatureSports(payload: ModulePayload): void {
   }
 }
 
+function haAlertItems(): { text: string; accent: "alert"; priority: number }[] {
+  const items: { text: string; accent: "alert"; priority: number }[] = [];
+  for (const alert of config.ha?.alerts ?? []) {
+    if (!alert?.entity || !alert?.state) continue;
+    const s = haStates.get(alert.entity);
+    if (s && s.state === alert.state) {
+      items.push({
+        text:
+          alert.text ||
+          `${s.attributes?.friendly_name ?? alert.entity} ${s.state}`,
+        accent: "alert" as const,
+        priority: 2,
+      });
+    }
+  }
+  return items;
+}
+
 function rebuildTape(): void {
   // Set-dedupe: weather always contributes, but only once if it's in rotation.
   const order = [...new Set([...rotation.order, "weather"])];
-  const items = order.flatMap((id) =>
-    [...(modules.get(id)?.tape ?? [])].sort((a, b) => b.priority - a.priority),
-  );
+  const items = [
+    ...haAlertItems(),
+    ...order.flatMap((id) =>
+      [...(modules.get(id)?.tape ?? [])].sort((a, b) => b.priority - a.priority),
+    ),
+  ];
   tape.setItems(items);
 }
+
+// ---- Live score chip -----------------------------------------------------------
+// Persistent mini scoreboard while a followed team's game is live, hidden when
+// the sports module is already on screen.
+
+function updateScoreChip(): void {
+  const games: any[] = (modules.get("sports")?.stage as any)?.games ?? [];
+  const live = games.find((g) => g.followed && g.state === "in");
+  const sportsVisible = paneEls.some((_, i) => paneModule(i) === "sports");
+  if (!live || sportsVisible || blanked) {
+    scoreChip.classList.add("hidden");
+    return;
+  }
+  scoreChip.innerHTML = `
+    ${live.away?.logo ? `<img src="${live.away.logo}" alt="">` : ""}
+    <span class="sc-team">${live.away?.abbrev ?? ""}</span>
+    <span class="sc-score">${live.away?.score ?? ""}</span>
+    <span class="sc-dash">–</span>
+    <span class="sc-score">${live.home?.score ?? ""}</span>
+    <span class="sc-team">${live.home?.abbrev ?? ""}</span>
+    ${live.home?.logo ? `<img src="${live.home.logo}" alt="">` : ""}
+    <span class="sc-detail">${live.detail ?? ""}</span>`;
+  scoreChip.classList.remove("hidden");
+}
+
+// Debug/test hook: inject a fabricated live game and refresh the chip.
+(window as any).__scorechip = (game: any) => {
+  const payload: any = modules.get("sports") ?? { module: "sports", stage: {}, tape: [] };
+  payload.stage = { games: [game] };
+  modules.set("sports", payload);
+  updateScoreChip();
+};
 
 // ---- Status rail -----------------------------------------------------------------
 
@@ -471,12 +538,14 @@ function renderWeather(): void {
 function blank(): void {
   blanked = true;
   blanker.classList.remove("hidden");
+  updateScoreChip();
   reportDisplayState();
 }
 
 function wake(): void {
   blanked = false;
   blanker.classList.add("hidden");
+  updateScoreChip();
   reportDisplayState();
 }
 

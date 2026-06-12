@@ -124,6 +124,29 @@ function enrichDetail(el: HTMLElement, item: any, live: boolean): void {
       if (live && d.last_play) {
         rows.push(`<div class="gd-line gd-form">${escapeHtml(d.last_play)}</div>`);
       }
+      if (d.standings?.length) {
+        const names = [item.home?.name, item.away?.name].filter(Boolean);
+        const tables = d.standings
+          .map(
+            (g: any) => `<div class="gd-standing">
+              <div class="gd-standing-head">${escapeHtml(g.header ?? "")}</div>
+              ${g.rows
+                .map((r: any) => {
+                  const mine = names.some(
+                    (n: string) => r.team && (n.includes(r.team) || r.team.includes(n)),
+                  );
+                  const ties = r.ties && r.ties !== "0" ? `-${r.ties}` : "";
+                  return `<div class="gd-standing-row ${mine ? "mine" : ""}">
+                    <span>${escapeHtml(r.team)}</span>
+                    <span>${escapeHtml(r.wins ?? "")}-${escapeHtml(r.losses ?? "")}${escapeHtml(ties)}</span>
+                  </div>`;
+                })
+                .join("")}
+            </div>`,
+          )
+          .join("");
+        rows.push(`<div class="gd-standings">${tables}</div>`);
+      }
       const footer = [d.venue, d.broadcast].filter(Boolean).join(" · ");
       if (footer) rows.push(`<div class="gd-line gd-footer">${escapeHtml(footer)}</div>`);
       extra.innerHTML = rows.join("");

@@ -195,6 +195,10 @@ class HABridge:
         for key in ("climate", "media"):
             if ha.get(key):
                 ids.add(ha[key])
+        # Alert entities ride the same state broadcasts (tape alert items).
+        for alert in ha.get("alerts") or []:
+            if isinstance(alert, dict) and alert.get("entity"):
+                ids.add(alert["entity"])
         return ids
 
     @staticmethod

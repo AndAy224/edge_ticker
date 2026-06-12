@@ -18,6 +18,7 @@ export interface HAMapping {
   lights: string[];
   climate: string | null;
   media: string | null;
+  alerts?: { entity: string; state: string; text?: string }[];
 }
 
 export interface HAEntityState {

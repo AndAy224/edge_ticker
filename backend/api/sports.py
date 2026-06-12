@@ -87,6 +87,28 @@ def _last_games(summary: dict) -> dict:
     return sides
 
 
+def _standings(summary: dict) -> list[dict]:
+    groups_out = []
+    for group in (summary.get("standings") or {}).get("groups") or []:
+        rows = []
+        for entry in ((group.get("standings") or {}).get("entries") or [])[:6]:
+            stats = {
+                (s.get("type") or s.get("name")): s.get("displayValue")
+                for s in entry.get("stats", [])
+            }
+            rows.append(
+                {
+                    "team": entry.get("team"),
+                    "wins": stats.get("wins"),
+                    "losses": stats.get("losses"),
+                    "ties": stats.get("ties"),
+                }
+            )
+        if rows:
+            groups_out.append({"header": group.get("header"), "rows": rows})
+    return groups_out[:2]
+
+
 def _last_play(summary: dict) -> str | None:
     plays = summary.get("scoringPlays") or summary.get("plays") or []
     if plays:
@@ -122,6 +144,7 @@ async def game_detail(sport: str, league: str, event: str):
         "last_meeting": _last_meeting(summary),
         "last_games": _last_games(summary),
         "last_play": _last_play(summary),
+        "standings": _standings(summary),
     }
     if len(_cache) >= CACHE_MAX_ENTRIES:
         _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
