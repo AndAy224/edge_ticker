@@ -148,6 +148,20 @@ function enrichStockDetail(el: HTMLElement, item: any): void {
         if (stats.length) {
           rows.push(`<div class="stock-stats">${escapeHtml(stats.join(" · "))}</div>`);
         }
+        if (d.recommendation) {
+          const r = d.recommendation;
+          const cls =
+            r.label.includes("Buy") ? "rec-buy" : r.label === "Hold" ? "rec-hold" : "rec-sell";
+          const seg = (n: number, c: string) =>
+            n > 0 ? `<span class="${c}" style="flex:${n}"></span>` : "";
+          rows.push(`<div class="stock-rec">
+            <span class="stock-rec-label ${cls}">${escapeHtml(r.label)}</span>
+            <span class="stock-rec-bar">
+              ${seg(r.strong_buy + r.buy, "rec-buy")}${seg(r.hold, "rec-hold")}${seg(r.sell + r.strong_sell, "rec-sell")}
+            </span>
+            <span class="stock-rec-count">${r.total} analysts</span>
+          </div>`);
+        }
         if (d.earnings?.date) {
           const when = new Date(`${d.earnings.date}T12:00:00`);
           const day = when.toLocaleDateString([], {

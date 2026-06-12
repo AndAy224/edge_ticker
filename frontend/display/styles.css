@@ -2178,6 +2178,60 @@ body {
   margin-top: 2px;
 }
 
+.stock-rec {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stock-rec-label {
+  font-size: 24px;
+  font-weight: 700;
+  min-width: 130px;
+}
+
+.stock-rec-label.rec-buy {
+  color: var(--up);
+}
+
+.stock-rec-label.rec-hold {
+  color: var(--alert);
+}
+
+.stock-rec-label.rec-sell {
+  color: var(--down);
+}
+
+.stock-rec-bar {
+  flex: 1;
+  max-width: 420px;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+.stock-rec-bar span {
+  height: 100%;
+}
+
+.stock-rec-bar .rec-buy {
+  background: var(--up);
+}
+
+.stock-rec-bar .rec-hold {
+  background: var(--alert);
+}
+
+.stock-rec-bar .rec-sell {
+  background: var(--down);
+}
+
+.stock-rec-count {
+  font-size: 19px;
+  color: var(--text-dim);
+}
+
 .stock-earnings {
   font-size: 22px;
   color: var(--text-dim);

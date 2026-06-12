@@ -56,7 +56,7 @@ def _shape_news(items: list[dict]) -> list[dict]:
 
 async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:
     today = date.today()
-    profile_r, metric_r, news_r, earnings_r = await asyncio.gather(
+    profile_r, metric_r, news_r, earnings_r, rec_r = await asyncio.gather(
         client.get(f"{FINNHUB}/stock/profile2", params={"symbol": symbol, "token": key}),
         client.get(f"{FINNHUB}/stock/metric", params={"symbol": symbol, "metric": "all", "token": key}),
         client.get(
@@ -76,6 +76,9 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
                 "to": str(today + timedelta(days=90)),
                 "token": key,
             },
+        ),
+        client.get(
+            f"{FINNHUB}/stock/recommendation", params={"symbol": symbol, "token": key}
         ),
         return_exceptions=True,
     )
@@ -114,7 +117,46 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
                 "hour": entry.get("hour"),
                 "eps_estimate": entry.get("epsEstimate"),
             }
-    return {"profile": profile, "metrics": metrics, "news": news, "earnings": earnings}
+    recommendation = None
+    if not isinstance(rec_r, BaseException) and rec_r.status_code == 200:
+        body = rec_r.json()
+        if isinstance(body, list) and body:
+            latest = body[0]  # newest month first
+            counts = {
+                "strong_buy": latest.get("strongBuy") or 0,
+                "buy": latest.get("buy") or 0,
+                "hold": latest.get("hold") or 0,
+                "sell": latest.get("sell") or 0,
+                "strong_sell": latest.get("strongSell") or 0,
+            }
+            total = sum(counts.values())
+            if total:
+                score = (
+                    5 * counts["strong_buy"]
+                    + 4 * counts["buy"]
+                    + 3 * counts["hold"]
+                    + 2 * counts["sell"]
+                    + 1 * counts["strong_sell"]
+                ) / total
+                label = (
+                    "Strong Buy"
+                    if score >= 4.5
+                    else "Buy"
+                    if score >= 3.5
+                    else "Hold"
+                    if score >= 2.5
+                    else "Sell"
+                    if score >= 1.5
+                    else "Strong Sell"
+                )
+                recommendation = {**counts, "total": total, "label": label}
+    return {
+        "profile": profile,
+        "metrics": metrics,
+        "news": news,
+        "earnings": earnings,
+        "recommendation": recommendation,
+    }
 
 
 async def _crypto_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:
