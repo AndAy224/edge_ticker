@@ -35,6 +35,7 @@ from . import db  # noqa: E402
 from .api.config import router as config_router  # noqa: E402
 from .api.control import router as control_router  # noqa: E402
 from .api.ha import router as ha_router  # noqa: E402
+from .api.sports import router as sports_router  # noqa: E402
 from .collectors import discover_collectors  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
@@ -101,6 +102,7 @@ app = FastAPI(title="edge-ticker", lifespan=lifespan)
 app.include_router(config_router, prefix="/api")
 app.include_router(control_router, prefix="/api")
 app.include_router(ha_router, prefix="/api")
+app.include_router(sports_router, prefix="/api")
 app.include_router(ws_router)
 
 

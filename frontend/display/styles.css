@@ -1995,3 +1995,148 @@ body {
       rgba(0, 0, 0, 0.05) 200px 400px
     );
 }
+
+/* ---- rich game detail (tap a game row) ---- */
+
+.sports-detail-rich {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+
+.gd-team {
+  flex: none;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.gd-logo {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+}
+
+.gd-abbrev {
+  font-size: 40px;
+  font-weight: 800;
+}
+
+.gd-name,
+.gd-record {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.gd-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.gd-league {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+
+.gd-league svg {
+  width: 26px;
+  height: 26px;
+}
+
+.gd-score {
+  font-size: 64px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-status {
+  font-size: 24px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-detail-extra {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+.gd-prob {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.gd-prob-pct {
+  font-size: 24px;
+  font-weight: 700;
+  min-width: 70px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-prob-bar {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+.gd-prob-bar span {
+  display: block;
+  height: 100%;
+}
+
+.gd-line {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.gd-form {
+  font-size: 20px;
+}
+
+.gd-footer {
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+[data-panes="2"] .gd-team,
+[data-panes="3"] .gd-team {
+  width: 170px;
+}
+
+[data-panes="2"] .gd-logo,
+[data-panes="3"] .gd-logo {
+  width: 90px;
+  height: 90px;
+}
+
+[data-panes="3"] .gd-name,
+[data-panes="3"] .gd-form {
+  display: none;
+}
+
+[data-panes="3"] .gd-score {
+  font-size: 44px;
+}

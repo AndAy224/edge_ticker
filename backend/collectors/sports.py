@@ -262,12 +262,14 @@ class SportsCollector(Collector):
             teams: dict[str, dict] = {}
             for competitor in competition.get("competitors", []):
                 team = competitor.get("team") or {}
+                records = competitor.get("records") or []
                 teams[competitor.get("homeAway", "home")] = {
                     "abbrev": team.get("abbreviation", "?"),
                     "name": team.get("displayName", "?"),
                     "score": competitor.get("score"),
                     "logo": team.get("logo"),
                     "color": team.get("color"),
+                    "record": records[0].get("summary") if records else None,
                 }
             if "home" not in teams or "away" not in teams:
                 return None
