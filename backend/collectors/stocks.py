@@ -312,16 +312,24 @@ class MarketsCollector(Collector):
         price = data.get("c")
         if not price:  # Finnhub returns zeros for unknown symbols
             raise RuntimeError(f"no Finnhub quote for {symbol}")
+        # IPO day: no previous close yet (pc=0, d/dp null) — measure against
+        # the open instead, like brokers display first-day moves.
+        previous = data.get("pc") or data.get("o") or price
+        change = data.get("d")
+        pct = data.get("dp")
+        if change is None or pct is None:
+            change = price - previous
+            pct = (change / previous * 100) if previous else 0.0
         return {
             "symbol": symbol,
             "price": price,
-            "change": data.get("d") or 0.0,
-            "pct": data.get("dp") or 0.0,
+            "change": change,
+            "pct": pct,
             "spark": [],  # candles are not on the free REST tier
             "open": data.get("o"),
             "high": data.get("h"),
             "low": data.get("l"),
-            "prev_close": data.get("pc"),
+            "prev_close": previous,
             "currency": "USD",
             "market_state": None,
         }
