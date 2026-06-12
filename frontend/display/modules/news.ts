@@ -1,3 +1,4 @@
+import qrcode from "qrcode-generator";
 import { register } from "./registry";
 
 function escapeHtml(value: unknown): string {
@@ -38,9 +39,26 @@ register({
   },
   renderDetail(el, item: any) {
     if (!item) return;
+    let qrCard = "";
+    if (item.link) {
+      try {
+        const qr = qrcode(0, "M");
+        qr.addData(String(item.link));
+        qr.make();
+        // White card: dark modules are unscannable on the dark themes.
+        qrCard = `<div class="news-qr">${qr.createSvgTag({ cellSize: 4, margin: 4 })}
+          <span class="news-qr-hint">scan to read</span></div>`;
+      } catch {
+        // oversized/invalid URL — just skip the QR
+      }
+    }
     el.innerHTML = `<div class="detail news-detail">
-      <div class="detail-big">${escapeHtml(item.title)}</div>
-      <div class="detail-meta">${escapeHtml(item.source)} · ${age(item.published)} ago</div>
+      <div class="news-detail-text">
+        <div class="detail-big">${escapeHtml(item.title)}</div>
+        ${item.summary ? `<div class="news-summary">${escapeHtml(item.summary)}</div>` : ""}
+        <div class="detail-meta">${escapeHtml(item.source)} · ${age(item.published)} ago</div>
+      </div>
+      ${qrCard}
     </div>`;
   },
 });

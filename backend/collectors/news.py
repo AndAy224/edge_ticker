@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
+import re
 from datetime import datetime, timezone
 
 import feedparser
@@ -11,6 +13,17 @@ from ..state import ModulePayload, TapeItem
 from .base import Collector
 
 log = logging.getLogger(__name__)
+
+SUMMARY_MAX_CHARS = 360
+
+
+def _teaser(raw: str) -> str:
+    """RSS summaries arrive as HTML — reduce to a plain-text teaser."""
+    text = html.unescape(re.sub(r"<[^>]+>", " ", raw))
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= SUMMARY_MAX_CHARS:
+        return text
+    return text[:SUMMARY_MAX_CHARS].rsplit(" ", 1)[0] + "…"
 
 DEFAULT_FEEDS = [
     {"name": "BBC World", "url": "https://feeds.bbci.co.uk/news/world/rss.xml"},
@@ -75,6 +88,9 @@ class NewsCollector(Collector):
                     "link": entry.get("link"),
                     "source": feed.get("name") or parsed.feed.get("title", "RSS"),
                     "published": published,
+                    "summary": _teaser(
+                        entry.get("summary") or entry.get("description") or ""
+                    ),
                 }
             )
         return items
