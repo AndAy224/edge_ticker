@@ -174,6 +174,10 @@ class MarketsCollector(Collector):
             quote["price"] = price
             quote["change"] = price - previous
             quote["pct"] = (quote["change"] / previous * 100) if previous else 0.0
+            if quote.get("high") is not None and price > quote["high"]:
+                quote["high"] = price
+            if quote.get("low") is not None and price < quote["low"]:
+                quote["low"] = price
             if now - self._history_at.get(symbol, 0.0) >= HISTORY_STREAM_INTERVAL:
                 self._history_at[symbol] = now
                 self._record(symbol, price, now)
@@ -248,6 +252,10 @@ class MarketsCollector(Collector):
             "change": change,
             "pct": (change / previous * 100) if previous else 0.0,
             "spark": closes[-48:],
+            "open": meta.get("regularMarketOpen"),
+            "high": meta.get("regularMarketDayHigh"),
+            "low": meta.get("regularMarketDayLow"),
+            "prev_close": previous,
             "currency": meta.get("currency"),
             "market_state": meta.get("marketState"),
         }
@@ -267,6 +275,10 @@ class MarketsCollector(Collector):
             "change": data.get("d") or 0.0,
             "pct": data.get("dp") or 0.0,
             "spark": [],  # candles are not on the free REST tier
+            "open": data.get("o"),
+            "high": data.get("h"),
+            "low": data.get("l"),
+            "prev_close": data.get("pc"),
             "currency": "USD",
             "market_state": None,
         }

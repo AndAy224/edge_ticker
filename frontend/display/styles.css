@@ -415,18 +415,52 @@ body {
 }
 
 .quote-card.up .quote-change,
+.quote-card.up .quote-delta,
 .markets-detail.up .quote-change {
   color: var(--up);
 }
 
 .quote-card.down .quote-change,
+.quote-card.down .quote-delta,
 .markets-detail.down .quote-change {
   color: var(--down);
 }
 
+.quote-delta {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* live tick: price pulses when a streamed update changes it */
+@keyframes tick-up {
+  from {
+    color: var(--up);
+  }
+  to {
+    color: var(--text);
+  }
+}
+
+@keyframes tick-down {
+  from {
+    color: var(--down);
+  }
+  to {
+    color: var(--text);
+  }
+}
+
+.quote-price.tick-up {
+  animation: tick-up 0.8s ease;
+}
+
+.quote-price.tick-down {
+  animation: tick-down 0.8s ease;
+}
+
 .spark {
   width: 100%;
-  height: 36px;
+  height: 44px;
 }
 
 .spark polyline {
@@ -441,6 +475,96 @@ body {
 
 .spark.down polyline {
   stroke: var(--down);
+}
+
+/* gradient area fill under the line */
+.spark.up .spark-fill-top {
+  stop-color: var(--up);
+  stop-opacity: 0.35;
+}
+
+.spark.up .spark-fill-bottom {
+  stop-color: var(--up);
+  stop-opacity: 0;
+}
+
+.spark.down .spark-fill-top {
+  stop-color: var(--down);
+  stop-opacity: 0.35;
+}
+
+.spark.down .spark-fill-bottom {
+  stop-color: var(--down);
+  stop-opacity: 0;
+}
+
+/* dashed prev-close reference line */
+.spark-ref {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+/* day range: L ──●── H */
+.quote-range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.range-label {
+  font-size: 16px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.range-track {
+  flex: 1;
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+}
+
+.range-marker {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.quote-card.up .range-marker,
+.markets-detail.up .range-marker {
+  background: var(--up);
+}
+
+.quote-card.down .range-marker,
+.markets-detail.down .range-marker {
+  background: var(--down);
+}
+
+.markets-detail .spark {
+  height: 140px;
+  margin: 14px 0;
+  max-width: 900px;
+}
+
+.markets-detail .quote-range {
+  max-width: 900px;
+  margin-top: 4px;
+}
+
+.markets-detail .range-label {
+  font-size: 20px;
+}
+
+[data-panes="3"] .range-label {
+  display: none;
 }
 
 /* ---- sports ---- */
@@ -1479,6 +1603,15 @@ body {
   font-size: 34px;
   font-weight: 500;
   margin: 0;
+}
+
+[data-theme="glance"] .quote-range {
+  order: 3;
+  margin-top: 4px;
+}
+
+[data-theme="glance"] .quote-delta {
+  font-size: 18px;
 }
 
 [data-theme="glance"] .quote-symbol {
