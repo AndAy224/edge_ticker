@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>edge-ticker</title>
+  </head>
+  <body>
+    <main id="app">
+      <aside id="rail">
+        <div id="rail-inner">
+          <div id="clock">--:--</div>
+          <div id="date"></div>
+          <div id="weather"></div>
+        </div>
+      </aside>
+      <section id="stage">
+        <div id="stage-content"></div>
+        <div id="page-dots"></div>
+        <div id="pin-badge" class="hidden">PINNED</div>
+      </section>
+      <footer id="tape">
+        <div id="tape-track"></div>
+      </footer>
+      <div id="overlay" class="hidden"></div>
+      <div id="blanker" class="hidden"></div>
+      <div id="conn-dot" class="hidden"></div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

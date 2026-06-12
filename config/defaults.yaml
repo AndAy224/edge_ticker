@@ -1,0 +1,51 @@
+# Seed configuration — loaded into SQLite on first boot (or after deleting the DB).
+# After first boot the live config is edited via the admin GUI, not this file.
+
+rotation:
+  interval_seconds: 25
+  order: [markets, sports, news]
+
+modules:
+  markets:
+    enabled: true
+    poll_seconds: 60
+    symbols: [SPY, QQQ, AAPL, MSFT, NVDA, TSLA, BTC-USD]
+
+  sports:
+    enabled: true
+    poll_seconds_live: 30
+    poll_seconds_idle: 600
+    leagues:
+      - { sport: baseball, league: mlb }
+      - { sport: football, league: nfl }
+      - { sport: hockey, league: nhl }
+    followed_teams: [Rays, Buccaneers, Lightning]
+
+  news:
+    enabled: true
+    poll_seconds: 300
+    keep: 30
+    feeds:
+      - { name: BBC World, url: "https://feeds.bbci.co.uk/news/world/rss.xml" }
+      - { name: NPR, url: "https://feeds.npr.org/1001/rss.xml" }
+      - { name: Ars Technica, url: "https://feeds.arstechnica.com/arstechnica/index" }
+      - { name: Hacker News, url: "https://hnrss.org/frontpage" }
+
+  weather:
+    enabled: true
+    poll_seconds: 900
+    location_name: "Clearwater, FL"
+    latitude: 27.9659
+    longitude: -82.8001
+
+night:
+  dim_at: "23:00"
+  wake_at: "07:00"
+  dim_level: 10
+  nightly_reload_at: "04:00"
+
+ha:
+  scenes: []        # up to 4 scene entity_ids
+  lights: []        # up to 8 light entity_ids
+  climate: null     # one climate entity_id
+  media: null       # one media_player entity_id

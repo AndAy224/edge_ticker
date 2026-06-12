@@ -1,0 +1,18 @@
+[Unit]
+Description=Edge ticker kiosk (cage + chromium)
+After=ticker-backend.service
+Wants=ticker-backend.service
+
+[Service]
+User=kiosk
+Group=kiosk
+ExecStart=/usr/bin/cage -- /usr/bin/chromium \
+  --kiosk --noerrdialogs --disable-infobars \
+  --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required \
+  --ozone-platform=wayland \
+  http://127.0.0.1:8080/display
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,5 @@
+# Everything this repo ships runs on Linux — keep LF everywhere so scripts,
+# units, and configs work when cloned onto the appliance.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

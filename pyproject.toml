@@ -1,0 +1,24 @@
+[project]
+name = "edge-ticker"
+version = "0.1.0"
+description = "Glance-style smart ticker for the Corsair Xeneon Edge"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "websockets>=12",
+    "pyyaml>=6",
+    "aiosqlite>=0.20",
+    "feedparser>=6.0.11",
+    "pydantic>=2.8",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.uv]
+package = false

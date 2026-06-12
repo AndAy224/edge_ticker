@@ -1,0 +1,11 @@
+# Chromium flags used by kiosk.service (reference / for manual testing)
+#
+# --kiosk                                   full screen, no chrome
+# --noerrdialogs                            never show error dialogs
+# --disable-infobars                        no "Chrome is being controlled" bar
+# --disable-session-crashed-bubble          no restore prompt after power pull
+# --autoplay-policy=no-user-gesture-required
+# --ozone-platform=wayland                  native Wayland under cage
+#
+# Useful for debugging touch:
+# --show-touch-points                       visual feedback for touches
