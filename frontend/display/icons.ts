@@ -57,3 +57,42 @@ export function sportIcon(sport?: string | null, league?: string | null): string
   const key = sport ?? (league ? LEAGUE_SPORT[league.toUpperCase()] : undefined);
   return SPORT_ICONS[key ?? ""] ?? SPORT_ICONS.generic;
 }
+
+export const WEATHER_ICONS: Record<string, string> = {
+  sun: wrap(
+    `<circle cx="12" cy="12" r="4.5"/>` +
+      `<path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>`,
+  ),
+  cloud: wrap(
+    `<path d="M7 18a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 9.1 3.8 3.8 0 0 1 17 18z"/>`,
+  ),
+  fog: wrap(
+    `<path d="M7 14a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 5.1 3.8 3.8 0 0 1 17 14"/>` +
+      `<path d="M5 17.5h14M7.5 21h9"/>`,
+  ),
+  rain: wrap(
+    `<path d="M7 15a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 6.1 3.8 3.8 0 0 1 17 15z"/>` +
+      `<path d="M8.5 17.5v3M12 18.5v3M15.5 17.5v3"/>`,
+  ),
+  snow: wrap(
+    `<path d="M7 15a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 6.1 3.8 3.8 0 0 1 17 15z"/>` +
+      `<path d="M8.5 18.2v.01M12 20v.01M15.5 18.2v.01M10.2 20.8v.01M13.8 17.4v.01"/>`,
+  ),
+  storm: wrap(
+    `<path d="M7 14a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 5.1 3.8 3.8 0 0 1 17 14z"/>` +
+      `<path d="M12.5 14.5L10 18.5h4L11.5 22.5"/>`,
+  ),
+};
+
+/** WMO weather-code groups → icon key (Open-Meteo `weather_code`). */
+export function weatherIcon(code?: number | null): string {
+  if (code == null) return WEATHER_ICONS.sun;
+  if (code <= 1) return WEATHER_ICONS.sun;
+  if (code <= 3) return WEATHER_ICONS.cloud;
+  if (code <= 48) return WEATHER_ICONS.fog;
+  if (code <= 67) return WEATHER_ICONS.rain;
+  if (code <= 77) return WEATHER_ICONS.snow;
+  if (code <= 82) return WEATHER_ICONS.rain;
+  if (code <= 86) return WEATHER_ICONS.snow;
+  return WEATHER_ICONS.storm;
+}

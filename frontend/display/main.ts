@@ -12,6 +12,7 @@ import "./modules/proxmox";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
+import { weatherIcon } from "./icons";
 import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
 
 const stageEl = document.getElementById("stage-content")!;
@@ -233,15 +234,29 @@ function syncPanes(): void {
     const pane = document.createElement("div");
     pane.className = "stage-pane";
     pane.dataset.pane = String(i);
+    const header = document.createElement("div");
+    header.className = "pane-header"; // hidden by default; themes opt in
+    pane.appendChild(header);
     stageEl.appendChild(pane);
     return pane;
   });
+}
+
+// Small-caps pane labels (glance theme). Fallback: uppercase the module id.
+const MODULE_LABELS: Record<string, string> = {
+  adsb: "OVERHEAD",
+};
+
+function paneLabel(id: string | undefined): string {
+  if (!id) return "";
+  return MODULE_LABELS[id] ?? id.toUpperCase();
 }
 
 function applyAppearance(): void {
   const root = document.documentElement;
   const themeId = config.appearance?.theme ?? DEFAULT_THEME;
   const theme = THEMES[themeId] ?? THEMES[DEFAULT_THEME];
+  root.dataset.theme = themeId in THEMES ? themeId : DEFAULT_THEME;
   for (const [name, value] of Object.entries(theme.vars)) {
     root.style.setProperty(name, value);
   }
@@ -260,6 +275,8 @@ function renderStage(): void {
 
 function renderPane(i: number): void {
   const id = paneModule(i);
+  const header = paneEls[i].querySelector<HTMLElement>(".pane-header");
+  if (header) header.textContent = paneLabel(id);
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   if (!id) {
@@ -283,7 +300,8 @@ function renderPane(i: number): void {
 }
 
 function crossfade(container: HTMLElement, layer: HTMLElement): void {
-  const previous = Array.from(container.children) as HTMLElement[];
+  // Only layers fade out — panes also hold a persistent .pane-header.
+  const previous = Array.from(container.querySelectorAll(":scope > .stage-layer"));
   layer.classList.add("enter");
   container.appendChild(layer);
   requestAnimationFrame(() => layer.classList.remove("enter"));
@@ -386,13 +404,16 @@ function renderWeather(): void {
   const current = stage.current;
   const today = stage.daily?.[0];
   weatherEl.innerHTML = `
-    <div class="weather-temp">${Math.round(current.temp)}°</div>
+    <div class="weather-temp"><span class="weather-icon">${weatherIcon(
+      current.code,
+    )}</span>${Math.round(current.temp)}°</div>
     <div class="weather-text">${current.text ?? ""}</div>
     <div class="weather-meta">
       ${today ? `H ${Math.round(today.high)}° · L ${Math.round(today.low)}°` : ""}
     </div>
     <div class="weather-meta">${current.humidity != null ? `${current.humidity}% rh` : ""}
-      ${current.wind != null ? ` · ${Math.round(current.wind)} mph` : ""}</div>`;
+      ${current.wind != null ? ` · ${Math.round(current.wind)} mph` : ""}</div>
+    <div class="weather-loc">${stage.location ?? ""}</div>`;
 }
 
 // ---- Blank / wake ------------------------------------------------------------------

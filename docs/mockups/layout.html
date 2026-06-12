@@ -1,0 +1,60 @@
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Mockup of a 2560x720 ticker layout: left status rail with clock and weather, center module stage showing stock cards, and a scrolling ticker tape along the bottom.</h2>
+<style>
+@keyframes tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.tape-track { display: flex; gap: 28px; white-space: nowrap; animation: tape 18s linear infinite; width: max-content; }
+</style>
+<div style="background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 14px;">
+  <div style="width: 100%; aspect-ratio: 32/9; background: #0d0f12; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; font-family: var(--font-sans);">
+    <div style="flex: 1; display: flex; min-height: 0;">
+      <div style="width: 17%; border-right: 1px solid #23262b; display: flex; flex-direction: column; justify-content: center; padding: 0 14px; gap: 2px;">
+        <div style="font-size: 26px; font-weight: 500; color: #e8eaed; line-height: 1;">9:42</div>
+        <div style="font-size: 11px; color: #8a8f98;">Thu Jun 11</div>
+        <div style="font-size: 12px; color: #c9ccd1; margin-top: 6px;"><i class="ti ti-sun" aria-hidden="true" style="font-size: 13px; color: #eab308;"></i> 88° Clearwater</div>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; padding: 8px 14px 6px; min-width: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; color: #8a8f98; letter-spacing: 0.06em;">MARKETS</span>
+          <span style="display: flex; gap: 5px; align-items: center;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #e8eaed;"></span>
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #3a3f46;"></span>
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #3a3f46;"></span>
+          </span>
+        </div>
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px;">
+          <div style="background: #16191e; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: #e8eaed; font-weight: 500;">SPY</span><span style="color: #4ade80;">+0.6%</span></div>
+            <svg viewBox="0 0 80 20" style="width: 100%; height: 18px;"><polyline points="0,15 12,13 24,14 36,10 48,11 60,7 72,8 80,5" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg>
+            <div style="font-size: 13px; color: #e8eaed;">612.48</div>
+          </div>
+          <div style="background: #16191e; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: #e8eaed; font-weight: 500;">NVDA</span><span style="color: #4ade80;">+2.1%</span></div>
+            <svg viewBox="0 0 80 20" style="width: 100%; height: 18px;"><polyline points="0,16 12,14 24,15 36,11 48,8 60,9 72,5 80,4" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg>
+            <div style="font-size: 13px; color: #e8eaed;">178.92</div>
+          </div>
+          <div style="background: #16191e; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: #e8eaed; font-weight: 500;">AAPL</span><span style="color: #f87171;">-0.4%</span></div>
+            <svg viewBox="0 0 80 20" style="width: 100%; height: 18px;"><polyline points="0,8 12,9 24,7 36,11 48,10 60,13 72,12 80,14" fill="none" stroke="#f87171" stroke-width="1.5"/></svg>
+            <div style="font-size: 13px; color: #e8eaed;">214.30</div>
+          </div>
+          <div style="background: #16191e; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: #e8eaed; font-weight: 500;">TSLA</span><span style="color: #4ade80;">+1.3%</span></div>
+            <svg viewBox="0 0 80 20" style="width: 100%; height: 18px;"><polyline points="0,14 12,15 24,12 36,13 48,9 60,10 72,7 80,6" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg>
+            <div style="font-size: 13px; color: #e8eaed;">341.77</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="height: 17%; border-top: 1px solid #23262b; display: flex; align-items: center; overflow: hidden;">
+      <div class="tape-track" style="font-size: 12px; color: #c9ccd1;">
+        <span>BTC <span style="color:#4ade80">104,210</span></span><span style="color:#3a3f46">•</span>
+        <span>Rays 5 — Yankees 3 <span style="color:#8a8f98">Final</span></span><span style="color:#3a3f46">•</span>
+        <span>10Y yield 4.31%</span><span style="color:#3a3f46">•</span>
+        <span style="color:#8a8f98">Reuters: Fed holds rates steady</span><span style="color:#3a3f46">•</span>
+        <span>BTC <span style="color:#4ade80">104,210</span></span><span style="color:#3a3f46">•</span>
+        <span>Rays 5 — Yankees 3 <span style="color:#8a8f98">Final</span></span><span style="color:#3a3f46">•</span>
+        <span>10Y yield 4.31%</span><span style="color:#3a3f46">•</span>
+        <span style="color:#8a8f98">Reuters: Fed holds rates steady</span>
+      </div>
+    </div>
+  </div>
+</div>

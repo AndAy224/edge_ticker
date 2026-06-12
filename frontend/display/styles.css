@@ -232,6 +232,17 @@ body {
   margin-top: 6px;
 }
 
+/* revealed by themes (e.g. glance) */
+.weather-icon,
+.weather-loc {
+  display: none;
+}
+
+.weather-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* ---- stage ---- */
 
 #stage {
@@ -306,6 +317,18 @@ body {
   border: 2px solid var(--alert);
   border-radius: 8px;
   padding: 4px 12px;
+}
+
+.pane-header {
+  display: none; /* revealed by themes (e.g. glance) */
+  position: absolute;
+  top: 22px;
+  left: 28px;
+  z-index: 4;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
 }
 
 #clock-chip {
@@ -713,6 +736,24 @@ body {
   gap: 20px;
 }
 
+/* wrapper that lets a (theme-revealed) title sit above the lights grid;
+   with the title hidden it renders identically to the bare grid */
+.ha-col-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+}
+
+.ha-col-wrap > .lights-grid {
+  flex: 1;
+}
+
+.ha-col-title,
+.ha-hint {
+  display: none;
+}
+
 .ha-col.lights-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1097,4 +1138,196 @@ body {
 
 .hidden {
   display: none !important;
+}
+
+/* ---- glance theme (the original concept-mockup look) ----
+   Flat single background with hairline borders, centered compact rail,
+   small-caps pane labels, compact quote cards, subtler tape. Color values
+   come from the theme vars; everything here is structure/typography. */
+
+[data-theme="glance"] #rail {
+  border-right: 1px solid var(--line);
+  align-items: center;
+}
+
+[data-theme="glance"][data-layout="rail-right"] #rail {
+  border-right: none;
+  border-left: 1px solid var(--line);
+}
+
+[data-theme="glance"][data-layout="banner"] #rail,
+[data-theme="glance"][data-layout="zen"] #rail {
+  border-right: none;
+  border-left: none;
+}
+
+[data-theme="glance"] #clock {
+  font-size: 68px;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+
+[data-theme="glance"] #date {
+  font-size: 22px;
+}
+
+[data-theme="glance"] #weather {
+  margin-top: 22px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+[data-theme="glance"] .weather-temp {
+  font-size: 34px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-theme="glance"] .weather-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  color: var(--alert);
+}
+
+[data-theme="glance"] .weather-loc {
+  display: block;
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+[data-theme="glance"] .weather-text,
+[data-theme="glance"] .weather-meta {
+  display: none;
+}
+
+/* zen keeps the big ambient look, just glance-flavored */
+[data-theme="glance"][data-layout="zen"] #clock {
+  font-size: 180px;
+}
+
+[data-theme="glance"][data-layout="zen"] .weather-temp {
+  font-size: 56px;
+}
+
+/* pane label + smaller dots */
+[data-theme="glance"] .pane-header {
+  display: block;
+}
+
+[data-theme="glance"][data-layout="focus"] .stage-pane:first-child .pane-header,
+[data-theme="glance"][data-layout="mosaic"] .stage-pane:first-child .pane-header {
+  left: 200px; /* clear the clock chip */
+}
+
+[data-theme="glance"] .dot {
+  width: 9px;
+  height: 9px;
+}
+
+[data-theme="glance"] #page-dots {
+  top: 26px;
+  gap: 9px;
+}
+
+[data-theme="glance"] #clock-chip {
+  font-size: 26px;
+  top: 20px;
+}
+
+/* compact quote cards: symbol+pct / sparkline / price */
+[data-theme="glance"] .quote-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 16px 20px;
+  min-height: 150px;
+}
+
+[data-theme="glance"] .quote-head {
+  order: 0;
+}
+
+[data-theme="glance"] .spark {
+  order: 1;
+  height: 46px;
+}
+
+[data-theme="glance"] .quote-price {
+  order: 2;
+  font-size: 34px;
+  font-weight: 500;
+  margin: 0;
+}
+
+[data-theme="glance"] .quote-symbol {
+  font-size: 24px;
+  color: var(--text);
+}
+
+[data-theme="glance"] .quote-change {
+  font-size: 22px;
+}
+
+/* flat hairline cards for the other modules */
+[data-theme="glance"] .game-row,
+[data-theme="glance"] .news-row,
+[data-theme="glance"] .pve-card,
+[data-theme="glance"] .adsb-row,
+[data-theme="glance"] .astro-moon,
+[data-theme="glance"] .astro-targets {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+/* subtler tape */
+[data-theme="glance"] .tape-item {
+  font-size: 26px;
+  font-weight: 500;
+}
+
+[data-theme="glance"] .tape-icon {
+  width: 26px;
+  height: 26px;
+}
+
+[data-theme="glance"] .tape-sep {
+  font-size: 22px;
+  margin: 0 22px;
+}
+
+/* HA overlay: column titles, hint, flat tiles */
+[data-theme="glance"] .ha-col-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+[data-theme="glance"] .ha-hint {
+  display: block;
+  text-align: right;
+  padding: 10px 4px 0;
+  font-size: 20px;
+  color: var(--muted);
+}
+
+[data-theme="glance"] .ha-tile {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 26px;
+}
+
+[data-theme="glance"] .ha-tile.light.on {
+  background: #2a2410;
+  border-color: var(--alert);
 }

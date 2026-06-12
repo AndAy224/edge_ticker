@@ -60,6 +60,23 @@ export const THEMES: Record<string, Theme> = {
       "--overlay-bg": "rgba(10, 7, 0, 0.97)",
     },
   },
+  glance: {
+    label: "Glance",
+    vars: {
+      "--bg": "#0d0f12",
+      "--panel": "#0d0f12",
+      "--panel-raised": "#16191e",
+      "--text": "#e8eaed",
+      "--text-dim": "#8a8f98",
+      "--up": "#4ade80",
+      "--down": "#f87171",
+      "--alert": "#eab308",
+      "--accent": "#60a5fa",
+      "--line": "#23262b",
+      "--muted": "#3a3f46",
+      "--overlay-bg": "rgba(13, 15, 18, 0.97)",
+    },
+  },
   frost: {
     label: "Frost",
     vars: {

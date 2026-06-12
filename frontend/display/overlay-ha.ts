@@ -151,12 +151,15 @@ export class HAOverlay {
       </div>`;
     }
 
+    // .ha-col-title / .ha-hint are display:none by default; the glance theme
+    // (and any future theme) reveals them via CSS.
     this.el.innerHTML = `${banner}
       <div class="ha-columns">
-        <div class="ha-col scenes">${scenes || '<div class="ha-empty">No scenes mapped</div>'}</div>
-        <div class="ha-col lights-grid">${lights || '<div class="ha-empty">No lights mapped</div>'}</div>
-        <div class="ha-col side">${climate}${media}</div>
-      </div>`;
+        <div class="ha-col scenes"><div class="ha-col-title">Scenes</div>${scenes || '<div class="ha-empty">No scenes mapped</div>'}</div>
+        <div class="ha-col-wrap"><div class="ha-col-title">Lights</div><div class="ha-col lights-grid">${lights || '<div class="ha-empty">No lights mapped</div>'}</div></div>
+        <div class="ha-col side"><div class="ha-col-title">Climate &amp; Media</div>${climate}${media}</div>
+      </div>
+      <div class="ha-hint">swipe down to close</div>`;
   }
 
   private onClick(e: Event): void {
