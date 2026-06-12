@@ -78,6 +78,7 @@ export class Celebration {
     // on top of it, then the whole scene crossfades into the card.
     this.el.innerHTML = `<div class="celebrate-scene">
       <div class="celebrate-field"></div>
+      ${event.team?.logo ? `<img class="celebrate-field-logo" src="${esc(event.team.logo)}" alt="">` : ""}
       <div class="celebrate-ball">${sportIcon(event.sport)}</div>
     </div>`;
     for (const b of BURSTS) this.later(() => this.burst(b.x, b.y, color), b.at);
