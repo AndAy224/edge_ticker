@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import time
+from datetime import date
 
 import httpx
 import websockets
@@ -57,6 +58,8 @@ STREAM_PUBLISH_INTERVAL = 2.0
 HISTORY_WINDOW_SECONDS = 8 * 3600
 HISTORY_STREAM_INTERVAL = 60.0  # min spacing for stream-sourced points
 SPARK_POINTS = 48
+EARNINGS_FETCH_URL = "https://finnhub.io/api/v1/calendar/earnings"
+EARNINGS_REFRESH_SECONDS = 12 * 3600
 
 
 class MarketsCollector(Collector):
@@ -75,6 +78,8 @@ class MarketsCollector(Collector):
         self._spark_file = DB_PATH.parent / "markets-spark.json"
         self._history: dict[str, list[list[float]]] = self._load_history()
         self._history_at: dict[str, float] = {}  # last stream-sourced point per symbol
+        self._earnings_today: set[str] = set()
+        self._earnings_checked = 0.0
 
     @staticmethod
     def _stream_symbol(symbol: str) -> str:
@@ -237,7 +242,33 @@ class MarketsCollector(Collector):
             if not q["spark"]:  # Finnhub path — fill from accumulated history
                 q["spark"] = self._spark(q["symbol"])
         self._save_history()
+        await self._refresh_earnings_today(client)
         return quotes
+
+    async def _refresh_earnings_today(self, client: httpx.AsyncClient) -> None:
+        """Which configured symbols report earnings today (refreshed ~12h)."""
+        if not self.finnhub_key:
+            return
+        now = time.monotonic()
+        if now - self._earnings_checked < EARNINGS_REFRESH_SECONDS:
+            return
+        self._earnings_checked = now
+        try:
+            today = str(date.today())
+            response = await client.get(
+                EARNINGS_FETCH_URL,
+                params={"from": today, "to": today, "token": self.finnhub_key},
+            )
+            response.raise_for_status()
+            calendar = response.json().get("earningsCalendar") or []
+            watched = set(self.symbols)
+            self._earnings_today = {
+                e["symbol"] for e in calendar if e.get("symbol") in watched
+            }
+            if self._earnings_today:
+                log.info("earnings today: %s", sorted(self._earnings_today))
+        except Exception as exc:
+            log.debug("earnings calendar fetch failed: %s", exc)
 
     async def _yahoo_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:
         if not self._warmed_up:
@@ -336,7 +367,10 @@ class MarketsCollector(Collector):
 
     def shape(self, quotes: list[dict]) -> ModulePayload:
         self._quotes = {q["symbol"]: q for q in quotes}
-        tape = []
+        tape = [
+            TapeItem(text=f"{symbol} reports earnings today", accent="alert", priority=1)
+            for symbol in sorted(self._earnings_today)
+        ]
         for q in quotes:
             up = q["change"] >= 0
             tape.append(

@@ -56,7 +56,7 @@ def _shape_news(items: list[dict]) -> list[dict]:
 
 async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:
     today = date.today()
-    profile_r, metric_r, news_r = await asyncio.gather(
+    profile_r, metric_r, news_r, earnings_r = await asyncio.gather(
         client.get(f"{FINNHUB}/stock/profile2", params={"symbol": symbol, "token": key}),
         client.get(f"{FINNHUB}/stock/metric", params={"symbol": symbol, "metric": "all", "token": key}),
         client.get(
@@ -65,6 +65,15 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
                 "symbol": symbol,
                 "from": str(today - timedelta(days=7)),
                 "to": str(today),
+                "token": key,
+            },
+        ),
+        client.get(
+            f"{FINNHUB}/calendar/earnings",
+            params={
+                "symbol": symbol,
+                "from": str(today),
+                "to": str(today + timedelta(days=90)),
                 "token": key,
             },
         ),
@@ -95,7 +104,17 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
         body = news_r.json()
         if isinstance(body, list):
             news = _shape_news(body)
-    return {"profile": profile, "metrics": metrics, "news": news}
+    earnings = None
+    if not isinstance(earnings_r, BaseException) and earnings_r.status_code == 200:
+        calendar = earnings_r.json().get("earningsCalendar") or []
+        if calendar:
+            entry = sorted(calendar, key=lambda e: e.get("date") or "")[0]
+            earnings = {
+                "date": entry.get("date"),
+                "hour": entry.get("hour"),
+                "eps_estimate": entry.get("epsEstimate"),
+            }
+    return {"profile": profile, "metrics": metrics, "news": news, "earnings": earnings}
 
 
 async def _crypto_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:

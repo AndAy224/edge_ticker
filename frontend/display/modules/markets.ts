@@ -148,6 +148,28 @@ function enrichStockDetail(el: HTMLElement, item: any): void {
         if (stats.length) {
           rows.push(`<div class="stock-stats">${escapeHtml(stats.join(" · "))}</div>`);
         }
+        if (d.earnings?.date) {
+          const when = new Date(`${d.earnings.date}T12:00:00`);
+          const day = when.toLocaleDateString([], {
+            weekday: "short",
+            month: "numeric",
+            day: "numeric",
+          });
+          const hour =
+            d.earnings.hour === "bmo"
+              ? " · before open"
+              : d.earnings.hour === "amc"
+                ? " · after close"
+                : "";
+          const est =
+            d.earnings.eps_estimate != null
+              ? ` · est EPS ${Number(d.earnings.eps_estimate).toFixed(2)}`
+              : "";
+          const soon = when.getTime() - Date.now() < 7 * 86400e3;
+          rows.push(
+            `<div class="stock-earnings ${soon ? "soon" : ""}">Reports ${day}${hour}${est}</div>`,
+          );
+        }
         if (d.metrics.low52 != null && d.metrics.high52 != null) {
           rows.push(`<div class="quote-range stock-52w">
             <span class="range-label">52W ${formatPrice(d.metrics.low52)}</span>

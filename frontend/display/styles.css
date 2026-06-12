@@ -2178,6 +2178,15 @@ body {
   margin-top: 2px;
 }
 
+.stock-earnings {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.stock-earnings.soon {
+  color: var(--alert);
+}
+
 .stock-news {
   margin-top: 8px;
   display: flex;
