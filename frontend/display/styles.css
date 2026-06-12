@@ -2370,3 +2370,36 @@ body {
 [data-panes="3"] .gd-standings {
   display: none;
 }
+
+/* ---- HA transition toast (door just opened/closed) ---- */
+
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--tape-height) + 28px);
+  transform: translate(-50%, 24px);
+  opacity: 0;
+  z-index: 85;
+  background: var(--panel-raised);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 18px 36px;
+  font-size: 34px;
+  font-weight: 700;
+  box-shadow: 0 10px 44px rgba(0, 0, 0, 0.5);
+  transition:
+    opacity 350ms ease,
+    transform 350ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#toast.toast-show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#toast.toast-alert {
+  border-color: var(--alert);
+  color: var(--alert);
+}

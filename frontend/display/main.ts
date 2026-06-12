@@ -171,11 +171,14 @@ function handleMessage(msg: any): void {
     case "sport_event":
       if (config.modules?.sports?.celebrations !== false) celebration.show(msg.event);
       break;
-    case "ha_state":
+    case "ha_state": {
       overlay.updateState(msg.entity_id, { state: msg.state, attributes: msg.attributes });
+      const previous = haStates.get(msg.entity_id)?.state;
       haStates.set(msg.entity_id, { state: msg.state, attributes: msg.attributes });
+      haTransitionToast(msg.entity_id, previous, msg.state);
       rebuildTape(); // alert items may have changed
       break;
+    }
     case "ha_states":
       overlay.setStates(msg.states ?? {}, msg.status);
       haStates.clear();
@@ -426,6 +429,54 @@ function autoFeatureSports(payload: ModulePayload): void {
     }
   }
 }
+
+// ---- HA transition toast --------------------------------------------------------
+// Small banner that pops up live when a configured alert entity changes state
+// (door just opened / just closed). The tape item covers the steady state;
+// this covers the moment.
+
+const toastEl = document.getElementById("toast")!;
+let toastTimer = 0;
+
+const STATE_VERBS: Record<string, string> = {
+  on: "opened",
+  off: "closed",
+  open: "opened",
+  closed: "closed",
+  unlocked: "unlocked",
+  locked: "locked",
+};
+
+function showToast(text: string, isAlert: boolean): void {
+  if (blanked) return;
+  clearTimeout(toastTimer);
+  toastEl.className = `toast-show ${isAlert ? "toast-alert" : ""}`;
+  toastEl.textContent = text;
+  toastTimer = window.setTimeout(() => {
+    toastEl.classList.remove("toast-show");
+    toastTimer = window.setTimeout(() => toastEl.classList.add("hidden"), 400);
+  }, 8000);
+}
+
+function haTransitionToast(entityId: string, previous: string | undefined, state: string): void {
+  if (previous === undefined || previous === state) return; // first sighting / no change
+  const alert = (config.ha?.alerts ?? []).find((a) => a?.entity === entityId);
+  if (!alert) return;
+  const entering = state === alert.state;
+  const name =
+    haStates.get(entityId)?.attributes?.friendly_name ?? entityId.split(".")[1] ?? entityId;
+  const verb = STATE_VERBS[state] ?? state;
+  const text = entering && alert.text ? alert.text : `${name} ${verb}`;
+  showToast(text, entering);
+}
+
+// Debug/test hook: simulate an HA state transition.
+(window as any).__hatest = (entityId: string, state: string, name?: string) => {
+  const previous = haStates.get(entityId)?.state ?? (state === "on" ? "off" : "on");
+  haStates.set(entityId, { state, attributes: { friendly_name: name ?? entityId } });
+  haTransitionToast(entityId, previous, state);
+  rebuildTape();
+};
 
 function haAlertItems(): { text: string; accent: "alert"; priority: number }[] {
   const items: { text: string; accent: "alert"; priority: number }[] = [];
