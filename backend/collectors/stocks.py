@@ -1,9 +1,11 @@
 """Markets collector.
 
 Polling baseline, picked automatically:
-- FINNHUB_KEY set  → Finnhub REST /quote per symbol (free tier has no candles,
-  so sparklines are self-built from accumulated quote history, persisted to
-  data/markets-spark.json across restarts)
+- FINNHUB_KEY set  → Finnhub REST /quote per equity symbol (free tier has no
+  candles, so sparklines are self-built from accumulated quote history,
+  persisted to data/markets-spark.json across restarts). Crypto (-USD)
+  symbols poll Coinbase's keyless public API instead — Finnhub REST has no
+  free crypto quotes — which includes real candles for the sparkline.
 - otherwise        → Yahoo Finance chart API (keyless, includes sparkline)
 
 With FINNHUB_KEY, a Finnhub WebSocket stream also runs alongside the poll
@@ -41,6 +43,11 @@ YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 YAHOO_WARMUP_URL = "https://finance.yahoo.com"
 FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote"
 FINNHUB_WS_URL = "wss://ws.finnhub.io"
+# Finnhub's free REST tier has no crypto quotes (returns zeros), so -USD
+# symbols poll Coinbase's keyless public API instead; product ids match our
+# symbol convention exactly (DOGE-USD). Candles give a real 12h sparkline.
+COINBASE_STATS_URL = "https://api.exchange.coinbase.com/products/{symbol}/stats"
+COINBASE_CANDLES_URL = "https://api.exchange.coinbase.com/products/{symbol}/candles"
 STREAM_PUBLISH_INTERVAL = 2.0
 
 # Self-built sparkline history: Finnhub's free tier has no candles and Yahoo
@@ -197,11 +204,16 @@ class MarketsCollector(Collector):
             self._warmed_up = False
         return self._client
 
+    def _quote_fn(self, symbol: str):
+        if not self.finnhub_key:
+            return self._yahoo_quote  # Yahoo handles crypto natively
+        return self._coinbase_quote if symbol.endswith("-USD") else self._finnhub_quote
+
     async def fetch(self) -> list[dict]:
         client = self._get_client()
-        quote = self._finnhub_quote if self.finnhub_key else self._yahoo_quote
         results = await asyncio.gather(
-            *(quote(client, s) for s in self.symbols), return_exceptions=True
+            *(self._quote_fn(s)(client, s) for s in self.symbols),
+            return_exceptions=True,
         )
         quotes = []
         rate_limited = False
@@ -258,6 +270,37 @@ class MarketsCollector(Collector):
             "prev_close": previous,
             "currency": meta.get("currency"),
             "market_state": meta.get("marketState"),
+        }
+
+    async def _coinbase_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:
+        stats_response, candles_response = await asyncio.gather(
+            client.get(COINBASE_STATS_URL.format(symbol=symbol)),
+            client.get(
+                COINBASE_CANDLES_URL.format(symbol=symbol), params={"granularity": 900}
+            ),
+        )
+        stats_response.raise_for_status()
+        stats = stats_response.json()
+        price = float(stats["last"])
+        day_open = float(stats["open"])  # 24h-ago reference
+        change = price - day_open
+        spark: list[float] = []
+        if candles_response.status_code == 200:
+            rows = candles_response.json()  # newest first: [ts, low, high, open, close, vol]
+            if isinstance(rows, list):
+                spark = [float(r[4]) for r in rows[:48]][::-1]
+        return {
+            "symbol": symbol,
+            "price": price,
+            "change": change,
+            "pct": (change / day_open * 100) if day_open else 0.0,
+            "spark": spark,
+            "open": day_open,
+            "high": float(stats["high"]),
+            "low": float(stats["low"]),
+            "prev_close": day_open,
+            "currency": "USD",
+            "market_state": None,
         }
 
     async def _finnhub_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:
