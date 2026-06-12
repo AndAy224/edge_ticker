@@ -1,7 +1,9 @@
 """Markets collector.
 
 Polling baseline, picked automatically:
-- FINNHUB_KEY set  → Finnhub REST /quote per symbol (no sparkline on free tier)
+- FINNHUB_KEY set  → Finnhub REST /quote per symbol (free tier has no candles,
+  so sparklines are self-built from accumulated quote history, persisted to
+  data/markets-spark.json across restarts)
 - otherwise        → Yahoo Finance chart API (keyless, includes sparkline)
 
 With FINNHUB_KEY, a Finnhub WebSocket stream also runs alongside the poll
@@ -20,10 +22,12 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 import httpx
 import websockets
 
+from ..db import DB_PATH
 from ..state import Bus, ModulePayload, TapeItem
 from .base import Collector
 
@@ -39,6 +43,14 @@ FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote"
 FINNHUB_WS_URL = "wss://ws.finnhub.io"
 STREAM_PUBLISH_INTERVAL = 2.0
 
+# Self-built sparkline history: Finnhub's free tier has no candles and Yahoo
+# (which includes intraday closes) rate-limits some networks, so we accumulate
+# our own series from the quotes we already receive. Persisted to JSON so a
+# backend restart doesn't blank the sparklines.
+HISTORY_WINDOW_SECONDS = 8 * 3600
+HISTORY_STREAM_INTERVAL = 60.0  # min spacing for stream-sourced points
+SPARK_POINTS = 48
+
 
 class MarketsCollector(Collector):
     name = "markets"
@@ -53,12 +65,52 @@ class MarketsCollector(Collector):
         self._quotes: dict[str, dict] = {}  # latest shaped quote per symbol
         # stream symbol ↔ config symbol (BTC-USD ↔ BINANCE:BTCUSDT)
         self._stream_map = {self._stream_symbol(s): s for s in self.symbols}
+        self._spark_file = DB_PATH.parent / "markets-spark.json"
+        self._history: dict[str, list[list[float]]] = self._load_history()
+        self._history_at: dict[str, float] = {}  # last stream-sourced point per symbol
 
     @staticmethod
     def _stream_symbol(symbol: str) -> str:
         if symbol.endswith("-USD"):
             return f"BINANCE:{symbol[:-4]}USDT"
         return symbol
+
+    # ---- sparkline history -------------------------------------------------
+
+    def _load_history(self) -> dict[str, list[list[float]]]:
+        try:
+            raw = json.loads(self._spark_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        cutoff = time.time() - HISTORY_WINDOW_SECONDS
+        return {
+            symbol: [p for p in points if p[0] >= cutoff]
+            for symbol, points in raw.items()
+            if symbol in self.symbols
+        }
+
+    def _save_history(self) -> None:
+        try:
+            tmp = self._spark_file.with_suffix(".json.tmp")
+            self._spark_file.parent.mkdir(parents=True, exist_ok=True)
+            tmp.write_text(json.dumps(self._history), encoding="utf-8")
+            os.replace(tmp, self._spark_file)
+        except OSError as exc:
+            log.debug("could not persist spark history: %s", exc)
+
+    def _record(self, symbol: str, price: float, now: float) -> None:
+        points = self._history.setdefault(symbol, [])
+        points.append([now, price])
+        cutoff = now - HISTORY_WINDOW_SECONDS
+        if points and points[0][0] < cutoff:
+            self._history[symbol] = [p for p in points if p[0] >= cutoff]
+
+    def _spark(self, symbol: str) -> list[float]:
+        prices = [p[1] for p in self._history.get(symbol, [])]
+        if len(prices) <= SPARK_POINTS:
+            return prices
+        step = (len(prices) - 1) / (SPARK_POINTS - 1)
+        return [prices[round(i * step)] for i in range(SPARK_POINTS)]
 
     async def start(self, bus: Bus) -> None:
         if not self.finnhub_key:
@@ -113,6 +165,7 @@ class MarketsCollector(Collector):
         if not self._quotes:
             return None
         changed = False
+        now = time.time()
         for symbol, price in prices.items():
             quote = self._quotes.get(symbol)
             if quote is None or quote["price"] == price:
@@ -121,6 +174,10 @@ class MarketsCollector(Collector):
             quote["price"] = price
             quote["change"] = price - previous
             quote["pct"] = (quote["change"] / previous * 100) if previous else 0.0
+            if now - self._history_at.get(symbol, 0.0) >= HISTORY_STREAM_INTERVAL:
+                self._history_at[symbol] = now
+                self._record(symbol, price, now)
+                quote["spark"] = self._spark(symbol)
             changed = True
         if not changed:
             return None
@@ -158,6 +215,12 @@ class MarketsCollector(Collector):
             if rate_limited:
                 self._warmed_up = False  # force a fresh warm-up next round
             raise RuntimeError("all quote requests failed")
+        now = time.time()
+        for q in quotes:
+            self._record(q["symbol"], q["price"], now)
+            if not q["spark"]:  # Finnhub path — fill from accumulated history
+                q["spark"] = self._spark(q["symbol"])
+        self._save_history()
         return quotes
 
     async def _yahoo_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:

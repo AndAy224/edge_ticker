@@ -1200,9 +1200,14 @@ body {
   color: var(--text-dim);
 }
 
-[data-theme="glance"] .weather-text,
+[data-theme="glance"] .weather-text {
+  display: none; /* the icon conveys conditions */
+}
+
 [data-theme="glance"] .weather-meta {
-  display: none;
+  width: 100%; /* own row under the icon+temp+location line */
+  font-size: 20px;
+  margin-top: 2px;
 }
 
 /* zen keeps the big ambient look, just glance-flavored */

@@ -1,0 +1,8 @@
+# The Xeneon Edge touch controller (wch.cn 27c0:0859) exposes two input
+# nodes: the real touchscreen (INPUT_PROP_DIRECT, multitouch) and a mouse-
+# emulation interface (REL axes + buttons). The mouse node makes wlroots
+# attach a pointer to the seat and render a cursor in the middle of the
+# panel — and cage ignores XCURSOR_THEME, so a blank theme can't hide it.
+# Ignore the mouse interface only; udev's input_id builtin tags just that
+# node with ID_INPUT_MOUSE (the touch node gets ID_INPUT_TOUCHSCREEN).
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="27c0", ATTRS{idProduct}=="0859", ENV{ID_INPUT_MOUSE}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"

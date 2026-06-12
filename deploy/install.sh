@@ -53,6 +53,11 @@ echo "==> blank cursor theme (kiosk.service sets XCURSOR_THEME=blank)"
 mkdir -p /usr/share/icons/blank
 cp -a "$APP_DIR/deploy/cursor/blank/." /usr/share/icons/blank/
 
+echo "==> udev rule: ignore the touch controller's mouse-emulation node"
+cp "$APP_DIR/deploy/99-edge-ticker-input.rules" /etc/udev/rules.d/
+udevadm control --reload-rules
+udevadm trigger --subsystem-match=input
+
 echo "==> systemd units"
 cp "$APP_DIR/deploy/ticker-backend.service" /etc/systemd/system/
 cp "$APP_DIR/deploy/kiosk.service" /etc/systemd/system/
