@@ -3,7 +3,7 @@
 # Run as root: sudo bash deploy/install.sh
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/AndAy224/edge-ticker.git}"
+REPO_URL="${REPO_URL:-https://github.com/AndAy224/edge_ticker.git}"
 APP_DIR=/opt/edge-ticker
 
 echo "==> apt packages"
