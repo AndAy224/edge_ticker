@@ -57,8 +57,9 @@ class WeatherCollector(Collector):
                     "longitude": self.longitude,
                     "current": "temperature_2m,apparent_temperature,"
                     "relative_humidity_2m,weather_code,wind_speed_10m",
+                    "hourly": "temperature_2m,precipitation_probability,weather_code",
                     "daily": "temperature_2m_max,temperature_2m_min,"
-                    "precipitation_probability_max,weather_code",
+                    "precipitation_probability_max,weather_code,sunrise,sunset",
                     "temperature_unit": "fahrenheit",
                     "wind_speed_unit": "mph",
                     "timezone": "auto",
@@ -101,8 +102,40 @@ class WeatherCollector(Collector):
                     f"{current['text']}".strip()
                 )
             )
+        # Next 24 hours from the current hour, for the stage forecast graph.
+        hourly_raw = raw.get("hourly", {})
+        now_hour = (current_raw.get("time") or "")[:13]
+
+        def hour_value(key: str, i: int):
+            values = hourly_raw.get(key) or []
+            return values[i] if i < len(values) else None
+
+        hourly = []
+        for i, t in enumerate(hourly_raw.get("time") or []):
+            if now_hour and t[:13] < now_hour:
+                continue
+            hourly.append(
+                {
+                    "time": t,
+                    "temp": hour_value("temperature_2m", i),
+                    "precip": hour_value("precipitation_probability", i),
+                    "code": hour_value("weather_code", i),
+                }
+            )
+            if len(hourly) >= 24:
+                break
+
         return ModulePayload(
             module=self.name,
-            stage={"location": self.location_name, "current": current, "daily": daily},
+            stage={
+                "location": self.location_name,
+                "current": current,
+                "daily": daily,
+                "hourly": hourly,
+                "sun": {
+                    "sunrise": (daily_raw.get("sunrise") or [None])[0],
+                    "sunset": (daily_raw.get("sunset") or [None])[0],
+                },
+            },
             tape=tape,
         )

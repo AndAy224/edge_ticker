@@ -686,7 +686,7 @@ body {
 }
 
 .wx-now {
-  flex: 1;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 32px;
@@ -2205,4 +2205,90 @@ body {
 
 [data-panes="3"] .stock-extra {
   display: none; /* narrow panes keep the price-focused detail */
+}
+
+/* ---- weather hourly forecast graph ---- */
+
+.wx-hourly {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wx-hourly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.wx-sun {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wx-sun-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  color: var(--alert);
+}
+
+.wx-sun-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wx-graph {
+  width: 100%;
+  height: 250px;
+}
+
+.wx-temp-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.wx-fill-top {
+  stop-color: var(--accent);
+  stop-opacity: 0.3;
+}
+
+.wx-fill-bottom {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+
+.wx-precip-bar {
+  fill: var(--accent);
+  opacity: 0.35;
+}
+
+.wx-temp-label {
+  fill: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.wx-hour-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+
+[data-panes="2"] .wx-graph {
+  height: 170px;
+}
+
+[data-panes="3"] .wx-hourly {
+  display: none;
 }
