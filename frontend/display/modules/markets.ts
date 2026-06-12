@@ -89,17 +89,89 @@ register({
   renderDetail(el, item: any) {
     if (!item) return;
     const up = (item.change ?? 0) >= 0;
-    el.innerHTML = `<div class="detail markets-detail ${up ? "up" : "down"}">
-      <div class="detail-title">${escapeHtml(item.symbol)}</div>
-      <div class="detail-big">${formatPrice(item.price ?? 0)}</div>
-      <div class="detail-sub quote-change">${up ? "▲" : "▼"} ${Math.abs(item.change ?? 0).toFixed(2)} (${Math.abs(item.pct ?? 0).toFixed(2)}%)</div>
-      ${sparkline(item.spark ?? [], item.prev_close ?? null, "spk-detail")}
-      ${rangeBar(item)}
-      <div class="detail-meta">
-        ${item.open != null ? `Open ${formatPrice(item.open)}` : ""}
-        ${item.prev_close != null ? ` · Prev close ${formatPrice(item.prev_close)}` : ""}
-        ${escapeHtml(item.market_state ?? "")}
+    el.innerHTML = `<div class="detail markets-detail markets-detail-rich ${up ? "up" : "down"}">
+      <div class="stock-main">
+        <div class="detail-title">${escapeHtml(item.symbol)}</div>
+        <div class="detail-big">${formatPrice(item.price ?? 0)}</div>
+        <div class="detail-sub quote-change">${up ? "▲" : "▼"} ${Math.abs(item.change ?? 0).toFixed(2)} (${Math.abs(item.pct ?? 0).toFixed(2)}%)</div>
+        ${sparkline(item.spark ?? [], item.prev_close ?? null, "spk-detail")}
+        ${rangeBar(item)}
+        <div class="detail-meta">
+          ${item.open != null ? `Open ${formatPrice(item.open)}` : ""}
+          ${item.prev_close != null ? ` · Prev close ${formatPrice(item.prev_close)}` : ""}
+          ${escapeHtml(item.market_state ?? "")}
+        </div>
       </div>
+      <div class="stock-extra"></div>
     </div>`;
+    enrichStockDetail(el, item);
   },
 });
+
+function marketCap(millions: number | null | undefined): string {
+  if (millions == null) return "";
+  if (millions >= 1_000_000) return `$${(millions / 1_000_000).toFixed(2)}T`;
+  if (millions >= 1_000) return `$${(millions / 1_000).toFixed(0)}B`;
+  return `$${millions.toFixed(0)}M`;
+}
+
+function newsAge(unix: number | null | undefined): string {
+  if (!unix) return "";
+  const minutes = Math.max(0, Math.round((Date.now() / 1000 - unix) / 60));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `${hours}h` : `${Math.round(hours / 24)}d`;
+}
+
+/** Fetch company profile / metrics / headlines and fill the right column. */
+function enrichStockDetail(el: HTMLElement, item: any): void {
+  fetch(`/api/markets/detail?symbol=${encodeURIComponent(item.symbol ?? "")}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      if (!d || !el.isConnected) return;
+      const extra = el.querySelector(".stock-extra");
+      if (!extra) return;
+      const rows: string[] = [];
+      if (d.profile?.name) {
+        const line = [d.profile.name, d.profile.industry, d.profile.exchange]
+          .filter(Boolean)
+          .join(" · ");
+        rows.push(`<div class="stock-profile">${escapeHtml(line)}</div>`);
+      }
+      if (d.metrics) {
+        const stats = [
+          d.profile?.market_cap != null ? `Mkt cap ${marketCap(d.profile.market_cap)}` : "",
+          d.metrics.pe != null ? `P/E ${Number(d.metrics.pe).toFixed(1)}` : "",
+          d.metrics.beta != null ? `Beta ${Number(d.metrics.beta).toFixed(2)}` : "",
+          d.metrics.div_yield ? `Div ${Number(d.metrics.div_yield).toFixed(2)}%` : "",
+        ].filter(Boolean);
+        if (stats.length) {
+          rows.push(`<div class="stock-stats">${escapeHtml(stats.join(" · "))}</div>`);
+        }
+        if (d.metrics.low52 != null && d.metrics.high52 != null) {
+          rows.push(`<div class="quote-range stock-52w">
+            <span class="range-label">52W ${formatPrice(d.metrics.low52)}</span>
+            <span class="range-track"><span class="range-marker" style="left: ${Math.min(100, Math.max(0, ((item.price - d.metrics.low52) / (d.metrics.high52 - d.metrics.low52)) * 100)).toFixed(1)}%"></span></span>
+            <span class="range-label">${formatPrice(d.metrics.high52)}</span>
+          </div>`);
+        }
+      }
+      if (d.news?.length) {
+        rows.push(
+          `<div class="stock-news">` +
+            d.news
+              .slice(0, 4)
+              .map(
+                (n: any) => `<div class="stock-news-item">
+                  <div class="stock-news-headline">${escapeHtml(n.headline)}</div>
+                  <div class="stock-news-meta">${escapeHtml(n.source ?? "")} · ${newsAge(n.datetime)} ago</div>
+                </div>`,
+              )
+              .join("") +
+            `</div>`,
+        );
+      }
+      extra.innerHTML = rows.join("");
+    })
+    .catch(() => {});
+}

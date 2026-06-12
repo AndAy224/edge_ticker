@@ -2140,3 +2140,69 @@ body {
 [data-panes="3"] .gd-score {
   font-size: 44px;
 }
+
+/* ---- rich stock detail (tap a quote card) ---- */
+
+.markets-detail-rich {
+  display: flex;
+  align-items: flex-end;
+  gap: 72px;
+}
+
+.stock-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.stock-extra {
+  flex: none;
+  width: 1050px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stock-profile {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.stock-stats {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.stock-52w {
+  max-width: 640px;
+  margin-top: 2px;
+}
+
+.stock-news {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stock-news-headline {
+  font-size: 24px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stock-news-meta {
+  font-size: 17px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+[data-panes="2"] .stock-extra {
+  width: 460px;
+}
+
+[data-panes="3"] .stock-extra {
+  display: none; /* narrow panes keep the price-focused detail */
+}
