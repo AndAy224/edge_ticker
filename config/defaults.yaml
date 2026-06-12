@@ -53,6 +53,10 @@ modules:
     enabled: false
     poll_seconds: 1800
 
+appearance:
+  theme: midnight     # midnight | daylight | amber | frost
+  layout: rail-left   # rail-left | rail-right | full-stage
+
 night:
   dim_at: "23:00"
   wake_at: "07:00"

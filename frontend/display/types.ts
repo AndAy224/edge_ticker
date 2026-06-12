@@ -29,4 +29,5 @@ export interface Config {
   modules?: Record<string, { enabled?: boolean; [key: string]: any }>;
   ha?: Partial<HAMapping>;
   night?: Record<string, any>;
+  appearance?: { theme?: string; layout?: string };
 }

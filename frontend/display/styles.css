@@ -10,6 +10,9 @@
   --down: #ff4d5e;
   --alert: #ffb020;
   --accent: #4da3ff;
+  --line: #1d242e;
+  --muted: #2a313c;
+  --overlay-bg: rgba(7, 9, 12, 0.97);
   --rail-width: 440px;
   --tape-height: 120px;
 }
@@ -44,6 +47,26 @@ body {
   grid-template-areas:
     "rail stage"
     "tape tape";
+}
+
+/* ---- layout variants (data-layout on <html>) ---- */
+
+[data-layout="rail-right"] #app {
+  grid-template-columns: 1fr var(--rail-width);
+  grid-template-areas:
+    "stage rail"
+    "tape tape";
+}
+
+[data-layout="full-stage"] #app {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "stage"
+    "tape";
+}
+
+[data-layout="full-stage"] #rail {
+  display: none;
 }
 
 /* ---- status rail ---- */
@@ -132,7 +155,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #2a313c;
+  background: var(--muted);
 }
 
 .dot.active {
@@ -372,7 +395,7 @@ body {
 #tape {
   grid-area: tape;
   background: var(--panel);
-  border-top: 1px solid #1d242e;
+  border-top: 1px solid var(--line);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -410,7 +433,7 @@ body {
 }
 
 .tape-sep {
-  color: #2a313c;
+  color: var(--muted);
   font-size: 32px;
   margin: 0 36px;
 }
@@ -435,7 +458,7 @@ body {
   left: 0;
   right: 0;
   bottom: var(--tape-height); /* tape stays visible */
-  background: rgba(7, 9, 12, 0.97);
+  background: var(--overlay-bg);
   z-index: 10;
   padding: 32px 48px;
   display: flex;
@@ -493,7 +516,7 @@ body {
 }
 
 .ha-tile.scene {
-  border-color: #273043;
+  border-color: var(--muted);
 }
 
 .ha-tile.light.on {
@@ -534,7 +557,7 @@ body {
 .climate-btn,
 .media-btn {
   background: var(--panel);
-  border: 2px solid #273043;
+  border: 2px solid var(--muted);
   border-radius: 14px;
   color: var(--text);
   font-size: 36px;
@@ -617,7 +640,7 @@ body {
 .pve-bar {
   flex: 1;
   height: 18px;
-  background: #1d242e;
+  background: var(--line);
   border-radius: 9px;
   overflow: hidden;
 }
@@ -766,7 +789,7 @@ body {
 }
 
 .astro-hour-bar[data-quality="bad"] {
-  background: #2a313c;
+  background: var(--muted);
 }
 
 .astro-hour-label {

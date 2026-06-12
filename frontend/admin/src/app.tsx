@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import { config, dirty, discardConfig, health, saveConfig, saveStatus } from "./state";
+import { AppearanceTab } from "./tabs/appearance";
 import { HATab } from "./tabs/ha";
 import { ModulesTab } from "./tabs/modules";
 import { ScheduleTab } from "./tabs/schedule";
@@ -9,6 +10,7 @@ import { SystemTab } from "./tabs/system";
 const TABS = [
   { id: "modules", label: "Modules", component: ModulesTab },
   { id: "sources", label: "Sources", component: SourcesTab },
+  { id: "appearance", label: "Appearance", component: AppearanceTab },
   { id: "ha", label: "HA Mapping", component: HATab },
   { id: "schedule", label: "Schedule", component: ScheduleTab },
   { id: "system", label: "System", component: SystemTab },

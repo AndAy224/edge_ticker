@@ -12,6 +12,7 @@ import "./modules/proxmox";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
+import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
 
 const stageEl = document.getElementById("stage-content")!;
 const dotsEl = document.getElementById("page-dots")!;
@@ -182,6 +183,7 @@ const rotation = {
 };
 
 function applyConfig(): void {
+  applyAppearance();
   rotation.order = (config.rotation?.order ?? []).filter(
     (id) => hasRenderer(id) && config.modules?.[id]?.enabled !== false,
   );
@@ -189,6 +191,17 @@ function applyConfig(): void {
   rotation.schedule();
   rebuildTape();
   renderStage();
+}
+
+function applyAppearance(): void {
+  const root = document.documentElement;
+  const themeId = config.appearance?.theme ?? DEFAULT_THEME;
+  const theme = THEMES[themeId] ?? THEMES[DEFAULT_THEME];
+  for (const [name, value] of Object.entries(theme.vars)) {
+    root.style.setProperty(name, value);
+  }
+  const layout = config.appearance?.layout ?? DEFAULT_LAYOUT;
+  root.dataset.layout = layout in LAYOUTS ? layout : DEFAULT_LAYOUT;
 }
 
 // ---- Stage -------------------------------------------------------------------

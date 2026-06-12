@@ -12,5 +12,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["display", "admin"]
+  "include": ["display", "admin", "shared"]
 }
