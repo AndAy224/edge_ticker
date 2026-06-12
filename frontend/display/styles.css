@@ -58,15 +58,131 @@ body {
     "tape tape";
 }
 
-[data-layout="full-stage"] #app {
+[data-layout="full-stage"] #app,
+[data-layout="focus"] #app,
+[data-layout="mosaic"] #app {
   grid-template-columns: 1fr;
   grid-template-areas:
     "stage"
     "tape";
 }
 
-[data-layout="full-stage"] #rail {
+[data-layout="full-stage"] #rail,
+[data-layout="focus"] #rail,
+[data-layout="mosaic"] #rail {
   display: none;
+}
+
+[data-layout="split"] #app {
+  --rail-width: 380px;
+}
+
+[data-layout="focus"] .stage-pane:first-child {
+  flex: 2.3;
+}
+
+/* banner: rail becomes a slim horizontal strip across the top */
+
+[data-layout="banner"] #app {
+  grid-template-columns: 1fr;
+  grid-template-rows: 110px 1fr var(--tape-height);
+  grid-template-areas:
+    "rail"
+    "stage"
+    "tape";
+}
+
+[data-layout="banner"] #rail {
+  align-items: center;
+  padding: 0 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-layout="banner"] #rail-inner {
+  display: flex;
+  align-items: baseline;
+  gap: 48px;
+}
+
+[data-layout="banner"] #clock {
+  font-size: 64px;
+  letter-spacing: -1px;
+}
+
+[data-layout="banner"] #date {
+  font-size: 24px;
+  margin-top: 0;
+}
+
+[data-layout="banner"] #weather {
+  margin-top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+[data-layout="banner"] .weather-temp {
+  font-size: 40px;
+}
+
+[data-layout="banner"] .weather-text {
+  font-size: 24px;
+}
+
+[data-layout="banner"] .weather-meta {
+  font-size: 18px;
+  margin-top: 0;
+}
+
+/* zen: no stage — giant clock + weather, tape keeps running */
+
+[data-layout="zen"] #app {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr var(--tape-height);
+  grid-template-areas:
+    "rail"
+    "tape";
+}
+
+[data-layout="zen"] #stage {
+  display: none;
+}
+
+[data-layout="zen"] #rail {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+[data-layout="zen"] #rail-inner {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 72px;
+  align-items: center;
+}
+
+[data-layout="zen"] #clock {
+  grid-row: 1 / 3;
+  font-size: 190px;
+  letter-spacing: -4px;
+}
+
+[data-layout="zen"] #date {
+  font-size: 34px;
+  align-self: end;
+}
+
+[data-layout="zen"] #weather {
+  margin-top: 6px;
+  align-self: start;
+}
+
+[data-layout="zen"] .weather-temp {
+  font-size: 60px;
+}
+
+[data-layout="zen"] .weather-text {
+  font-size: 28px;
 }
 
 /* ---- status rail ---- */
@@ -124,6 +240,22 @@ body {
   overflow: hidden;
 }
 
+#stage-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.stage-pane {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.stage-pane + .stage-pane {
+  border-left: 1px solid var(--line);
+}
+
 .stage-layer {
   position: absolute;
   inset: 0;
@@ -174,6 +306,29 @@ body {
   border: 2px solid var(--alert);
   border-radius: 8px;
   padding: 4px 12px;
+}
+
+#clock-chip {
+  display: none;
+  position: absolute;
+  top: 18px;
+  left: 28px;
+  z-index: 5;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-layout="focus"] #clock-chip,
+[data-layout="mosaic"] #clock-chip {
+  display: block;
+}
+
+/* keep the pin badge clear of the clock chip in rail-less layouts */
+[data-layout="focus"] #pin-badge,
+[data-layout="mosaic"] #pin-badge {
+  top: 72px;
 }
 
 .stale-dot {
@@ -288,9 +443,18 @@ body {
 }
 
 .game-league {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-dim);
   width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.game-league svg {
+  width: 26px;
+  height: 26px;
 }
 
 .game-teams {
@@ -390,6 +554,54 @@ body {
   margin-top: 12px;
 }
 
+.detail-icon {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  margin-right: 10px;
+  vertical-align: -5px;
+}
+
+.detail-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- narrow-pane adaptations (data-panes on <html>) ---- */
+
+[data-panes="2"] .stage-layer,
+[data-panes="3"] .stage-layer {
+  /* extra top room keeps the page dots clear of pane content */
+  padding: 48px 28px 36px;
+}
+
+[data-panes="2"] .sports-list,
+[data-panes="3"] .sports-list {
+  grid-template-columns: 1fr;
+}
+
+/* single-column game rows are twice as tall — cap them so the list fits the
+   pane (stage layers bottom-align and would overflow out the top) */
+[data-panes="2"] .sports-list .game-row:nth-child(n + 6),
+[data-panes="3"] .sports-list .game-row:nth-child(n + 6) {
+  display: none;
+}
+
+[data-panes="2"] .pve-layout,
+[data-panes="3"] .pve-layout,
+[data-panes="2"] .astro-layout,
+[data-panes="3"] .astro-layout {
+  grid-template-columns: 1fr;
+}
+
+[data-panes="3"] .detail-big {
+  font-size: 44px;
+}
+
+[data-panes="3"] .detail-sub {
+  font-size: 28px;
+}
+
 /* ---- ticker tape ---- */
 
 #tape {
@@ -426,10 +638,25 @@ body {
 }
 
 .tape-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font-size: 40px;
   font-weight: 600;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.tape-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+
+.tape-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .tape-sep {

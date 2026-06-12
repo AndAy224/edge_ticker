@@ -8,10 +8,23 @@
 // is likewise only set on rebuild — changing it mid-animation remaps the
 // elapsed-time fraction onto the new timeline and the tape jumps.
 
+import { sportIcon } from "./icons";
 import type { TapeItem } from "./types";
 
 const SPEED_PX_PER_SECOND = 120;
 const MIN_DURATION_SECONDS = 10;
+
+function fillItem(span: HTMLElement, item: TapeItem): void {
+  span.className = `tape-item accent-${item.accent}`;
+  if (item.icon) {
+    const icon = document.createElement("span");
+    icon.className = "tape-icon";
+    icon.innerHTML = sportIcon(item.icon);
+    span.replaceChildren(icon, document.createTextNode(item.text));
+  } else {
+    span.textContent = item.text;
+  }
+}
 
 export class Tape {
   private signature = "";
@@ -21,7 +34,7 @@ export class Tape {
 
   setItems(items: TapeItem[]): void {
     if (!items.length) return;
-    const signature = items.map((i) => `${i.accent}|${i.text}`).join(" ");
+    const signature = items.map((i) => `${i.accent}|${i.icon ?? ""}|${i.text}`).join(" ");
     if (signature === this.signature) return;
     this.signature = signature;
 
@@ -35,8 +48,7 @@ export class Tape {
   private update(items: TapeItem[]): void {
     items.forEach((item, i) => {
       for (const span of [this.itemSpans[i], this.itemSpans[i + items.length]]) {
-        span.textContent = item.text;
-        span.className = `tape-item accent-${item.accent}`;
+        fillItem(span, item);
       }
     });
   }
@@ -46,8 +58,7 @@ export class Tape {
     half.className = "tape-half";
     for (const item of items) {
       const span = document.createElement("span");
-      span.className = `tape-item accent-${item.accent}`;
-      span.textContent = item.text;
+      fillItem(span, item);
       half.appendChild(span);
       const sep = document.createElement("span");
       sep.className = "tape-sep";

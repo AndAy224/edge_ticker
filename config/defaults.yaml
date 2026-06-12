@@ -55,7 +55,7 @@ modules:
 
 appearance:
   theme: midnight     # midnight | daylight | amber | frost
-  layout: rail-left   # rail-left | rail-right | full-stage
+  layout: rail-left   # rail-left | rail-right | full-stage | banner | focus | split | mosaic | zen
 
 night:
   dim_at: "23:00"

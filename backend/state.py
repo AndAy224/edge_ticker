@@ -15,6 +15,9 @@ class TapeItem(BaseModel):
     text: str
     accent: Literal["neutral", "up", "down", "alert"] = "neutral"
     priority: int = 0
+    # Optional icon key rendered by the display before the text (e.g. a sport
+    # name mapped to an inline SVG — the appliance has no emoji fonts).
+    icon: str | None = None
 
 
 class ModulePayload(BaseModel):

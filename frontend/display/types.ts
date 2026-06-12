@@ -2,6 +2,7 @@ export interface TapeItem {
   text: string;
   accent: "neutral" | "up" | "down" | "alert";
   priority: number;
+  icon?: string | null;
 }
 
 export interface ModulePayload {

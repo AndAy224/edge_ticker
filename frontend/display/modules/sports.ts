@@ -1,3 +1,4 @@
+import { sportIcon } from "../icons";
 import { register } from "./registry";
 
 function escapeHtml(value: unknown): string {
@@ -15,7 +16,7 @@ function gameRow(game: any, index: number): string {
     ? new Date(game.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : escapeHtml(game.detail);
   return `<div class="game-row ${live ? "live" : ""} ${game.followed ? "followed" : ""}" data-detail="${index}">
-    <span class="game-league">${escapeHtml(game.league)}</span>
+    <span class="game-league">${sportIcon(game.sport, game.league)}<span>${escapeHtml(game.league)}</span></span>
     <span class="game-teams">
       <span class="team">${escapeHtml(game.away?.abbrev)} <strong>${pre ? "" : escapeHtml(game.away?.score ?? "")}</strong></span>
       <span class="game-at">@</span>
@@ -40,7 +41,7 @@ register({
     if (!item) return;
     const pre = item.state === "pre";
     el.innerHTML = `<div class="detail sports-detail">
-      <div class="detail-meta">${escapeHtml(item.league)} · ${escapeHtml(item.detail)}</div>
+      <div class="detail-meta"><span class="detail-icon">${sportIcon(item.sport, item.league)}</span>${escapeHtml(item.league)} · ${escapeHtml(item.detail)}</div>
       <div class="detail-big">
         ${escapeHtml(item.away?.name)} ${pre ? "" : escapeHtml(item.away?.score ?? "")}
         <span class="game-at">@</span>

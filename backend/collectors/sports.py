@@ -80,6 +80,7 @@ class SportsCollector(Collector):
                 return None
             return {
                 "id": event.get("id"),
+                "sport": league.get("sport"),
                 "league": str(league["league"]).upper(),
                 "state": status_type.get("state", "pre"),  # pre | in | post
                 "detail": status_type.get("shortDetail", ""),
@@ -117,6 +118,7 @@ class SportsCollector(Collector):
                     f"{g['home']['abbrev']} {g['home']['score']} ({suffix})",
                     accent="alert" if live else "neutral",
                     priority=1 if g["followed"] else 0,
+                    icon=g.get("sport"),
                 )
             )
         return ModulePayload(

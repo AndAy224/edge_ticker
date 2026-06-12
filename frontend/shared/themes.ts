@@ -79,18 +79,53 @@ export const THEMES: Record<string, Theme> = {
   },
 };
 
-export const LAYOUTS: Record<string, { label: string; description: string }> = {
+export interface LayoutDef {
+  label: string;
+  description: string;
+  /** How many rotation modules show side by side on the stage. */
+  panes: 1 | 2 | 3;
+}
+
+export const LAYOUTS: Record<string, LayoutDef> = {
   "rail-left": {
     label: "Rail left",
     description: "Clock & weather rail on the left, stage on the right.",
+    panes: 1,
   },
   "rail-right": {
     label: "Rail right",
     description: "Stage on the left, clock & weather rail on the right.",
+    panes: 1,
   },
   "full-stage": {
     label: "Full stage",
-    description: "No rail — modules use the whole width. Weather stays on the tape.",
+    description: "No rail — one module uses the whole width. Weather stays on the tape.",
+    panes: 1,
+  },
+  banner: {
+    label: "Banner",
+    description: "Slim clock & weather strip across the top, full-width stage below.",
+    panes: 1,
+  },
+  focus: {
+    label: "Focus 70/30",
+    description: "Current module large, next module previews in a narrower right pane.",
+    panes: 2,
+  },
+  split: {
+    label: "Split",
+    description: "Rail plus two modules side by side.",
+    panes: 2,
+  },
+  mosaic: {
+    label: "Mosaic",
+    description: "Three modules side by side — no rail, compact clock chip.",
+    panes: 3,
+  },
+  zen: {
+    label: "Zen",
+    description: "Giant clock & weather only; data lives on the tape.",
+    panes: 1,
   },
 };
 

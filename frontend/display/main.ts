@@ -19,6 +19,7 @@ const dotsEl = document.getElementById("page-dots")!;
 const pinBadge = document.getElementById("pin-badge")!;
 const railInner = document.getElementById("rail-inner")!;
 const clockEl = document.getElementById("clock")!;
+const clockChip = document.getElementById("clock-chip")!;
 const dateEl = document.getElementById("date")!;
 const weatherEl = document.getElementById("weather")!;
 const blanker = document.getElementById("blanker")!;
@@ -28,8 +29,29 @@ const connDot = document.getElementById("conn-dot")!;
 const modules = new Map<string, ModulePayload>();
 let config: Config = {};
 let blanked = false;
-let detailTimer = 0;
-let detailOpen = false;
+
+// Multi-pane stage: layouts can show a window of 1–3 consecutive rotation
+// modules side by side. Pane i shows rotation.order[(index + i) % length].
+let paneEls: HTMLElement[] = [];
+const paneDetailTimers = new Map<number, number>(); // pane index -> auto-close timer
+
+function layoutPanes(): number {
+  const layout = config.appearance?.layout ?? DEFAULT_LAYOUT;
+  return (LAYOUTS[layout] ?? LAYOUTS[DEFAULT_LAYOUT]).panes;
+}
+
+function effectivePaneCount(): number {
+  return Math.max(1, Math.min(layoutPanes(), rotation.order.length || 1));
+}
+
+function paneModule(i: number): string | undefined {
+  if (!rotation.order.length) return undefined;
+  return rotation.order[(rotation.index + i) % rotation.order.length];
+}
+
+function anyDetailOpen(): boolean {
+  return paneDetailTimers.size > 0;
+}
 
 const tape = new Tape(document.getElementById("tape-track")!);
 const overlay = new HAOverlay(
@@ -113,7 +135,11 @@ function handleMessage(msg: any): void {
       modules.set(payload.module, payload);
       if (payload.module === "weather") renderWeather();
       rebuildTape();
-      if (payload.module === rotation.current() && !detailOpen) renderStage();
+      for (let i = 0; i < paneEls.length; i++) {
+        if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
+          renderPane(i);
+        }
+      }
       break;
     }
     case "config":
@@ -158,20 +184,22 @@ const rotation = {
     clearInterval(this.timer);
     const seconds = config.rotation?.interval_seconds ?? 25;
     this.timer = window.setInterval(() => {
-      if (!this.pinned && !overlay.isOpen() && !blanked && !detailOpen) this.next();
+      if (!this.pinned && !overlay.isOpen() && !blanked && !anyDetailOpen()) this.next();
     }, seconds * 1000);
   },
   next(): void {
-    if (!this.order.length) return;
+    // No-op when every module is already visible; re-evaluated per tick so
+    // rotation resumes if a config change grows the order past the pane count.
+    if (this.order.length <= effectivePaneCount()) return;
     this.index = (this.index + 1) % this.order.length;
-    closeDetail();
+    closeAllDetails();
     renderStage();
     reportDisplayState();
   },
   prev(): void {
-    if (!this.order.length) return;
+    if (this.order.length <= effectivePaneCount()) return;
     this.index = (this.index - 1 + this.order.length) % this.order.length;
-    closeDetail();
+    closeAllDetails();
     renderStage();
     reportDisplayState();
   },
@@ -188,9 +216,26 @@ function applyConfig(): void {
     (id) => hasRenderer(id) && config.modules?.[id]?.enabled !== false,
   );
   if (rotation.index >= rotation.order.length) rotation.index = 0;
+  closeAllDetails(); // pane→module mapping may have changed under open details
+  syncPanes();
   rotation.schedule();
   rebuildTape();
   renderStage();
+}
+
+/** (Re)build the .stage-pane containers when the effective count changes. */
+function syncPanes(): void {
+  const count = effectivePaneCount();
+  document.documentElement.dataset.panes = String(count);
+  if (paneEls.length === count) return;
+  stageEl.replaceChildren();
+  paneEls = Array.from({ length: count }, (_, i) => {
+    const pane = document.createElement("div");
+    pane.className = "stage-pane";
+    pane.dataset.pane = String(i);
+    stageEl.appendChild(pane);
+    return pane;
+  });
 }
 
 function applyAppearance(): void {
@@ -207,8 +252,14 @@ function applyAppearance(): void {
 // ---- Stage -------------------------------------------------------------------
 
 function renderStage(): void {
-  const id = rotation.current();
   renderDots();
+  for (let i = 0; i < paneEls.length; i++) {
+    if (!paneDetailTimers.has(i)) renderPane(i);
+  }
+}
+
+function renderPane(i: number): void {
+  const id = paneModule(i);
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   if (!id) {
@@ -228,13 +279,13 @@ function renderStage(): void {
       }
     }
   }
-  crossfade(layer);
+  crossfade(paneEls[i], layer);
 }
 
-function crossfade(layer: HTMLElement): void {
-  const previous = Array.from(stageEl.children) as HTMLElement[];
+function crossfade(container: HTMLElement, layer: HTMLElement): void {
+  const previous = Array.from(container.children) as HTMLElement[];
   layer.classList.add("enter");
-  stageEl.appendChild(layer);
+  container.appendChild(layer);
   requestAnimationFrame(() => layer.classList.remove("enter"));
   for (const el of previous) {
     el.classList.add("exit");
@@ -243,6 +294,8 @@ function crossfade(layer: HTMLElement): void {
 }
 
 function renderDots(): void {
+  // Hidden when rotation can't advance (everything is already visible).
+  dotsEl.classList.toggle("hidden", rotation.order.length <= effectivePaneCount());
   dotsEl.innerHTML = rotation.order
     .map((_, i) => `<span class="dot ${i === rotation.index ? "active" : ""}"></span>`)
     .join("");
@@ -251,12 +304,15 @@ function renderDots(): void {
 // ---- Tap-to-expand detail ------------------------------------------------------
 
 function handleStageTap(target: EventTarget | null): void {
-  if (detailOpen) {
-    closeDetail();
-    renderStage();
+  const paneEl = (target as HTMLElement)?.closest?.<HTMLElement>(".stage-pane");
+  if (!paneEl) return;
+  const pane = Number(paneEl.dataset.pane);
+  if (paneDetailTimers.has(pane)) {
+    closeDetail(pane);
+    renderPane(pane);
     return;
   }
-  const id = rotation.current();
+  const id = paneModule(pane);
   if (!id) return;
   const renderer = getRenderer(id);
   const payload = modules.get(id);
@@ -269,18 +325,23 @@ function handleStageTap(target: EventTarget | null): void {
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   renderer.renderDetail(layer, item);
-  crossfade(layer);
-  detailOpen = true;
-  clearTimeout(detailTimer);
-  detailTimer = window.setTimeout(() => {
-    closeDetail();
-    renderStage();
-  }, 20_000);
+  crossfade(paneEls[pane], layer);
+  paneDetailTimers.set(
+    pane,
+    window.setTimeout(() => {
+      closeDetail(pane);
+      renderPane(pane);
+    }, 20_000),
+  );
 }
 
-function closeDetail(): void {
-  detailOpen = false;
-  clearTimeout(detailTimer);
+function closeDetail(pane: number): void {
+  clearTimeout(paneDetailTimers.get(pane));
+  paneDetailTimers.delete(pane);
+}
+
+function closeAllDetails(): void {
+  for (const pane of [...paneDetailTimers.keys()]) closeDetail(pane);
 }
 
 // ---- Tape ----------------------------------------------------------------------
@@ -297,10 +358,12 @@ function rebuildTape(): void {
 
 function tickClock(): void {
   const now = new Date();
-  clockEl.textContent = now.toLocaleTimeString([], {
+  const time = now.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   });
+  clockEl.textContent = time;
+  clockChip.textContent = time; // rail-less layouts (focus/mosaic) show the chip
   dateEl.textContent = now.toLocaleDateString([], {
     weekday: "long",
     month: "long",
