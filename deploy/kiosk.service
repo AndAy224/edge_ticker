@@ -1,12 +1,33 @@
 [Unit]
 Description=Edge ticker kiosk (cage + chromium)
-After=ticker-backend.service
+After=ticker-backend.service systemd-user-sessions.service getty@tty1.service
 Wants=ticker-backend.service
+Conflicts=getty@tty1.service
 
 [Service]
 User=kiosk
 Group=kiosk
-ExecStart=/usr/bin/cage -- /usr/bin/chromium \
+# cage/wlroots needs a real logind session: PAMName=login runs pam_systemd,
+# which provisions XDG_RUNTIME_DIR (/run/user/%U) and registers a seat0
+# session on the VT so the compositor can take DRM master. Without this the
+# bare ExecStart dies at startup with "XDG_RUNTIME_DIR is not set".
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+# pam_systemd won't infer the VT from systemd's TTYPath, so the session lands
+# seatless and cage can't take DRM master. Pin it to seat0 / VT 1 explicitly.
+Environment=XDG_SEAT=seat0
+Environment=XDG_VTNR=1
+StandardInput=tty-force
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+# On Ubuntu 24.04 chromium is the snap (apt chromium-browser is a wrapper into
+# it); there is no /usr/bin/chromium, so cage's spawn fails with ENOENT. Launch
+# the snap directly.
+ExecStart=/usr/bin/cage -- /snap/bin/chromium \
   --kiosk --noerrdialogs --disable-infobars \
   --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required \
   --ozone-platform=wayland \
