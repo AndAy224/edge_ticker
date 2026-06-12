@@ -416,3 +416,43 @@ code {
 .radio-desc {
   color: var(--dim);
 }
+
+/* sources tab: per-feed fetch status */
+
+.row-group {
+  margin-bottom: 10px;
+}
+
+.fetch-status {
+  font-size: 12px;
+  margin: 3px 0 0 4px;
+}
+
+.fetch-status.ok {
+  color: var(--ok);
+}
+
+.fetch-status.error {
+  color: var(--error);
+}
+
+.fetch-status.unknown {
+  color: var(--dim);
+}
+
+/* system tab: file-input styled as a button */
+
+.file-button {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  background: none;
+}
+
+.file-button input[type="file"] {
+  display: none;
+}

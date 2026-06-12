@@ -3,7 +3,7 @@
 
 rotation:
   interval_seconds: 25
-  order: [markets, sports, news]
+  order: [markets, sports, news]   # weather also has a stage page — add it here to rotate it
 
 modules:
   markets:
@@ -13,6 +13,7 @@ modules:
 
   sports:
     enabled: true
+    auto_feature: false   # jump to sports + pin while a followed game is live
     poll_seconds_live: 30
     poll_seconds_idle: 600
     leagues:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 import httpx
 
@@ -33,6 +34,7 @@ class SportsCollector(Collector):
         self.live_interval = float(self.module_config.get("poll_seconds_live", 30))
         self.idle_interval = float(self.module_config.get("poll_seconds_idle", 600))
         self.interval = self.live_interval
+        self.league_status: dict[str, dict] = {}  # per-league fetch state for /api/health
 
     async def fetch(self) -> list[dict]:
         async with httpx.AsyncClient(timeout=15) as client:
@@ -42,12 +44,24 @@ class SportsCollector(Collector):
             )
         games: list[dict] = []
         failures = 0
+        now = datetime.now(timezone.utc).isoformat()
+        status: dict[str, dict] = {}
         for league, result in zip(self.leagues, results):
+            key = f"{league.get('sport')}/{league.get('league')}"
+            entry = {
+                "sport": league.get("sport"),
+                "league": league.get("league"),
+                "checked_at": now,
+            }
             if isinstance(result, BaseException):
                 failures += 1
                 log.debug("league %s failed: %s", league.get("league"), result)
+                entry.update(ok=False, error=str(result), games=0)
             else:
                 games.extend(result)
+                entry.update(ok=True, error=None, games=len(result))
+            status[key] = entry
+        self.league_status = status
         if failures == len(self.leagues) and self.leagues:
             raise RuntimeError("all league scoreboards failed")
         return games
@@ -96,6 +110,9 @@ class SportsCollector(Collector):
     def _is_followed(self, teams: dict) -> bool:
         names = " ".join(t.get("name", "") for t in teams.values()).lower()
         return any(team in names for team in self.followed)
+
+    def status(self) -> dict:
+        return super().status() | {"leagues": list(self.league_status.values())}
 
     def shape(self, games: list[dict]) -> ModulePayload:
         games.sort(

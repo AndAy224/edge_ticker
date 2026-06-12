@@ -86,6 +86,7 @@ class WeatherCollector(Collector):
                 "high": daily_raw.get("temperature_2m_max", [None] * 3)[i],
                 "low": daily_raw.get("temperature_2m_min", [None] * 3)[i],
                 "precip": daily_raw.get("precipitation_probability_max", [None] * 3)[i],
+                "code": daily_raw.get("weather_code", [None] * 3)[i],
                 "text": WMO_TEXT.get(
                     daily_raw.get("weather_code", [None] * 3)[i], ""
                 ),

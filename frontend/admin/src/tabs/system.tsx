@@ -1,4 +1,28 @@
-import { control, displayState, health, livePayloads } from "../state";
+import { config, control, displayState, health, livePayloads } from "../state";
+
+function downloadConfig(): void {
+  const blob = new Blob([JSON.stringify(config.value, null, 2)], {
+    type: "application/json",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "edge-ticker-config.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function restoreConfig(file: File | undefined): Promise<void> {
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (typeof parsed !== "object" || parsed === null || !parsed.modules) {
+      throw new Error("not an edge-ticker config (missing modules)");
+    }
+    config.value = parsed; // marks dirty — Save & apply pushes it live
+  } catch (err) {
+    alert(`Could not read backup: ${err}`);
+  }
+}
 
 const CONTROLS = ["prev", "next", "pin", "blank", "wake", "reload"] as const;
 
@@ -55,6 +79,29 @@ export function SystemTab() {
               </tr>
             ))}
           </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Config backup</h2>
+        <p class="hint">
+          Restore loads the file as a draft — review, then Save &amp; apply.
+        </p>
+        <div class="button-row">
+          <button class="ghost" onClick={downloadConfig}>
+            Download backup
+          </button>
+          <label class="ghost file-button">
+            Restore from file…
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={(e) => {
+                restoreConfig(e.currentTarget.files?.[0]);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
         </div>
       </section>
 

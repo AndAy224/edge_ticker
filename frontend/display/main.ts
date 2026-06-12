@@ -9,6 +9,7 @@ import "./modules/sports";
 import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
+import "./modules/weather";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
@@ -135,6 +136,7 @@ function handleMessage(msg: any): void {
       const payload: ModulePayload = msg.payload;
       modules.set(payload.module, payload);
       if (payload.module === "weather") renderWeather();
+      if (payload.module === "sports") autoFeatureSports(payload);
       rebuildTape();
       for (let i = 0; i < paneEls.length; i++) {
         if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
@@ -364,8 +366,46 @@ function closeAllDetails(): void {
 
 // ---- Tape ----------------------------------------------------------------------
 
+// ---- Live-game auto-pin ----------------------------------------------------------
+// When a followed team's game goes live (and the toggle is on), jump to sports
+// and pin. Edge-triggered: a manual unpin isn't fought until the next game
+// starts; when no followed game is live anymore, auto-unpin.
+let liveFeatured = false;
+
+function autoFeatureSports(payload: ModulePayload): void {
+  const games: any[] = payload.stage?.games ?? [];
+  const liveFollowed = games.some((g) => g.followed && g.state === "in");
+  if (liveFollowed && !liveFeatured) {
+    liveFeatured = true;
+    if (
+      config.modules?.sports?.auto_feature === true &&
+      !blanked &&
+      !overlay.isOpen() &&
+      !anyDetailOpen() &&
+      !rotation.pinned
+    ) {
+      const target = rotation.order.indexOf("sports");
+      if (target >= 0) {
+        rotation.index = target;
+        rotation.pinned = true;
+        pinBadge.classList.remove("hidden");
+        renderStage();
+        reportDisplayState();
+      }
+    }
+  } else if (!liveFollowed && liveFeatured) {
+    liveFeatured = false;
+    if (rotation.pinned && config.modules?.sports?.auto_feature === true) {
+      rotation.pinned = false;
+      pinBadge.classList.add("hidden");
+      reportDisplayState();
+    }
+  }
+}
+
 function rebuildTape(): void {
-  const order = [...rotation.order, "weather"];
+  // Set-dedupe: weather always contributes, but only once if it's in rotation.
+  const order = [...new Set([...rotation.order, "weather"])];
   const items = order.flatMap((id) =>
     [...(modules.get(id)?.tape ?? [])].sort((a, b) => b.priority - a.priority),
   );

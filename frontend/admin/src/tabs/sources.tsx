@@ -1,5 +1,28 @@
 import { useState } from "preact/hooks";
-import { config, patch } from "../state";
+import { config, health, patch } from "../state";
+
+function ago(iso: string | undefined): string {
+  if (!iso) return "";
+  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  return minutes < 1 ? "just now" : `${minutes}m ago`;
+}
+
+function FetchStatus({ entry, what }: { entry: any; what: string }) {
+  if (!entry) return <div class="fetch-status unknown">○ not fetched yet</div>;
+  if (!entry.ok) {
+    return <div class="fetch-status error">● {entry.error ?? "failed"}</div>;
+  }
+  return (
+    <div class="fetch-status ok">
+      ● {entry.items ?? entry.games ?? 0} {what} · {ago(entry.checked_at)}
+      {entry.cached ? " · cached (304)" : ""}
+    </div>
+  );
+}
+
+function collectorStatus(name: string): any {
+  return (health.value?.collectors ?? []).find((c: any) => c.name === name);
+}
 
 function ChipEditor({
   items,
@@ -74,6 +97,14 @@ export function SourcesTab() {
   const news = cfg.modules?.news ?? {};
   const weather = cfg.modules?.weather ?? {};
   const adsb = cfg.modules?.adsb ?? {};
+  const newsHealth = collectorStatus("news");
+  const sportsHealth = collectorStatus("sports");
+  const feedStatus = (url: string) =>
+    (newsHealth?.feeds ?? []).find((f: any) => f.url === url);
+  const leagueStatus = (league: any) =>
+    (sportsHealth?.leagues ?? []).find(
+      (l: any) => l.sport === league.sport && l.league === league.league,
+    );
 
   return (
     <div class="tab">
@@ -103,30 +134,43 @@ export function SourcesTab() {
           onAdd={(value) => patch((c) => c.modules.sports.followed_teams.push(value))}
           onRemove={(i) => patch((c) => c.modules.sports.followed_teams.splice(i, 1))}
         />
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.auto_feature === true}
+            onChange={(e) =>
+              patch((c) => (c.modules.sports.auto_feature = e.currentTarget.checked))
+            }
+          />
+          Jump to sports and pin while a followed team's game is live
+        </label>
         <h2>Sports — leagues</h2>
         <div class="rows">
           {(sports.leagues ?? []).map((league: any, i: number) => (
-            <div class="row" key={i}>
-              <input
-                value={league.sport}
-                placeholder="sport (e.g. baseball)"
-                onInput={(e) =>
-                  patch((c) => (c.modules.sports.leagues[i].sport = e.currentTarget.value))
-                }
-              />
-              <input
-                value={league.league}
-                placeholder="league (e.g. mlb)"
-                onInput={(e) =>
-                  patch((c) => (c.modules.sports.leagues[i].league = e.currentTarget.value))
-                }
-              />
-              <button
-                class="ghost danger"
-                onClick={() => patch((c) => c.modules.sports.leagues.splice(i, 1))}
-              >
-                ✕
-              </button>
+            <div class="row-group" key={i}>
+              <div class="row">
+                <input
+                  value={league.sport}
+                  placeholder="sport (e.g. baseball)"
+                  onInput={(e) =>
+                    patch((c) => (c.modules.sports.leagues[i].sport = e.currentTarget.value))
+                  }
+                />
+                <input
+                  value={league.league}
+                  placeholder="league (e.g. mlb)"
+                  onInput={(e) =>
+                    patch((c) => (c.modules.sports.leagues[i].league = e.currentTarget.value))
+                  }
+                />
+                <button
+                  class="ghost danger"
+                  onClick={() => patch((c) => c.modules.sports.leagues.splice(i, 1))}
+                >
+                  ✕
+                </button>
+              </div>
+              <FetchStatus entry={leagueStatus(league)} what="games" />
             </div>
           ))}
           <button
@@ -144,28 +188,31 @@ export function SourcesTab() {
         <h2>News — feeds</h2>
         <div class="rows">
           {(news.feeds ?? []).map((feed: any, i: number) => (
-            <div class="row" key={i}>
-              <input
-                value={feed.name}
-                placeholder="name"
-                onInput={(e) =>
-                  patch((c) => (c.modules.news.feeds[i].name = e.currentTarget.value))
-                }
-              />
-              <input
-                class="wide"
-                value={feed.url}
-                placeholder="https://…/rss.xml"
-                onInput={(e) =>
-                  patch((c) => (c.modules.news.feeds[i].url = e.currentTarget.value))
-                }
-              />
-              <button
-                class="ghost danger"
-                onClick={() => patch((c) => c.modules.news.feeds.splice(i, 1))}
-              >
-                ✕
-              </button>
+            <div class="row-group" key={i}>
+              <div class="row">
+                <input
+                  value={feed.name}
+                  placeholder="name"
+                  onInput={(e) =>
+                    patch((c) => (c.modules.news.feeds[i].name = e.currentTarget.value))
+                  }
+                />
+                <input
+                  class="wide"
+                  value={feed.url}
+                  placeholder="https://…/rss.xml"
+                  onInput={(e) =>
+                    patch((c) => (c.modules.news.feeds[i].url = e.currentTarget.value))
+                  }
+                />
+                <button
+                  class="ghost danger"
+                  onClick={() => patch((c) => c.modules.news.feeds.splice(i, 1))}
+                >
+                  ✕
+                </button>
+              </div>
+              <FetchStatus entry={feedStatus(feed.url)} what="items" />
             </div>
           ))}
           <button
