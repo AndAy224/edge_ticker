@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 ATTRIBUTE_WHITELIST = {
     "friendly_name",
+    "device_class",
     "brightness",
     "color_temp",
     "rgb_color",
@@ -57,6 +58,7 @@ class HABridge:
                     "domain": eid.split(".", 1)[0],
                     "name": s.get("attributes", {}).get("friendly_name", eid),
                     "state": s.get("state"),
+                    "device_class": s.get("attributes", {}).get("device_class"),
                 }
                 for eid, s in self.all_states.items()
             ),
