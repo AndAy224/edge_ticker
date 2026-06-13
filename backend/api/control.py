@@ -5,10 +5,11 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from ..collectors.sports import build_test_event
+from ..collectors.weather_alerts import TEST_ALERT
 
 router = APIRouter()
 
-ACTIONS = {"next", "prev", "pin", "blank", "wake", "reload", "celebrate_test"}
+ACTIONS = {"next", "prev", "pin", "blank", "wake", "reload", "celebrate_test", "weather_alert_test"}
 
 
 @router.post("/control")
@@ -33,5 +34,9 @@ async def control(request: Request):
             request.app.state.celebrate_test_event = event
         await request.app.state.bus.broadcast({"type": "sport_event", "event": event})
         return {"ok": True, "event": event}
+    if action == "weather_alert_test":
+        # Canned (not live-fetched): there may be no active NWS alert to replay.
+        await request.app.state.bus.broadcast({"type": "weather_alert", "alert": TEST_ALERT})
+        return {"ok": True, "alert": TEST_ALERT}
     await request.app.state.bus.broadcast({"type": "control", "action": action})
     return {"ok": True}

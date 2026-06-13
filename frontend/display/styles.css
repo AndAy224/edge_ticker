@@ -2600,3 +2600,142 @@ body {
 [data-panes="3"] .live-game .gd-team {
   width: 120px;
 }
+
+/* ---- severe weather alert overlay ---- */
+
+#weather-alert {
+  position: absolute;
+  inset: 0;
+  z-index: 88; /* above celebration + toast, below dimmer/blanker */
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(150, 30, 12, 0.6), transparent 72%),
+    linear-gradient(180deg, #2b0604 0%, #170302 100%);
+  overflow: hidden;
+}
+
+.wxalert-card {
+  position: absolute;
+  inset: 0 0 var(--tape-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 72px;
+  padding: 0 110px;
+  animation: wxalert-pop 420ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes wxalert-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+
+.wxalert-icon {
+  width: 300px;
+  height: 300px;
+  flex: none;
+  color: #ffb84d;
+  filter: drop-shadow(0 0 44px rgba(255, 140, 30, 0.75));
+  animation: wxalert-pulse 1.6s ease-in-out infinite;
+}
+
+.wxalert-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes wxalert-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 0.82;
+  }
+}
+
+.wxalert-info {
+  max-width: 1500px;
+  min-width: 0;
+}
+
+.wxalert-event {
+  font-size: 104px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #ffb84d;
+  text-shadow: 0 0 40px rgba(255, 140, 30, 0.65);
+}
+
+.wxalert-headline {
+  font-size: 40px;
+  font-weight: 600;
+  color: #fff;
+  margin-top: 18px;
+  line-height: 1.3;
+}
+
+.wxalert-meta {
+  display: flex;
+  gap: 36px;
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 14px;
+}
+
+.wxalert-instruction {
+  font-size: 28px;
+  color: rgba(255, 220, 180, 0.85);
+  margin-top: 18px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* compact alert chip on the status rail */
+.weather-alert-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--alert);
+}
+
+.weather-alert-chip svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
+/* one-line alert banner pinned to the top of the weather stage page (the
+   stage layer bottom-aligns its content, so the top corner is free) */
+.wx-alert-banner {
+  position: absolute;
+  top: 30px;
+  left: 48px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--alert);
+  background: color-mix(in srgb, var(--alert) 14%, transparent);
+  color: var(--alert);
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.wx-alert-banner svg {
+  width: 34px;
+  height: 34px;
+  flex: none;
+}

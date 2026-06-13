@@ -41,6 +41,11 @@ modules:
     latitude: 27.9659
     longitude: -82.8001
 
+  weather_alerts:        # NWS active alerts at the weather module's location
+    enabled: true
+    overlay: true        # full-screen takeover for Extreme/Severe warnings
+    poll_seconds: 180
+
   # Stretch modules — flip enabled and add to rotation.order to use.
   # proxmox and adsb also need their env vars in .env (see .env.example).
   proxmox:

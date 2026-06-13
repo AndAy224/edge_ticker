@@ -9,12 +9,13 @@ import { setSportsLiveMode } from "./modules/sports";
 import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
-import "./modules/weather";
+import { setWeatherAlerts } from "./modules/weather";
 import { Celebration } from "./celebrate";
+import { WeatherAlertOverlay } from "./weather-alert";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
-import { weatherIcon } from "./icons";
+import { WEATHER_ICONS, weatherIcon } from "./icons";
 import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
 
 const stageEl = document.getElementById("stage-content")!;
@@ -65,6 +66,13 @@ const celebration = new Celebration(
 );
 // Debug/test hook: lets devtools (or CDP) fire arbitrary celebration events.
 (window as any).__celebrate = (event: any) => celebration.show(event);
+const weatherAlert = new WeatherAlertOverlay(
+  document.getElementById("weather-alert")!,
+  () => blanked,
+  () => wake(),
+);
+// Debug/test hook: fire an arbitrary severe-weather alert overlay.
+(window as any).__weatheralert = (alert: any) => weatherAlert.show(alert);
 const overlay = new HAOverlay(
   document.getElementById("overlay")!,
   (domain, service, entityId, data) =>
@@ -140,14 +148,31 @@ function handleMessage(msg: any): void {
       overlay.setStates(msg.ha?.states ?? {}, msg.ha?.status);
       haStates.clear();
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
+      setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);
       applyConfig();
       renderWeather();
+      // Re-evaluate auto-feature from the snapshot so a mid-game reload
+      // (nightly reload, self-heal) features immediately instead of waiting
+      // for the next sports poll. `liveFeatured` is in-memory, so a reload
+      // after a manual unpin mid-game re-features once — accepted.
+      {
+        const sports = modules.get("sports");
+        if (sports) autoFeatureSports(sports);
+      }
       updateScoreChip();
       break;
     case "module": {
       const payload: ModulePayload = msg.payload;
       modules.set(payload.module, payload);
       if (payload.module === "weather") renderWeather();
+      if (payload.module === "weather_alerts") {
+        // Alerts render inside the weather rail/stage, not their own pane.
+        setWeatherAlerts(payload.stage?.alerts ?? []);
+        renderWeather();
+        for (let i = 0; i < paneEls.length; i++) {
+          if (paneModule(i) === "weather" && !paneDetailTimers.has(i)) renderPane(i);
+        }
+      }
       if (payload.module === "sports") {
         autoFeatureSports(payload);
         updateScoreChip();
@@ -170,6 +195,9 @@ function handleMessage(msg: any): void {
       break;
     case "sport_event":
       if (config.modules?.sports?.celebrations !== false) celebration.show(msg.event);
+      break;
+    case "weather_alert":
+      weatherAlert.show(msg.alert);
       break;
     case "ha_state": {
       overlay.updateState(msg.entity_id, { state: msg.state, attributes: msg.attributes });
@@ -234,6 +262,7 @@ const rotation = {
   },
   togglePin(): void {
     this.pinned = !this.pinned;
+    autoPinned = false; // manual pin/unpin takes ownership from auto-feature
     pinBadge.classList.toggle("hidden", !this.pinned);
     reportDisplayState();
   },
@@ -242,6 +271,13 @@ const rotation = {
 function applyConfig(): void {
   applyAppearance();
   setSportsLiveMode((config.modules?.sports as any)?.live_mode !== false);
+  if (autoPinned && config.modules?.sports?.auto_feature !== true) {
+    // Feature toggled off mid-game: release our pin, keep a manual one.
+    autoPinned = false;
+    rotation.pinned = false;
+    pinBadge.classList.add("hidden");
+    reportDisplayState();
+  }
   rotation.order = (config.rotation?.order ?? []).filter(
     (id) => hasRenderer(id) && config.modules?.[id]?.enabled !== false,
   );
@@ -396,9 +432,11 @@ function closeAllDetails(): void {
 
 // ---- Live-game auto-pin ----------------------------------------------------------
 // When a followed team's game goes live (and the toggle is on), jump to sports
-// and pin. Edge-triggered: a manual unpin isn't fought until the next game
-// starts; when no followed game is live anymore, auto-unpin.
+// and pin. Edge-triggered: a manual unpin or swipe-away isn't fought until the
+// next game starts; when no followed game is live anymore, auto-unpin.
+// `autoPinned` marks a pin *we* created — a user's manual pin is never removed.
 let liveFeatured = false;
+let autoPinned = false;
 
 function autoFeatureSports(payload: ModulePayload): void {
   const games: any[] = payload.stage?.games ?? [];
@@ -414,21 +452,36 @@ function autoFeatureSports(payload: ModulePayload): void {
     ) {
       const target = rotation.order.indexOf("sports");
       if (target >= 0) {
-        rotation.index = target;
+        // Multi-pane: if sports is already on screen, pin in place without a
+        // gratuitous full-stage crossfade.
+        if (!paneEls.some((_, i) => paneModule(i) === "sports")) {
+          rotation.index = target;
+          renderStage();
+        }
         rotation.pinned = true;
+        autoPinned = true;
         pinBadge.classList.remove("hidden");
-        renderStage();
         reportDisplayState();
       }
     }
   } else if (!liveFollowed && liveFeatured) {
     liveFeatured = false;
-    if (rotation.pinned && config.modules?.sports?.auto_feature === true) {
+    if (autoPinned) {
+      autoPinned = false;
       rotation.pinned = false;
       pinBadge.classList.add("hidden");
       reportDisplayState();
     }
   }
+}
+
+/** A manual swipe while auto-pinned releases the pin (but not `liveFeatured`,
+ *  so the display won't yank back until the next game-start edge). */
+function releaseAutoPin(): void {
+  if (!autoPinned) return;
+  autoPinned = false;
+  rotation.pinned = false;
+  pinBadge.classList.add("hidden");
 }
 
 // ---- HA transition toast --------------------------------------------------------
@@ -498,8 +551,9 @@ function haAlertItems(): { text: string; accent: "alert"; priority: number }[] {
 }
 
 function rebuildTape(): void {
-  // Set-dedupe: weather always contributes, but only once if it's in rotation.
-  const order = [...new Set([...rotation.order, "weather"])];
+  // Set-dedupe: weather (and weather alerts, which never rotate) always
+  // contribute, but only once each if present in the rotation.
+  const order = [...new Set([...rotation.order, "weather", "weather_alerts"])];
   const items = [
     ...haAlertItems(),
     ...order.flatMap((id) =>
@@ -533,9 +587,13 @@ function updateScoreChip(): void {
   scoreChip.classList.remove("hidden");
 }
 
-// Debug/test hook: replace the sports payload entirely and re-render.
+// Debug/test hook: replace the sports payload entirely and re-render,
+// running the same side-effects as a real sports module message.
 (window as any).__sportsfake = (games: any[]) => {
-  modules.set("sports", { module: "sports", stage: { games }, tape: [] } as any);
+  const payload = { module: "sports", stage: { games }, tape: [] } as any;
+  modules.set("sports", payload);
+  autoFeatureSports(payload);
+  rebuildTape();
   renderStage();
   updateScoreChip();
 };
@@ -579,6 +637,12 @@ function renderWeather(): void {
   if (!stage?.current) return;
   const current = stage.current;
   const today = stage.daily?.[0];
+  const alerts: any[] = (modules.get("weather_alerts")?.stage as any)?.alerts ?? [];
+  const alertChip = alerts.length
+    ? `<div class="weather-alert-chip">${WEATHER_ICONS.warning}<span>${alerts[0].event}${
+        alerts.length > 1 ? ` +${alerts.length - 1}` : ""
+      }</span></div>`
+    : "";
   weatherEl.innerHTML = `
     <div class="weather-temp"><span class="weather-icon">${weatherIcon(
       current.code,
@@ -589,6 +653,7 @@ function renderWeather(): void {
     </div>
     <div class="weather-meta">${current.humidity != null ? `${current.humidity}% rh` : ""}
       ${current.wind != null ? ` · ${Math.round(current.wind)} mph` : ""}</div>
+    ${alertChip}
     <div class="weather-loc">${stage.location ?? ""}</div>`;
 }
 
@@ -647,10 +712,12 @@ attachGestures(document.getElementById("app")!, {
     }
     switch (direction) {
       case "left":
+        releaseAutoPin();
         rotation.next();
         rotation.schedule();
         break;
       case "right":
+        releaseAutoPin();
         rotation.prev();
         rotation.schedule();
         break;

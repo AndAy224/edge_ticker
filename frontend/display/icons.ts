@@ -55,7 +55,9 @@ const LEAGUE_SPORT: Record<string, string> = {
 
 export function sportIcon(sport?: string | null, league?: string | null): string {
   const key = sport ?? (league ? LEAGUE_SPORT[league.toUpperCase()] : undefined);
-  return SPORT_ICONS[key ?? ""] ?? SPORT_ICONS.generic;
+  // Tape items may carry non-sport icon keys (e.g. "warning") — resolve those
+  // too instead of silently falling back to the generic trophy.
+  return SPORT_ICONS[key ?? ""] ?? WEATHER_ICONS[key ?? ""] ?? SPORT_ICONS.generic;
 }
 
 export const WEATHER_ICONS: Record<string, string> = {
@@ -81,6 +83,12 @@ export const WEATHER_ICONS: Record<string, string> = {
   storm: wrap(
     `<path d="M7 14a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 5.1 3.8 3.8 0 0 1 17 14z"/>` +
       `<path d="M12.5 14.5L10 18.5h4L11.5 22.5"/>`,
+  ),
+  // Severe-weather alert triangle (tape items + full-screen takeover).
+  warning: wrap(
+    `<path d="M10.4 4.3 2.9 17.6A1.8 1.8 0 0 0 4.5 20.3h15a1.8 1.8 0 0 0 1.6-2.7L13.6 4.3a1.8 1.8 0 0 0-3.2 0z"/>` +
+      `<path d="M12 9.5v4.5"/>` +
+      `<path d="M12 17.2v.01"/>`,
   ),
 };
 

@@ -9,6 +9,28 @@ function escapeHtml(value: unknown): string {
   );
 }
 
+// Active NWS alerts, pushed in by main.ts from the weather_alerts module
+// (renderers only receive their own payload — same pattern as
+// setSportsLiveMode in modules/sports.ts).
+let activeAlerts: any[] = [];
+export function setWeatherAlerts(alerts: any[]): void {
+  activeAlerts = alerts ?? [];
+}
+
+function alertBanner(): string {
+  if (!activeAlerts.length) return "";
+  const a = activeAlerts[0];
+  const ends = a.ends ? new Date(a.ends) : null;
+  const until =
+    ends && !Number.isNaN(ends.getTime())
+      ? ` — until ${ends.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+      : "";
+  const more = activeAlerts.length > 1 ? ` (+${activeAlerts.length - 1} more)` : "";
+  return `<div class="wx-alert-banner">${WEATHER_ICONS.warning}<span>${escapeHtml(
+    a.event,
+  )}${until}${more}</span></div>`;
+}
+
 function weekday(date: string, index: number): string {
   if (index === 0) return "Today";
   const d = new Date(`${date}T12:00:00`);
@@ -98,6 +120,7 @@ register({
       )
       .join("");
     el.innerHTML = `<div class="weather-stage">
+      ${alertBanner()}
       <div class="wx-now">
         <span class="wx-now-icon">${weatherIcon(current.code)}</span>
         <div>

@@ -96,7 +96,14 @@ export function SourcesTab() {
   const sports = cfg.modules?.sports ?? {};
   const news = cfg.modules?.news ?? {};
   const weather = cfg.modules?.weather ?? {};
+  const weatherAlerts = cfg.modules?.weather_alerts ?? {};
   const adsb = cfg.modules?.adsb ?? {};
+  // Existing DBs predate this module — its config key may not exist yet.
+  const patchWeatherAlerts = (key: string, value: unknown) =>
+    patch(
+      (c) => (c.modules.weather_alerts = { ...(c.modules.weather_alerts ?? {}), [key]: value }),
+    );
+  const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
   const sportsHealth = collectorStatus("sports");
   const feedStatus = (url: string) =>
@@ -278,6 +285,35 @@ export function SourcesTab() {
           value={adsb.radius_km ?? 40}
           onChange={(v) => patch((c) => (c.modules.adsb.radius_km = v))}
         />
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={weatherAlerts.enabled !== false}
+            onChange={(e) => patchWeatherAlerts("enabled", e.currentTarget.checked)}
+          />
+          Severe weather alerts (NWS) on the tape
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={weatherAlerts.overlay !== false}
+            onChange={(e) => patchWeatherAlerts("overlay", e.currentTarget.checked)}
+          />
+          Full-screen takeover for severe warnings
+        </label>
+        {weatherAlerts.enabled !== false && (
+          <FetchStatus
+            entry={
+              weatherAlertsHealth && {
+                ok: !weatherAlertsHealth.last_error,
+                error: weatherAlertsHealth.last_error,
+                items: weatherAlertsHealth.active_alerts,
+                checked_at: weatherAlertsHealth.last_success,
+              }
+            }
+            what="active alerts"
+          />
+        )}
       </section>
     </div>
   );
