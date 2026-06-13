@@ -2356,6 +2356,223 @@ body {
   display: none;
 }
 
+/* ---- air quality ---- */
+
+.airquality-stage {
+  --aq-color: var(--text);
+  display: flex;
+  align-items: flex-end;
+  gap: 56px;
+  flex-wrap: wrap;
+}
+
+.airquality-stage[data-accent="up"] {
+  --aq-color: var(--up);
+}
+.airquality-stage[data-accent="alert"] {
+  --aq-color: var(--alert);
+}
+.airquality-stage[data-accent="down"] {
+  --aq-color: var(--down);
+}
+
+.aq-now {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-width: 0;
+}
+
+.aq-now-icon {
+  width: 140px;
+  height: 140px;
+  flex: none;
+  color: var(--aq-color);
+}
+
+.aq-now-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.aq-now-value {
+  font-size: 88px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--aq-color);
+}
+
+.aq-now-unit {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-left: 10px;
+}
+
+.aq-now-category {
+  font-size: 32px;
+  margin-top: 6px;
+}
+
+.aq-now-meta {
+  font-size: 24px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.aq-now-loc {
+  font-size: 24px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.aq-hourly {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aq-hourly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.aq-graph {
+  width: 100%;
+  height: 250px;
+}
+
+.aq-graph-line {
+  fill: none;
+  stroke: var(--aq-color);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.aq-fill-top {
+  stop-color: var(--aq-color);
+  stop-opacity: 0.3;
+}
+
+.aq-fill-bottom {
+  stop-color: var(--aq-color);
+  stop-opacity: 0;
+}
+
+.aq-graph-label {
+  fill: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.aq-hour-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+
+.aq-pollutants {
+  display: flex;
+  gap: 20px;
+}
+
+.aq-pollutant {
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 18px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.aq-pollutant-label {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.aq-pollutant-value {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.aq-pollutant-value span {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.aq-pollen {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.aq-pollen-head {
+  font-weight: 600;
+}
+
+.aq-pollen-item strong {
+  color: var(--text);
+}
+
+[data-theme="glance"] .aq-pollutant {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+[data-panes="2"] .airquality-stage,
+[data-panes="3"] .airquality-stage {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+[data-panes="2"] .aq-graph {
+  height: 170px;
+}
+
+[data-panes="3"] .aq-now-icon {
+  width: 90px;
+  height: 90px;
+}
+
+[data-panes="3"] .aq-now-value {
+  font-size: 64px;
+}
+
+[data-panes="3"] .aq-hourly {
+  display: none;
+}
+
+[data-panes="3"] .aq-pollutants {
+  width: 100%;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+[data-panes="3"] .aq-pollutant {
+  min-width: 0;
+  flex: 1;
+  padding: 12px 14px;
+}
+
 /* ---- live score chip (followed game, shown on non-sports pages) ---- */
 
 #score-chip {

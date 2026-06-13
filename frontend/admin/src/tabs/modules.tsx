@@ -1,7 +1,7 @@
 import { config, patch } from "../state";
 
 // Modules that have a stage renderer and can be in the rotation.
-const STAGE_MODULES = ["markets", "sports", "news", "weather", "proxmox", "adsb", "astro"];
+const STAGE_MODULES = ["markets", "sports", "news", "weather", "airquality", "proxmox", "adsb", "astro"];
 
 export function ModulesTab() {
   const cfg = config.value;

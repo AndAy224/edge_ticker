@@ -10,6 +10,7 @@ import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
 import { setWeatherAlerts } from "./modules/weather";
+import "./modules/airquality";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { HAOverlay } from "./overlay-ha";
@@ -310,6 +311,7 @@ function syncPanes(): void {
 // Small-caps pane labels (glance theme). Fallback: uppercase the module id.
 const MODULE_LABELS: Record<string, string> = {
   adsb: "OVERHEAD",
+  airquality: "AIR QUALITY",
 };
 
 function paneLabel(id: string | undefined): string {

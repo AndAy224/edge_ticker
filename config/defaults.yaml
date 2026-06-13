@@ -46,6 +46,11 @@ modules:
     overlay: true        # full-screen takeover for Extreme/Severe warnings
     poll_seconds: 180
 
+  airquality:
+    enabled: true
+    poll_seconds: 1800   # keyless (Open-Meteo); reuses the weather location
+    # Has a stage page — add `airquality` to rotation.order above to show it.
+
   # Stretch modules — flip enabled and add to rotation.order to use.
   # proxmox and adsb also need their env vars in .env (see .env.example).
   proxmox:

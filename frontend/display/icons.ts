@@ -92,6 +92,13 @@ export const WEATHER_ICONS: Record<string, string> = {
   ),
 };
 
+// Air-quality glyph: a leaf inside drifting haze lines.
+export const AQI_ICON = wrap(
+  `<path d="M20 4c-7 0-11 3.5-11 9a5 5 0 0 0 5 5c5.5 0 7-7 6-14z"/>` +
+    `<path d="M9 18c.6-3.2 2.4-5.6 5.5-7.5"/>` +
+    `<path d="M3 20h6M3 16.5h3"/>`,
+);
+
 /** WMO weather-code groups → icon key (Open-Meteo `weather_code`). */
 export function weatherIcon(code?: number | null): string {
   if (code == null) return WEATHER_ICONS.sun;
