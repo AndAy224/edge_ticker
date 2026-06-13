@@ -52,6 +52,87 @@ SLOT_LABELS = {
     0: "QB", 2: "RB", 4: "WR", 6: "TE", 16: "D/ST", 17: "K",
     23: "FLEX", 7: "OP", 1: "TQB", 3: "RB/WR", 5: "WR/TE", 24: "ER",
 }
+# player.defaultPositionId → position label
+POS_LABELS = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "D/ST"}
+# injuryStatus → short badge ("" / None means healthy, no badge)
+INJURY_BADGE = {
+    "QUESTIONABLE": "Q", "DOUBTFUL": "D", "OUT": "OUT", "PROBABLE": "P",
+    "SUSPENSION": "SUS", "SUSPENDED": "SUS", "INJURY_RESERVE": "IR", "IR": "IR",
+    "DAY_TO_DAY": "DTD",
+}
+# badges that mean a starter probably needs swapping
+UNAVAILABLE = {"OUT", "D", "SUS", "IR"}
+
+# Per-season NFL schedule (abbrev, bye week, weekly opponent+kickoff). Public,
+# auth-free, changes rarely → cached. Shared by the collector and the API.
+_PRO_TTL_SECONDS = 6 * 3600.0
+_pro_cache: dict[int, tuple[float, dict]] = {}
+
+
+async def pro_teams(season: int) -> dict:
+    """{proTeamId: {abbrev, byeWeek, games: {week: {oppId, oppAbbrev, home, date}}}}."""
+    now = time.monotonic()
+    cached = _pro_cache.get(season)
+    if cached and now - cached[0] < _PRO_TTL_SECONDS:
+        return cached[1]
+    url = f"https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{season}"
+    try:
+        async with httpx.AsyncClient(timeout=15, headers=HEADERS, follow_redirects=True) as client:
+            r = await client.get(url, params={"view": "proTeamSchedules_wl"})
+            r.raise_for_status()
+            data = r.json()
+    except Exception as exc:  # best-effort: enrichment degrades to no opp/bye
+        log.warning("pro_teams fetch failed: %s", exc)
+        return cached[1] if cached else {}
+    proteams = (data.get("settings") or {}).get("proTeams") or []
+    abbrev_by_id = {t.get("id"): (t.get("abbrev") or "").upper() for t in proteams}
+    out: dict[int, dict] = {}
+    for t in proteams:
+        tid = t.get("id")
+        games: dict[int, dict] = {}
+        for wk, glist in (t.get("proGamesByScoringPeriod") or {}).items():
+            g = (glist or [{}])[0]
+            is_home = g.get("homeProTeamId") == tid
+            opp_id = g.get("awayProTeamId") if is_home else g.get("homeProTeamId")
+            games[int(wk)] = {
+                "oppId": opp_id,
+                "oppAbbrev": abbrev_by_id.get(opp_id, ""),
+                "home": is_home,
+                "date": g.get("date"),
+            }
+        out[tid] = {"abbrev": abbrev_by_id.get(tid), "byeWeek": t.get("byeWeek"), "games": games}
+    _pro_cache[season] = (now, out)
+    return out
+
+
+def _injury_badge(player: dict) -> str | None:
+    raw = player.get("injuryStatus")
+    if not raw or raw in ("ACTIVE", "NORMAL"):
+        return None
+    return INJURY_BADGE.get(raw, raw[:3].upper())
+
+
+def player_meta(player: dict, pro: dict, week: int) -> dict:
+    """Position, NFL team, injury, bye, this-week opponent + kickoff for a player."""
+    pt = pro.get(player.get("proTeamId")) or {}
+    bye = pt.get("byeWeek") == week and pt.get("byeWeek") is not None
+    game = (pt.get("games") or {}).get(week)
+    opp = None
+    kickoff = None
+    if bye:
+        opp = "BYE"
+    elif game:
+        opp = ("@ " if not game["home"] else "vs ") + (game["oppAbbrev"] or "?")
+        kickoff = game.get("date")
+    return {
+        "pos": POS_LABELS.get(player.get("defaultPositionId"), ""),
+        "proTeam": pt.get("abbrev"),
+        "injury": _injury_badge(player),
+        "injured": bool(player.get("injured")),
+        "bye": bye,
+        "opp": opp,
+        "kickoff": kickoff,
+    }
 
 
 def win_probability(proj_a: float, proj_b: float, rem_a: float, rem_b: float) -> float:
@@ -88,6 +169,7 @@ class FantasyCollector(Collector):
         self.espn_swid = os.environ.get("ESPN_SWID", "").strip()
         self._client: httpx.AsyncClient | None = None
         self._bus: Bus | None = None
+        self._pro: dict = {}  # per-season NFL schedule (abbrev/bye/opponent)
         self._side_points: dict[str, float] = {}  # teamId -> last live points (for celebrations)
         self._celebrated_at: dict[str, float] = {}
 
@@ -116,6 +198,7 @@ class FantasyCollector(Collector):
         if response.status_code == 401:
             raise RuntimeError("fantasy: 401 — private league needs ESPN_S2/ESPN_SWID cookies")
         response.raise_for_status()
+        self._pro = await pro_teams(self.season)
         return response.json()
 
     # ---- shaping -----------------------------------------------------------
@@ -131,14 +214,16 @@ class FantasyCollector(Collector):
                     return t.get("id")
         return teams[0].get("id") if teams else None
 
-    def _side(self, raw_side: dict, teams_by_id: dict, members_by_id: dict, decided: bool) -> dict:
+    def _side(
+        self, raw_side: dict, teams_by_id: dict, members_by_id: dict, decided: bool, week: int
+    ) -> dict:
         tid = raw_side.get("teamId")
         team = teams_by_id.get(tid, {})
         cur = raw_side.get("totalPointsLive")
         if cur is None:
             cur = raw_side.get("totalPoints") or 0.0
         proj = raw_side.get("totalProjectedPointsLive")
-        starters = _starters(raw_side)
+        starters = _starters(raw_side, self._pro, week)
         return {
             "teamId": tid,
             "name": _team_name(team),
@@ -175,12 +260,17 @@ class FantasyCollector(Collector):
                 continue
             winner = m.get("winner") or "UNDECIDED"
             decided = winner not in ("UNDECIDED", None)
-            home = self._side(home_raw, teams_by_id, members_by_id, decided)
-            away = self._side(away_raw, teams_by_id, members_by_id, decided) if away_raw else None
+            home = self._side(home_raw, teams_by_id, members_by_id, decided, week)
+            away = (
+                self._side(away_raw, teams_by_id, members_by_id, decided, week)
+                if away_raw else None
+            )
             entry = _matchup_entry(home, away, winner, decided, season_active, my_id)
             scoreboard.append(entry)
             if my_id in (home.get("teamId"), away.get("teamId") if away else None):
                 my_matchup = entry
+        if my_matchup and my_matchup.get("mineSide") in ("home", "away"):
+            my_matchup["attention"] = _attention_count(my_matchup[my_matchup["mineSide"]])
 
         standings = _standings(teams, teams_by_id, members_by_id, my_id)
         my_team = next((s for s in standings if s.get("teamId") == my_id), None)
@@ -290,7 +380,7 @@ def _record_summary(team: dict) -> str | None:
     return f"{base}-{t}" if t else base
 
 
-def _starters(raw_side: dict) -> list[dict]:
+def _starters(raw_side: dict, pro: dict, week: int) -> list[dict]:
     roster = (
         raw_side.get("rosterForCurrentMatchupPeriod")
         or raw_side.get("rosterForMatchupPeriod")
@@ -310,8 +400,18 @@ def _starters(raw_side: dict) -> list[dict]:
             "points": round(actual, 1) if actual is not None else None,
             "projected": round(proj, 1) if proj is not None else None,
             "yetToPlay": actual in (None, 0) and proj not in (None, 0),
+            **player_meta(player, pro, week),
         })
     return out
+
+
+def _attention_count(side: dict) -> int:
+    """Starters that look like they need a swap: out/doubtful/IR/suspended/bye."""
+    return sum(
+        1
+        for s in side.get("starters") or []
+        if s.get("bye") or s.get("injured") or (s.get("injury") in UNAVAILABLE)
+    )
 
 
 def _player_points(player: dict) -> tuple[float | None, float | None]:

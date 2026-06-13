@@ -3312,7 +3312,175 @@ body {
   opacity: 0.75;
 }
 
+.ff-popp {
+  width: 130px;
+  text-align: right;
+  font-size: 17px;
+  color: var(--text-dim);
+}
+
+.ff-dim {
+  color: var(--text-dim);
+}
+
+.ff-tap {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+/* at-a-glance warning chip on the matchup / live head */
+.ff-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ff-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--alert);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.ff-warn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* injury / bye badges */
+.ff-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.ff-tag-out {
+  background: var(--down);
+  color: #fff;
+}
+
+.ff-tag-doubt,
+.ff-tag-q {
+  background: var(--alert);
+  color: #1a1206;
+}
+
+.ff-tag-bye {
+  background: var(--muted);
+  color: var(--text);
+}
+
+/* roster health board */
+.ff-board {
+  width: 100%;
+}
+
+.ff-attention {
+  background: color-mix(in srgb, var(--alert) 16%, transparent);
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.ff-att-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 21px;
+  padding: 3px 0;
+}
+
+.ff-att-ico {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  color: var(--alert);
+  flex: none;
+}
+
+.ff-att-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ff-board-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 36px;
+  row-gap: 1px;
+}
+
+.ff-board-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  padding: 3px 0;
+}
+
+.ff-board-row.ff-bench {
+  color: var(--text-dim);
+}
+
+.ff-board-row.ff-ir {
+  opacity: 0.6;
+}
+
+.ff-pteam {
+  width: 46px;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+/* player card */
+.ff-pcard {
+  width: 100%;
+  max-width: 900px;
+}
+
+.ff-pc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.ff-pc-name {
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.ff-pc-sub {
+  font-size: 22px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.ff-pc-line {
+  font-size: 23px;
+  margin: 8px 0;
+}
+
+.ff-spark-svg {
+  width: 100%;
+  max-width: 440px;
+  height: 70px;
+  margin-top: 4px;
+}
+
 /* narrow panes: drop to a single column, hide the lineup detail */
+[data-panes="3"] .ff-board-list {
+  grid-template-columns: 1fr;
+}
+
 [data-panes="2"] .fantasy-stage,
 [data-panes="3"] .fantasy-stage {
   flex-direction: column;

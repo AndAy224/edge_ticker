@@ -405,25 +405,35 @@ function handleStageTap(target: EventTarget | null): void {
   const paneEl = (target as HTMLElement)?.closest?.<HTMLElement>(".stage-pane");
   if (!paneEl) return;
   const pane = Number(paneEl.dataset.pane);
-  if (paneDetailTimers.has(pane)) {
+  const key = (target as HTMLElement)?.closest?.<HTMLElement>("[data-detail]")?.dataset
+    .detail;
+  const open = paneDetailTimers.has(pane);
+  // A tap inside an open detail that doesn't hit a [data-detail] target closes it.
+  if (open && key == null) {
     closeDetail(pane);
     renderPane(pane);
     return;
   }
+  if (key == null) return;
   const id = paneModule(pane);
   if (!id) return;
   const renderer = getRenderer(id);
   const payload = modules.get(id);
-  const key = (target as HTMLElement)?.closest?.<HTMLElement>("[data-detail]")?.dataset
-    .detail;
-  if (!renderer?.renderDetail || !renderer.getDetailItem || !payload || key == null) return;
+  if (!renderer?.renderDetail || !renderer.getDetailItem || !payload) return;
   const item = renderer.getDetailItem(payload.stage, key);
-  if (!item) return;
-
+  if (!item) {
+    if (open) {
+      closeDetail(pane);
+      renderPane(pane);
+    }
+    return;
+  }
+  // Render (or, if a detail is already open, drill into) the detail layer.
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   renderer.renderDetail(layer, item);
   crossfade(paneEls[pane], layer);
+  clearTimeout(paneDetailTimers.get(pane));
   paneDetailTimers.set(
     pane,
     window.setTimeout(() => {

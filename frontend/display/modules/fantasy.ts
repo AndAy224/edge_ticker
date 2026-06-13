@@ -1,3 +1,4 @@
+import { WEATHER_ICONS } from "../icons";
 import { register } from "./registry";
 
 function escapeHtml(value: unknown): string {
@@ -20,6 +21,13 @@ function fmt(n: unknown): string {
 
 function record(side: any): string {
   return side?.record ? `<span class="ff-rec">${escapeHtml(side.record)}</span>` : "";
+}
+
+/** At-a-glance warning chip: N starters need attention (injured / bye). */
+function warnChip(n: unknown): string {
+  const count = Number(n) || 0;
+  if (count <= 0) return "";
+  return `<span class="ff-warn" title="${count} starters need attention">${WEATHER_ICONS.warning}${count}</span>`;
 }
 
 function teamLogo(side: any, cls: string): string {
@@ -97,7 +105,7 @@ function liveTracker(data: any): string {
   return `<div class="ff-live" data-detail="matchup">
     <div class="ff-live-head">
       <span class="ff-live-league">${escapeHtml(data.meta?.league ?? "")} · Wk ${escapeHtml(data.meta?.week ?? "")}</span>
-      <span class="ff-live-dot"><span class="live-dot"></span>LIVE</span>
+      <span class="ff-head-right">${warnChip(m.attention)}<span class="ff-live-dot"><span class="live-dot"></span>LIVE</span></span>
     </div>
     <div class="ff-live-score">
       <div class="ff-live-team ff-mine">${teamLogo(me, "ff-live-logo")}<div><div class="ff-live-abbr">${escapeHtml(me?.abbrev)}</div><div class="ff-live-name">${escapeHtml(me?.name)}</div></div></div>
@@ -129,7 +137,7 @@ function matchupCard(data: any): string {
     : m.state === "post" ? `<span class="ff-final">FINAL</span>`
     : `<span class="ff-pre">Wk ${escapeHtml(data.meta?.week ?? "")}</span>`;
   return `<div class="ff-matchup" data-detail="matchup">
-    <div class="ff-matchup-head"><span>My Matchup</span>${stateTag}</div>
+    <div class="ff-matchup-head"><span>My Matchup</span><span class="ff-head-right">${warnChip(m.attention)}${stateTag}</span></div>
     <div class="ff-matchup-body">
       <div class="ff-m-team ff-mine">${teamLogo(me, "ff-m-logo")}
         <div class="ff-m-info"><div class="ff-m-abbr">${escapeHtml(me?.abbrev)}</div>${record(me)}</div>
@@ -158,7 +166,7 @@ function standingsTable(data: any): string {
     <div class="ff-panel-head">Standings</div>
     ${rows
       .map(
-        (r) => `<div class="ff-st-row ${r.mine ? "ff-mine-row" : ""}">
+        (r) => `<div class="ff-st-row ${r.mine ? "ff-mine-row" : ""}" data-detail="team:${escapeHtml(r.teamId)}">
         <span class="ff-st-rank">${escapeHtml(r.rank)}</span>
         <span class="ff-st-name">${escapeHtml(r.abbrev)}</span>
         <span class="ff-st-rec">${escapeHtml(r.wins)}-${escapeHtml(r.losses)}${r.ties ? "-" + escapeHtml(r.ties) : ""}</span>
@@ -177,7 +185,7 @@ function scoreboardPanel(data: any): string {
     ${games
       .map((g) => {
         const live = g.state === "in";
-        return `<div class="ff-sb-row ${g.mineSide ? "ff-mine-row" : ""}">
+        return `<div class="ff-sb-row ${g.mineSide ? "ff-mine-row" : ""}" data-detail="game:${escapeHtml(g.home.teamId)}">
           <span class="ff-sb-team">${escapeHtml(g.away.abbrev)}</span>
           <span class="ff-sb-pts">${fmt(g.away.points)}</span>
           <span class="ff-sb-sep">${live ? '<span class="live-dot"></span>' : g.state === "post" ? "F" : "@"}</span>
@@ -200,8 +208,8 @@ function trendPanel(data: any): string {
   const line = t.map((w, i) => `${x(i).toFixed(0)},${y(w.points).toFixed(0)}`).join(" ");
   const wl = t.map((w) => w.result).join("");
   const wins = t.filter((w) => w.result === "W").length;
-  return `<div class="ff-panel ff-trend">
-    <div class="ff-panel-head">My Season · ${wins}-${t.length - wins}</div>
+  return `<div class="ff-panel ff-trend" data-detail="myteam">
+    <div class="ff-panel-head">My Season · ${wins}-${t.length - wins}<span class="ff-tap">my team ›</span></div>
     <svg class="ff-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
       <polyline points="${line}" class="ff-trend-line"/>
       ${t.map((w, i) => `<circle cx="${x(i).toFixed(0)}" cy="${y(w.points).toFixed(0)}" r="3" class="ff-trend-dot ${w.result === "W" ? "win" : "loss"}"/>`).join("")}
@@ -238,65 +246,205 @@ register({
     </div>`;
   },
   getDetailItem(stage, key) {
-    if (key === "matchup" && stage?.matchup) {
-      return { __box: true, matchup: stage.matchup, meta: stage.meta };
+    const meta = stage?.meta;
+    if (!meta || typeof key !== "string") return null;
+    if (key === "matchup") {
+      const m = stage.matchup;
+      if (!m) return null;
+      const tid = m.mineSide === "home" ? m.home?.teamId : m.away?.teamId ?? m.home?.teamId;
+      return { kind: "box", teamId: tid, meta };
+    }
+    if (key.startsWith("game:")) return { kind: "box", teamId: Number(key.slice(5)), meta };
+    if (key === "myteam") return { kind: "team", teamId: stage.myTeam?.teamId, meta };
+    if (key.startsWith("team:")) return { kind: "team", teamId: Number(key.slice(5)), meta };
+    if (key.startsWith("player:")) {
+      const [, pid, tid] = key.split(":");
+      return { kind: "player", playerId: Number(pid), teamId: Number(tid), meta };
     }
     return null;
   },
   renderDetail(el, item: any) {
-    if (!item?.__box) return;
-    const m = item.matchup;
-    const mineHome = m.mineSide === "home";
-    const me = mineHome ? m.home : m.away ?? m.home;
-    const opp = mineHome ? m.away : m.home;
-    el.innerHTML = `<div class="detail ff-detail">
-      <div class="ff-detail-head">
-        <span>${escapeHtml(item.meta?.league ?? "")} · Week ${escapeHtml(item.meta?.week ?? "")}</span>
-        <span>${fmt(me?.points)} — ${fmt(opp?.points)}</span>
-      </div>
-      <div class="ff-detail-cols">
-        ${teamColumn(me, true)}
-        ${teamColumn(opp, false)}
-      </div>
-      <div class="ff-detail-box" data-ffbox></div>
-    </div>`;
-    enrichBoxscore(el, item);
+    if (item?.kind === "box") renderBox(el, item);
+    else if (item?.kind === "team") renderTeam(el, item);
+    else if (item?.kind === "player") renderPlayer(el, item);
   },
 });
 
-/** Fetch the full boxscore (starters + bench, proj/actual) for the matchup. */
-function enrichBoxscore(el: HTMLElement, item: any): void {
-  const m = item.matchup;
-  const teamId = m.mineSide === "home" ? m.home?.teamId : m.away?.teamId ?? m.home?.teamId;
-  if (item.meta?.leagueId == null || teamId == null) return;
+// ---- detail helpers --------------------------------------------------------
+
+function metaText(meta: any): string {
+  return `${escapeHtml(meta?.league ?? "")} · Week ${escapeHtml(meta?.week ?? "")}`;
+}
+
+function kickoff(ms: unknown): string {
+  if (ms == null) return "";
+  const d = new Date(Number(ms));
+  return (
+    d.toLocaleDateString([], { weekday: "short" }) +
+    " " +
+    d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  );
+}
+
+/** Injury / bye badge. */
+function injuryTag(p: any): string {
+  if (p?.bye) return `<span class="ff-tag ff-tag-bye">BYE</span>`;
+  if (!p?.injury) return "";
+  const sev =
+    p.injury === "OUT" || p.injury === "IR" || p.injury === "SUS" ? "out"
+    : p.injury === "D" ? "doubt"
+    : "q";
+  return `<span class="ff-tag ff-tag-${sev}">${escapeHtml(p.injury)}</span>`;
+}
+
+function oppText(p: any): string {
+  if (p?.bye) return "BYE";
+  if (!p?.opp) return "";
+  return `${escapeHtml(p.opp)}${p.kickoff ? " " + kickoff(p.kickoff) : ""}`;
+}
+
+function ptsText(p: any): string {
+  return p?.points != null ? fmt(p.points) : p?.projected != null ? `${fmt(p.projected)}*` : "—";
+}
+
+function fetchDetail(item: any): Promise<any> {
+  const m = item.meta;
+  if (m?.leagueId == null || item.teamId == null) return Promise.resolve(null);
+  const params = new URLSearchParams({
+    league_id: String(m.leagueId),
+    season: String(m.season),
+    week: String(m.week),
+    team_id: String(item.teamId),
+  });
+  return fetch(`/api/fantasy/detail?${params}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+}
+
+/** Matchup boxscore: both lineups with injury badge, opponent, points. */
+function renderBox(el: HTMLElement, item: any): void {
+  el.innerHTML = `<div class="detail ff-detail">
+    <div class="ff-detail-head"><span>${metaText(item.meta)}</span><span class="ff-dim">loading…</span></div>
+    <div data-ffbox></div>
+  </div>`;
+  const boxCol = (side: any) =>
+    !side ? "" : `<div class="ff-box-col">
+      <div class="ff-box-team">${escapeHtml(side.abbrev)} <strong>${fmt(side.points)}</strong>${
+        side.projected != null ? ` <span class="ff-dim">proj ${fmt(side.projected)}</span>` : ""
+      }</div>
+      ${(side.players ?? [])
+        .map(
+          (p: any) => `<div class="ff-box-row ${p.bench ? "ff-bench" : ""}">
+            <span class="ff-slot">${escapeHtml(p.pos || p.slot)}</span>
+            <span class="ff-pname">${escapeHtml(p.name)}${injuryTag(p)}</span>
+            <span class="ff-popp">${oppText(p)}</span>
+            <span class="ff-ppts">${ptsText(p)}</span>
+          </div>`,
+        )
+        .join("")}
+    </div>`;
+  fetchDetail(item).then((d) => {
+    if (!d || d.error || !el.isConnected) return;
+    const head = el.querySelector(".ff-detail-head");
+    if (head) {
+      head.innerHTML = `<span>${metaText(item.meta)}</span><span>${fmt(d.home?.points)} — ${fmt(d.away?.points)}</span>`;
+    }
+    const box = el.querySelector("[data-ffbox]");
+    if (box) box.innerHTML = `<div class="ff-box">${boxCol(d.home)}${boxCol(d.away)}</div>`;
+  });
+}
+
+/** Roster health board: injuries, byes, opponents, swap suggestions. */
+function renderTeam(el: HTMLElement, item: any): void {
+  el.innerHTML = `<div class="detail ff-board">
+    <div class="ff-detail-head"><span>Roster · ${metaText(item.meta)}</span><span class="ff-dim">loading…</span></div>
+    <div data-ffboard></div>
+  </div>`;
+  fetchDetail(item).then((d) => {
+    if (!d || d.error || !el.isConnected) return;
+    const head = el.querySelector(".ff-detail-head");
+    if (head) head.innerHTML = `<span>Roster · ${metaText(item.meta)}</span><span class="ff-tap">tap to close</span>`;
+    const wrap = el.querySelector("[data-ffboard]");
+    if (!wrap) return;
+    const attention = (d.attention ?? [])
+      .map(
+        (a: any) => `<div class="ff-att-row"><span class="ff-att-ico">${WEATHER_ICONS.warning}</span>
+        <strong>${escapeHtml(a.out.name)}</strong> ${escapeHtml(a.out.reason)}${
+          a.suggest
+            ? ` → start <strong>${escapeHtml(a.suggest.name)}</strong> <span class="ff-dim">${escapeHtml(a.suggest.pos)} ${fmt(a.suggest.proj)}</span>`
+            : ""
+        }</div>`,
+      )
+      .join("");
+    const rows = (d.roster ?? []).map((p: any) => playerRow(p, item.teamId)).join("");
+    wrap.innerHTML = `${attention ? `<div class="ff-attention">${attention}</div>` : ""}<div class="ff-board-list">${rows}</div>`;
+  });
+}
+
+function playerRow(p: any, teamId: number): string {
+  const ir = p.lineupSlotId === 21 ? "ff-ir" : "";
+  return `<div class="ff-board-row ${p.bench ? "ff-bench" : ""} ${ir}" data-detail="player:${escapeHtml(p.playerId)}:${escapeHtml(teamId)}">
+    <span class="ff-slot">${escapeHtml(p.slot)}</span>
+    <span class="ff-pname">${escapeHtml(p.name)}${injuryTag(p)}</span>
+    <span class="ff-pteam">${escapeHtml(p.proTeam ?? "")}</span>
+    <span class="ff-popp">${oppText(p)}</span>
+    <span class="ff-ppts">${ptsText(p)}</span>
+  </div>`;
+}
+
+/** Per-player card: identity, injury, ownership, this-week, season, sparkline. */
+function renderPlayer(el: HTMLElement, item: any): void {
+  el.innerHTML = `<div class="detail ff-pcard"><div data-ffpc class="ff-dim">loading…</div></div>`;
   const params = new URLSearchParams({
     league_id: String(item.meta.leagueId),
     season: String(item.meta.season),
     week: String(item.meta.week),
-    team_id: String(teamId),
+    player_id: String(item.playerId),
   });
-  fetch(`/api/fantasy/detail?${params}`)
+  fetch(`/api/fantasy/player?${params}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
       if (!d || d.error || !el.isConnected) return;
-      const box = el.querySelector("[data-ffbox]");
-      if (!box) return;
-      const col = (side: any) =>
-        side
-          ? `<div class="ff-box-col">
-              <div class="ff-box-team">${escapeHtml(side.abbrev)} <strong>${fmt(side.points)}</strong></div>
-              ${(side.players ?? [])
-                .map(
-                  (p: any) => `<div class="ff-box-row ${p.bench ? "ff-bench" : ""}">
-                    <span class="ff-slot">${escapeHtml(p.slot)}</span>
-                    <span class="ff-pname">${escapeHtml(p.name)}</span>
-                    <span class="ff-ppts">${p.points != null ? fmt(p.points) : p.projected != null ? fmt(p.projected) + "*" : "—"}</span>
-                  </div>`,
-                )
-                .join("")}
-            </div>`
+      const wrap = el.querySelector("[data-ffpc]");
+      if (!wrap) return;
+      const own =
+        d.percentOwned != null
+          ? `Rostered ${fmt(d.percentOwned)}% · Started ${fmt(d.percentStarted)}%`
           : "";
-      box.innerHTML = `<div class="ff-box">${col(d.home)}${col(d.away)}</div>`;
+      const thisWeek = d.bye
+        ? "BYE"
+        : d.opp
+          ? `${escapeHtml(d.opp)}${d.kickoff ? " " + kickoff(d.kickoff) : ""}${d.projected != null ? ` · proj ${fmt(d.projected)}` : ""}`
+          : "—";
+      wrap.innerHTML = `
+        <div class="ff-pc-head">
+          <div>
+            <div class="ff-pc-name">${escapeHtml(d.name)}${injuryTag(d)}</div>
+            <div class="ff-pc-sub">${escapeHtml(d.pos ?? "")} · ${escapeHtml(d.proTeam ?? "")}${d.jersey ? " · #" + escapeHtml(d.jersey) : ""}</div>
+          </div>
+          <span class="ff-tap" data-detail="team:${escapeHtml(item.teamId)}">‹ back</span>
+        </div>
+        ${own ? `<div class="ff-pc-line">${own}</div>` : ""}
+        <div class="ff-pc-line">This week: ${thisWeek}</div>
+        <div class="ff-pc-line">Season: ${d.seasonTotal != null ? `${fmt(d.seasonTotal)} pts · ${fmt(d.seasonAvg)} avg` : "—"}</div>
+        ${sparkline(d.weekly)}
+      `;
     })
     .catch(() => {});
+}
+
+function sparkline(weekly: any[]): string {
+  const pts = (weekly ?? []).filter((w) => w.points != null);
+  if (pts.length < 2) return "";
+  const vals = pts.map((w) => w.points);
+  const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+  const W = 440, H = 70;
+  const x = (i: number) => (i / (pts.length - 1)) * W;
+  const y = (v: number) => H - 8 - ((v - min) / span) * (H - 16);
+  const line = pts.map((w, i) => `${x(i).toFixed(0)},${y(w.points).toFixed(0)}`).join(" ");
+  return `<div class="ff-pc-line">Weekly</div>
+    <svg class="ff-spark-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <polyline points="${line}" class="ff-trend-line"/>
+      ${pts.map((w, i) => `<circle cx="${x(i).toFixed(0)}" cy="${y(w.points).toFixed(0)}" r="2.5" class="ff-trend-dot win"/>`).join("")}
+    </svg>`;
 }
