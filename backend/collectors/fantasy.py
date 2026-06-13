@@ -35,6 +35,12 @@ HEADERS = {"User-Agent": "edge-ticker/1.0 (fantasy football collector)", "Accept
 CELEBRATION_COOLDOWN_SECONDS = 120.0
 HEADSHOT_URL = "https://a.espncdn.com/i/headshots/nfl/players/full/{pid}.png"
 
+# Custom (user-uploaded) team logos are served from this auth-only host — the
+# cookieless kiosk browser gets a 401, so rewrite them to a backend proxy that
+# refetches with the server's cookies. Built-in logos (g.espncdn.com) are public
+# and pass through unchanged. The proxy lives in backend/api/fantasy.py.
+LOGO_IMAGE_PREFIX = "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/"
+
 # Win-probability normal model: remaining projected points drive the variance,
 # so the result sharpens toward 100/0 as a slate finishes. SIGMA_K is tuned so a
 # full untouched slate (~110 projected each) yields sigma ≈ 24.
@@ -137,7 +143,7 @@ class FantasyCollector(Collector):
             "teamId": tid,
             "name": _team_name(team),
             "abbrev": team.get("abbrev") or "?",
-            "logo": team.get("logo"),
+            "logo": _logo(team.get("logo")),
             "owner": _owner_name(team, members_by_id),
             "record": _record_summary(team),
             "color": None,
@@ -249,6 +255,14 @@ class FantasyCollector(Collector):
 
 
 # ---- module-level helpers (pure, testable) --------------------------------
+
+
+def _logo(url: str | None) -> str | None:
+    """Rewrite auth-only custom logos to the backend proxy; pass public ones."""
+    if url and url.startswith(LOGO_IMAGE_PREFIX):
+        image_id = url[len(LOGO_IMAGE_PREFIX):].split("?", 1)[0]
+        return f"/api/fantasy/logo?id={image_id}"
+    return url
 
 
 def _team_name(team: dict) -> str:
@@ -374,7 +388,7 @@ def _standings(teams: list[dict], teams_by_id: dict, members_by_id: dict, my_id)
             "teamId": t.get("id"),
             "name": _team_name(t),
             "abbrev": t.get("abbrev") or "?",
-            "logo": t.get("logo"),
+            "logo": _logo(t.get("logo")),
             "owner": _owner_name(t, members_by_id),
             "wins": o.get("wins") or 0,
             "losses": o.get("losses") or 0,

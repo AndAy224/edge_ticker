@@ -23,10 +23,27 @@ function record(side: any): string {
 }
 
 function teamLogo(side: any, cls: string): string {
+  const abbr = (side?.abbrev ?? "?").slice(0, 3);
   return side?.logo
-    ? `<img class="${cls}" src="${escapeHtml(side.logo)}" alt="">`
-    : `<span class="${cls} ff-logo-fallback">${escapeHtml((side?.abbrev ?? "?").slice(0, 3))}</span>`;
+    ? `<img class="${cls}" data-ff-fallback="${escapeHtml(abbr)}" src="${escapeHtml(side.logo)}" alt="">`
+    : `<span class="${cls} ff-logo-fallback">${escapeHtml(abbr)}</span>`;
 }
+
+// Any logo that fails to load (e.g. an auth-only URL that 401s) is swapped for
+// the team-abbrev chip. Captured at the document level since <img> error events
+// don't bubble; gated on data-ff-fallback so only fantasy logos are touched.
+document.addEventListener(
+  "error",
+  (e) => {
+    const img = e.target as HTMLElement;
+    if (!(img instanceof HTMLImageElement) || img.dataset.ffFallback == null) return;
+    const span = document.createElement("span");
+    span.className = `${img.className} ff-logo-fallback`;
+    span.textContent = img.dataset.ffFallback;
+    img.replaceWith(span);
+  },
+  true,
+);
 
 /** Win-probability split bar (my side highlighted by order). */
 function probBar(m: any): string {

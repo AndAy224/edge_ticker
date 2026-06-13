@@ -7,16 +7,19 @@ here, with a small TTL cache so repeated taps don't hammer ESPN. Never polled.
 from __future__ import annotations
 
 import os
+import re
 import time
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
 from ..collectors.fantasy import (
     HEADERS,
     LEAGUE_URL,
+    LOGO_IMAGE_PREFIX,
     SLOT_LABELS,
+    _logo,
     _player_points,
     _team_name,
 )
@@ -26,6 +29,13 @@ router = APIRouter()
 CACHE_TTL_SECONDS = 60.0
 CACHE_MAX_ENTRIES = 50
 _cache: dict[str, tuple[float, dict]] = {}
+
+# Logo proxy cache: image id -> (monotonic_time, content_type, bytes). Logos
+# rarely change, so a long TTL is fine.
+LOGO_TTL_SECONDS = 86400.0
+LOGO_MAX_ENTRIES = 64
+_logo_cache: dict[str, tuple[float, str, bytes]] = {}
+_LOGO_ID_RE = re.compile(r"^[0-9a-fA-F-]{8,64}$")
 
 
 def _cookies() -> dict:
@@ -64,7 +74,7 @@ def _team_block(raw_side: dict, teams_by_id: dict) -> dict:
     return {
         "abbrev": team.get("abbrev") or "?",
         "name": _team_name(team),
-        "logo": team.get("logo"),
+        "logo": _logo(team.get("logo")),
         "points": round(float(total), 1),
         "projected": (round(float(raw_side["totalProjectedPointsLive"]), 1)
                       if raw_side.get("totalProjectedPointsLive") is not None else None),
@@ -110,3 +120,29 @@ async def fantasy_detail(league_id: str, season: int, week: int, team_id: int):
         _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
     _cache[key] = (now, detail)
     return detail
+
+
+@router.get("/fantasy/logo")
+async def fantasy_logo(id: str):
+    """Proxy an auth-only ESPN custom team logo so the cookieless kiosk can show
+    it. Host- and id-locked (no open proxy); refetched with the server cookies."""
+    if not _LOGO_ID_RE.match(id):
+        return JSONResponse({"error": "bad image id"}, status_code=400)
+    now = time.monotonic()
+    cached = _logo_cache.get(id)
+    if cached and now - cached[0] < LOGO_TTL_SECONDS:
+        return Response(content=cached[2], media_type=cached[1])
+    try:
+        async with httpx.AsyncClient(
+            timeout=15, headers=HEADERS, cookies=_cookies(), follow_redirects=True
+        ) as client:
+            r = await client.get(LOGO_IMAGE_PREFIX + id)
+            r.raise_for_status()
+    except Exception as exc:
+        return JSONResponse({"error": f"logo fetch failed: {exc}"}, status_code=502)
+    content_type = r.headers.get("content-type", "image/png").split(";")[0]
+    data = r.content
+    if len(_logo_cache) >= LOGO_MAX_ENTRIES:
+        _logo_cache.pop(min(_logo_cache, key=lambda k: _logo_cache[k][0]))
+    _logo_cache[id] = (now, content_type, data)
+    return Response(content=data, media_type=content_type)
