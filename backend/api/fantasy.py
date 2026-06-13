@@ -162,6 +162,9 @@ def _team_block(raw_side: dict, teams_by_id: dict, pro: dict, week: int) -> dict
     total = raw_side.get("totalPointsLive")
     if total is None:
         total = raw_side.get("totalPoints") or 0.0
+    # Prefer the true per-week lineup; fall back to the current roster when the
+    # matchup-period roster is empty (past / playoff weeks lose it).
+    players = _roster(raw_side, pro, week) or _team_roster(team, pro, week)
     return {
         "abbrev": team.get("abbrev") or "?",
         "name": _team_name(team),
@@ -169,7 +172,7 @@ def _team_block(raw_side: dict, teams_by_id: dict, pro: dict, week: int) -> dict
         "points": round(float(total), 1),
         "projected": (round(float(raw_side["totalProjectedPointsLive"]), 1)
                       if raw_side.get("totalProjectedPointsLive") is not None else None),
-        "players": _roster(raw_side, pro, week),
+        "players": players,
     }
 
 
