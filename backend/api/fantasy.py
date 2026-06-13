@@ -162,9 +162,12 @@ def _team_block(raw_side: dict, teams_by_id: dict, pro: dict, week: int) -> dict
     total = raw_side.get("totalPointsLive")
     if total is None:
         total = raw_side.get("totalPoints") or 0.0
-    # Prefer the true per-week lineup; fall back to the current roster when the
-    # matchup-period roster is empty (past / playoff weeks lose it).
-    players = _roster(raw_side, pro, week) or _team_roster(team, pro, week)
+    # Prefer the true per-week lineup; fall back to the current roster's STARTERS
+    # when the matchup-period roster is empty (past / playoff weeks lose it). The
+    # boxscore is starters-only so it fits the screen — full bench is the health board.
+    players = _roster(raw_side, pro, week)
+    if not players:
+        players = [p for p in _team_roster(team, pro, week) if not p["bench"]]
     return {
         "abbrev": team.get("abbrev") or "?",
         "name": _team_name(team),
