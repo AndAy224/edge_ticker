@@ -98,11 +98,15 @@ export function SourcesTab() {
   const weather = cfg.modules?.weather ?? {};
   const weatherAlerts = cfg.modules?.weather_alerts ?? {};
   const adsb = cfg.modules?.adsb ?? {};
-  // Existing DBs predate this module — its config key may not exist yet.
+  const fantasy = cfg.modules?.fantasy ?? {};
+  // Existing DBs predate these modules — their config keys may not exist yet.
   const patchWeatherAlerts = (key: string, value: unknown) =>
     patch(
       (c) => (c.modules.weather_alerts = { ...(c.modules.weather_alerts ?? {}), [key]: value }),
     );
+  const patchFantasy = (key: string, value: unknown) =>
+    patch((c) => (c.modules.fantasy = { ...(c.modules.fantasy ?? {}), [key]: value }));
+  const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
   const sportsHealth = collectorStatus("sports");
@@ -209,6 +213,94 @@ export function SourcesTab() {
             + add league
           </button>
         </div>
+      </section>
+
+      <section>
+        <h2>Fantasy football — ESPN</h2>
+        <p class="hint">
+          Private leagues need <code>ESPN_S2</code> + <code>ESPN_SWID</code> cookies in{" "}
+          <code>.env</code> on the appliance. Your league id is in the league URL.
+        </p>
+        <label class="field">
+          League id
+          <input
+            value={fantasy.league_id ?? ""}
+            placeholder="e.g. 899513"
+            onInput={(e) => patchFantasy("league_id", e.currentTarget.value.trim())}
+          />
+        </label>
+        <label class="field">
+          Team id (optional — else matched by name)
+          <input
+            type="number"
+            min={1}
+            value={fantasy.team_id ?? ""}
+            onInput={(e) =>
+              patchFantasy(
+                "team_id",
+                e.currentTarget.value === "" ? null : Number(e.currentTarget.value),
+              )
+            }
+          />
+        </label>
+        <label class="field">
+          Team name (fuzzy match, if no team id)
+          <input
+            value={fantasy.team_name ?? ""}
+            placeholder="e.g. My Team"
+            onInput={(e) => patchFantasy("team_name", e.currentTarget.value)}
+          />
+        </label>
+        <label class="field">
+          Season (blank = current year)
+          <input
+            type="number"
+            value={fantasy.season ?? ""}
+            onInput={(e) =>
+              patchFantasy(
+                "season",
+                e.currentTarget.value === "" ? null : Number(e.currentTarget.value),
+              )
+            }
+          />
+        </label>
+        <NumberField
+          label="Live poll interval (s)"
+          value={fantasy.poll_seconds_live ?? 30}
+          onChange={(v) => patchFantasy("poll_seconds_live", v)}
+        />
+        <NumberField
+          label="Idle poll interval (s)"
+          value={fantasy.poll_seconds_idle ?? 1800}
+          onChange={(v) => patchFantasy("poll_seconds_idle", v)}
+        />
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={fantasy.auto_feature !== false}
+            onChange={(e) => patchFantasy("auto_feature", e.currentTarget.checked)}
+          />
+          Full-screen takeover + pin while my matchup is live
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={fantasy.celebrations !== false}
+            onChange={(e) => patchFantasy("celebrations", e.currentTarget.checked)}
+          />
+          Celebration overlay when my starters score
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={fantasy.live_mode !== false}
+            onChange={(e) => patchFantasy("live_mode", e.currentTarget.checked)}
+          />
+          Full-screen live tracker while my matchup is live
+        </label>
+        {fantasyHealth?.last_error && (
+          <p class="hint error">{fantasyHealth.last_error}</p>
+        )}
       </section>
 
       <section>

@@ -34,6 +34,7 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 from . import db  # noqa: E402
 from .api.config import router as config_router  # noqa: E402
 from .api.control import router as control_router  # noqa: E402
+from .api.fantasy import router as fantasy_router  # noqa: E402
 from .api.ha import router as ha_router  # noqa: E402
 from .api.markets import router as markets_router  # noqa: E402
 from .api.sports import router as sports_router  # noqa: E402
@@ -103,6 +104,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="edge-ticker", lifespan=lifespan)
 app.include_router(config_router, prefix="/api")
 app.include_router(control_router, prefix="/api")
+app.include_router(fantasy_router, prefix="/api")
 app.include_router(ha_router, prefix="/api")
 app.include_router(markets_router, prefix="/api")
 app.include_router(sports_router, prefix="/api")

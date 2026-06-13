@@ -2818,6 +2818,524 @@ body {
   width: 120px;
 }
 
+/* ---- fantasy football ---- */
+
+.fantasy-stage {
+  width: 100%;
+  display: flex;
+  gap: 36px;
+  align-items: stretch;
+}
+
+.ff-left {
+  flex: 1.15;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.ff-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.ff-panel {
+  background: var(--panel-raised);
+  border-radius: 14px;
+  padding: 12px 18px;
+}
+
+.ff-panel-head,
+.ff-matchup-head {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* my-matchup card */
+.ff-matchup {
+  background: var(--panel-raised);
+  border-radius: 18px;
+  padding: 20px 26px;
+}
+
+.ff-matchup-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ff-m-team {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ff-m-team:last-child {
+  justify-content: flex-end;
+}
+
+.ff-m-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: contain;
+  flex: none;
+}
+
+.ff-logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--muted);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.ff-m-abbr {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.ff-right .ff-m-info,
+.ff-m-info.ff-right {
+  text-align: right;
+}
+
+.ff-rec {
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+.ff-m-pts {
+  font-size: 56px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ff-mine .ff-m-abbr,
+.ff-mine .ff-m-pts {
+  color: var(--accent);
+}
+
+.ff-m-vs {
+  font-size: 22px;
+  color: var(--text-dim);
+  flex: none;
+}
+
+.ff-m-proj,
+.ff-live-proj,
+.ff-col-proj {
+  font-size: 19px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* win-probability bar */
+.ff-prob {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.ff-prob-pct {
+  font-size: 24px;
+  font-weight: 700;
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ff-prob-pct:last-child {
+  text-align: right;
+}
+
+.ff-prob-bar {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  background: var(--muted);
+}
+
+.ff-prob-away {
+  background: var(--text-dim);
+}
+
+.ff-prob-home {
+  background: var(--accent);
+}
+
+/* live full-screen tracker */
+.ff-live {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ff-live-head {
+  display: flex;
+  justify-content: flex-end; /* clear the absolute pin badge at top-left */
+  align-items: center;
+  gap: 16px;
+  font-size: 19px;
+  color: var(--text-dim);
+}
+
+.ff-live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--alert);
+  font-weight: 700;
+}
+
+.ff-live-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.ff-live-team {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ff-live-opp {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.ff-live-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: contain;
+  flex: none;
+}
+
+.ff-live-abbr {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.ff-live-name {
+  font-size: 20px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ff-mine .ff-live-abbr,
+.ff-live-team.ff-mine .ff-live-abbr {
+  color: var(--accent);
+}
+
+.ff-live-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 58px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.ff-live-dash {
+  font-size: 34px;
+  color: var(--text-dim);
+}
+
+.ff-live-lineups,
+.ff-detail-cols {
+  display: flex;
+  gap: 28px;
+}
+
+.ff-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.ff-col-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ff-col-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex: none;
+}
+
+.ff-col-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.ff-col-abbr {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.ff-col-pts {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ff-mine.ff-col .ff-col-abbr,
+.ff-mine.ff-col .ff-col-pts {
+  color: var(--accent);
+}
+
+.ff-lineup {
+  margin-top: 4px;
+}
+
+.ff-starter,
+.ff-box-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  padding: 1px 0;
+}
+
+.ff-slot {
+  width: 54px;
+  flex: none;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.ff-pname {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ff-ppts {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ff-starter.ff-yet {
+  color: var(--text-dim);
+}
+
+.ff-bye {
+  font-size: 28px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* standings */
+.ff-st-row,
+.ff-sb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 19px;
+  padding: 2px 0;
+}
+
+.ff-st-rank {
+  width: 28px;
+  color: var(--text-dim);
+  font-weight: 700;
+  text-align: right;
+}
+
+.ff-st-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.ff-st-rec {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.ff-st-pf {
+  width: 90px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ff-mine-row {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* scoreboard */
+.ff-sb-row {
+  justify-content: center;
+}
+
+.ff-sb-team {
+  width: 70px;
+  font-weight: 600;
+}
+
+.ff-sb-row .ff-sb-team:last-child {
+  text-align: right;
+}
+
+.ff-sb-pts {
+  width: 64px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ff-sb-sep {
+  width: 28px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* season trend */
+.ff-trend-svg {
+  width: 100%;
+  height: 90px;
+}
+
+.ff-trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ff-trend-dot.win {
+  fill: var(--up);
+}
+
+.ff-trend-dot.loss {
+  fill: var(--down);
+}
+
+.ff-trend-wl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ff-wl-W {
+  color: var(--up);
+}
+
+.ff-wl-L {
+  color: var(--down);
+}
+
+.ff-wl-T {
+  color: var(--text-dim);
+}
+
+.ff-hint {
+  font-size: 18px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* tap-to-expand detail */
+.ff-detail {
+  width: 100%;
+}
+
+.ff-detail-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.ff-box {
+  display: flex;
+  gap: 28px;
+}
+
+.ff-box-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.ff-box-team {
+  font-size: 22px;
+  margin-bottom: 6px;
+  color: var(--text-dim);
+}
+
+.ff-box-row.ff-bench {
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+/* narrow panes: drop to a single column, hide the lineup detail */
+[data-panes="2"] .fantasy-stage,
+[data-panes="3"] .fantasy-stage {
+  flex-direction: column;
+  gap: 18px;
+}
+
+[data-panes="3"] .ff-live-lineups {
+  display: none;
+}
+
+[data-panes="3"] .ff-live-nums {
+  font-size: 60px;
+}
+
+[data-panes="3"] .ff-m-pts {
+  font-size: 40px;
+}
+
+[data-panes="3"] .ff-m-logo {
+  width: 44px;
+  height: 44px;
+}
+
 /* ---- severe weather alert overlay ---- */
 
 #weather-alert {

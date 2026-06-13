@@ -6,6 +6,7 @@ import { getRenderer, hasRenderer } from "./modules/registry";
 import "./modules/markets";
 import "./modules/news";
 import { setSportsLiveMode } from "./modules/sports";
+import { setFantasyLiveMode } from "./modules/fantasy";
 import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
@@ -159,6 +160,8 @@ function handleMessage(msg: any): void {
       {
         const sports = modules.get("sports");
         if (sports) autoFeatureSports(sports);
+        const fantasy = modules.get("fantasy");
+        if (fantasy) autoFeatureFantasy(fantasy);
       }
       updateScoreChip();
       break;
@@ -178,6 +181,7 @@ function handleMessage(msg: any): void {
         autoFeatureSports(payload);
         updateScoreChip();
       }
+      if (payload.module === "fantasy") autoFeatureFantasy(payload);
       rebuildTape();
       for (let i = 0; i < paneEls.length; i++) {
         if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
@@ -196,6 +200,9 @@ function handleMessage(msg: any): void {
       break;
     case "sport_event":
       if (config.modules?.sports?.celebrations !== false) celebration.show(msg.event);
+      break;
+    case "fantasy_event":
+      if ((config.modules?.fantasy as any)?.celebrations !== false) celebration.show(msg.event);
       break;
     case "weather_alert":
       weatherAlert.show(msg.alert);
@@ -263,7 +270,7 @@ const rotation = {
   },
   togglePin(): void {
     this.pinned = !this.pinned;
-    autoPinned = false; // manual pin/unpin takes ownership from auto-feature
+    autoPinnedFor = null; // manual pin/unpin takes ownership from auto-feature
     pinBadge.classList.toggle("hidden", !this.pinned);
     reportDisplayState();
   },
@@ -272,9 +279,13 @@ const rotation = {
 function applyConfig(): void {
   applyAppearance();
   setSportsLiveMode((config.modules?.sports as any)?.live_mode !== false);
-  if (autoPinned && config.modules?.sports?.auto_feature !== true) {
+  setFantasyLiveMode((config.modules?.fantasy as any)?.live_mode !== false);
+  const featureOff =
+    (autoPinnedFor === "sports" && config.modules?.sports?.auto_feature !== true) ||
+    (autoPinnedFor === "fantasy" && (config.modules?.fantasy as any)?.auto_feature === false);
+  if (featureOff) {
     // Feature toggled off mid-game: release our pin, keep a manual one.
-    autoPinned = false;
+    autoPinnedFor = null;
     rotation.pinned = false;
     pinBadge.classList.add("hidden");
     reportDisplayState();
@@ -312,6 +323,7 @@ function syncPanes(): void {
 const MODULE_LABELS: Record<string, string> = {
   adsb: "OVERHEAD",
   airquality: "AIR QUALITY",
+  fantasy: "FANTASY",
 };
 
 function paneLabel(id: string | undefined): string {
@@ -437,51 +449,73 @@ function closeAllDetails(): void {
 // and pin. Edge-triggered: a manual unpin or swipe-away isn't fought until the
 // next game starts; when no followed game is live anymore, auto-unpin.
 // `autoPinned` marks a pin *we* created — a user's manual pin is never removed.
-let liveFeatured = false;
-let autoPinned = false;
+let liveFeatured = false; // sports: a followed game is live (edge tracker)
+let fantasyLiveFeatured = false; // fantasy: my matchup is live (edge tracker)
+let autoPinnedFor: string | null = null; // module id we auto-pinned for (null = none)
+
+/** Pin to `id` on the not-live→live edge (only if its feature is enabled). */
+function applyAutoFeature(id: string, enabled: boolean): void {
+  if (
+    enabled &&
+    !blanked &&
+    !overlay.isOpen() &&
+    !anyDetailOpen() &&
+    !rotation.pinned
+  ) {
+    const target = rotation.order.indexOf(id);
+    if (target >= 0) {
+      // Multi-pane: if the module is already on screen, pin in place without a
+      // gratuitous full-stage crossfade.
+      if (!paneEls.some((_, i) => paneModule(i) === id)) {
+        rotation.index = target;
+        renderStage();
+      }
+      rotation.pinned = true;
+      autoPinnedFor = id;
+      pinBadge.classList.remove("hidden");
+      reportDisplayState();
+    }
+  }
+}
+
+/** Release the auto-pin on the live→not-live edge (manual pins are untouched). */
+function clearAutoFeature(id: string): void {
+  if (autoPinnedFor === id) {
+    autoPinnedFor = null;
+    rotation.pinned = false;
+    pinBadge.classList.add("hidden");
+    reportDisplayState();
+  }
+}
 
 function autoFeatureSports(payload: ModulePayload): void {
   const games: any[] = payload.stage?.games ?? [];
   const liveFollowed = games.some((g) => g.followed && g.state === "in");
   if (liveFollowed && !liveFeatured) {
     liveFeatured = true;
-    if (
-      config.modules?.sports?.auto_feature === true &&
-      !blanked &&
-      !overlay.isOpen() &&
-      !anyDetailOpen() &&
-      !rotation.pinned
-    ) {
-      const target = rotation.order.indexOf("sports");
-      if (target >= 0) {
-        // Multi-pane: if sports is already on screen, pin in place without a
-        // gratuitous full-stage crossfade.
-        if (!paneEls.some((_, i) => paneModule(i) === "sports")) {
-          rotation.index = target;
-          renderStage();
-        }
-        rotation.pinned = true;
-        autoPinned = true;
-        pinBadge.classList.remove("hidden");
-        reportDisplayState();
-      }
-    }
+    applyAutoFeature("sports", config.modules?.sports?.auto_feature === true);
   } else if (!liveFollowed && liveFeatured) {
     liveFeatured = false;
-    if (autoPinned) {
-      autoPinned = false;
-      rotation.pinned = false;
-      pinBadge.classList.add("hidden");
-      reportDisplayState();
-    }
+    clearAutoFeature("sports");
+  }
+}
+
+function autoFeatureFantasy(payload: ModulePayload): void {
+  const live = (payload.stage as any)?.matchup?.state === "in";
+  if (live && !fantasyLiveFeatured) {
+    fantasyLiveFeatured = true;
+    applyAutoFeature("fantasy", (config.modules?.fantasy as any)?.auto_feature !== false);
+  } else if (!live && fantasyLiveFeatured) {
+    fantasyLiveFeatured = false;
+    clearAutoFeature("fantasy");
   }
 }
 
 /** A manual swipe while auto-pinned releases the pin (but not `liveFeatured`,
  *  so the display won't yank back until the next game-start edge). */
 function releaseAutoPin(): void {
-  if (!autoPinned) return;
-  autoPinned = false;
+  if (!autoPinnedFor) return;
+  autoPinnedFor = null;
   rotation.pinned = false;
   pinBadge.classList.add("hidden");
 }
@@ -599,6 +633,19 @@ function updateScoreChip(): void {
   renderStage();
   updateScoreChip();
 };
+
+// Debug/test hook: replace the fantasy payload entirely and re-render,
+// running the same auto-feature side-effects as a real fantasy message.
+(window as any).__fantasyfake = (stage: any) => {
+  const payload = { module: "fantasy", stage, tape: [] } as any;
+  modules.set("fantasy", payload);
+  autoFeatureFantasy(payload);
+  rebuildTape();
+  renderStage();
+};
+
+// Debug/test hook: fire a fantasy scoring celebration.
+(window as any).__fantasyevent = (event: any) => celebration.show(event);
 
 // Debug/test hook: inject a fabricated live game and refresh the chip.
 (window as any).__scorechip = (game: any) => {

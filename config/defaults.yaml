@@ -51,6 +51,20 @@ modules:
     poll_seconds: 1800   # keyless (Open-Meteo); reuses the weather location
     # Has a stage page — add `airquality` to rotation.order above to show it.
 
+  fantasy:
+    enabled: true
+    league_id: ""         # ESPN league id (from the league URL); required to run
+    team_id: null         # your team id (int); or set team_name for a fuzzy match
+    team_name: ""
+    season: null          # defaults to the current year
+    poll_seconds_live: 30
+    poll_seconds_idle: 1800
+    auto_feature: true    # full-screen takeover + pin while my matchup is live
+    celebrations: true    # celebration overlay when my starters score
+    live_mode: true
+    # Has a stage page — add `fantasy` to rotation.order above to show it.
+    # Private leagues need ESPN_S2 + ESPN_SWID cookies in .env.
+
   # Stretch modules — flip enabled and add to rotation.order to use.
   # proxmox and adsb also need their env vars in .env (see .env.example).
   proxmox:
