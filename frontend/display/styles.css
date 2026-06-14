@@ -1156,7 +1156,8 @@ body {
 }
 
 .climate-btn,
-.media-btn {
+.media-btn,
+.fan-btn {
   background: var(--panel);
   border: 2px solid var(--muted);
   border-radius: 14px;
@@ -1164,6 +1165,38 @@ body {
   font-size: 36px;
   width: 100px;
   height: 100px;
+}
+
+.ha-tile.fan.on {
+  border-color: var(--accent);
+}
+
+.fan-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.fan-controls {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-top: 4px;
+}
+
+.fan-speed {
+  font-size: 34px;
+  color: var(--text-dim);
+  min-width: 96px;
+  text-align: center;
 }
 
 .ha-empty {

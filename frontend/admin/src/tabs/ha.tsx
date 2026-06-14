@@ -186,7 +186,7 @@ export function HATab() {
     );
   }
 
-  const toggleIn = (key: "scenes" | "lights") => (entityId: string, add: boolean) =>
+  const toggleIn = (key: "scenes" | "lights" | "fans") => (entityId: string, add: boolean) =>
     patch((c) => {
       const list: string[] = c.ha[key] ?? (c.ha[key] = []);
       if (add) list.push(entityId);
@@ -216,6 +216,13 @@ export function HATab() {
         selected={ha.lights ?? []}
         max={8}
         onToggle={toggleIn("lights")}
+      />
+      <MultiPicker
+        title="Fans"
+        domain="fan"
+        selected={ha.fans ?? []}
+        max={8}
+        onToggle={toggleIn("fans")}
       />
       <SinglePicker
         title="Climate"

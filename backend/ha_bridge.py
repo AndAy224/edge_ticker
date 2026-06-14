@@ -29,6 +29,13 @@ ATTRIBUTE_WHITELIST = {
     "media_artist",
     "volume_level",
     "unit_of_measurement",
+    "percentage",
+    "percentage_step",
+    "preset_mode",
+    "preset_modes",
+    "oscillating",
+    "direction",
+    "supported_features",
 }
 
 
@@ -193,7 +200,11 @@ class HABridge:
 
     def _mapped_ids(self) -> set[str]:
         ha = (self.get_config() or {}).get("ha") or {}
-        ids = set(ha.get("scenes") or []) | set(ha.get("lights") or [])
+        ids = (
+            set(ha.get("scenes") or [])
+            | set(ha.get("lights") or [])
+            | set(ha.get("fans") or [])
+        )
         for key in ("climate", "media"):
             if ha.get(key):
                 ids.add(ha[key])

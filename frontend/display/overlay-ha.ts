@@ -22,7 +22,7 @@ function escapeHtml(value: unknown): string {
 }
 
 export class HAOverlay {
-  private mapping: HAMapping = { scenes: [], lights: [], climate: null, media: null };
+  private mapping: HAMapping = { scenes: [], lights: [], fans: [], climate: null, media: null };
   private states: Record<string, HAEntityState> = {};
   private status = "unconfigured";
   private idleTimer = 0;
@@ -54,6 +54,7 @@ export class HAOverlay {
     this.mapping = {
       scenes: mapping?.scenes ?? [],
       lights: mapping?.lights ?? [],
+      fans: mapping?.fans ?? [],
       climate: mapping?.climate ?? null,
       media: mapping?.media ?? null,
     };
@@ -151,13 +152,39 @@ export class HAOverlay {
       </div>`;
     }
 
+    // Fan tiles: name toggles on/off (generic data-domain path); the −/+ speed
+    // buttons use a dedicated, capability-aware handler in onClick().
+    const fans = this.mapping.fans
+      .slice(0, 8)
+      .map((id) => {
+        const s = this.states[id];
+        const on = s?.state === "on";
+        const pct = s?.attributes?.percentage;
+        const preset = s?.attributes?.preset_mode;
+        const speed =
+          typeof pct === "number" ? `${pct}%` : preset ? escapeHtml(preset) : on ? "On" : "Off";
+        return `<div class="ha-tile fan ${on ? "on" : ""}">
+          <button class="fan-toggle" ${offline ? "disabled" : ""}
+            data-domain="fan" data-service="toggle" data-entity="${escapeHtml(id)}">
+            <span class="tile-name">${escapeHtml(this.friendlyName(id))}</span>
+            <span class="tile-state">${on ? "On" : "Off"}</span>
+          </button>
+          <span class="fan-controls">
+            <button class="fan-btn" ${offline ? "disabled" : ""} data-fan-delta="-1" data-entity="${escapeHtml(id)}">−</button>
+            <span class="fan-speed">${speed}</span>
+            <button class="fan-btn" ${offline ? "disabled" : ""} data-fan-delta="1" data-entity="${escapeHtml(id)}">+</button>
+          </span>
+        </div>`;
+      })
+      .join("");
+
     // .ha-col-title / .ha-hint are display:none by default; the glance theme
     // (and any future theme) reveals them via CSS.
     this.el.innerHTML = `${banner}
       <div class="ha-columns">
         <div class="ha-col scenes"><div class="ha-col-title">Scenes</div>${scenes || '<div class="ha-empty">No scenes mapped</div>'}</div>
         <div class="ha-col-wrap"><div class="ha-col-title">Lights</div><div class="ha-col lights-grid">${lights || '<div class="ha-empty">No lights mapped</div>'}</div></div>
-        <div class="ha-col side"><div class="ha-col-title">Climate &amp; Media</div>${climate}${media}</div>
+        <div class="ha-col side"><div class="ha-col-title">Controls</div>${climate}${fans}${media}</div>
       </div>
       <div class="ha-hint">swipe down to close</div>`;
   }
@@ -174,6 +201,28 @@ export class HAOverlay {
         this.send("climate", "set_temperature", entityId, {
           temperature: current + Number(climateBtn.dataset.climateDelta),
         });
+      }
+      return;
+    }
+
+    const fanBtn = target.closest<HTMLElement>("[data-fan-delta]");
+    if (fanBtn) {
+      const entityId = fanBtn.dataset.entity!;
+      const dir = Number(fanBtn.dataset.fanDelta);
+      const attrs = this.states[entityId]?.attributes;
+      if (!attrs) return;
+      if (typeof attrs.percentage === "number") {
+        // Percentage fan: HA steps by the fan's native percentage_step and
+        // turns it on from off / off at the bottom.
+        this.send("fan", dir > 0 ? "increase_speed" : "decrease_speed", entityId);
+      } else if (Array.isArray(attrs.preset_modes) && attrs.preset_modes.length) {
+        // Preset-only fan: step through its named modes.
+        const modes = attrs.preset_modes as string[];
+        const i = Math.min(
+          Math.max(modes.indexOf(attrs.preset_mode) + dir, 0),
+          modes.length - 1,
+        );
+        this.send("fan", "set_preset_mode", entityId, { preset_mode: modes[i] });
       }
       return;
     }

@@ -95,6 +95,7 @@ night:
 ha:
   scenes: []        # up to 4 scene entity_ids
   lights: []        # up to 8 light entity_ids
+  fans: []          # up to 8 fan entity_ids (toggle + speed tiles)
   climate: null     # one climate entity_id
   media: null       # one media_player entity_id
   alerts: []        # [{entity, state, text?}] → alert-colored tape items while matched

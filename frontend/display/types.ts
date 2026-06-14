@@ -16,6 +16,7 @@ export interface ModulePayload {
 export interface HAMapping {
   scenes: string[];
   lights: string[];
+  fans: string[];
   climate: string | null;
   media: string | null;
   alerts?: { entity: string; state: string; text?: string }[];
