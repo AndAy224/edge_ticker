@@ -23,9 +23,13 @@ SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/su
 SCHEDULE_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams/{team}/schedule"
 STATE_SORT = {"in": 0, "pre": 1, "post": 2}
 
-# Followed-team score celebrations: don't fire more than once per game per
-# cooldown (basketball would otherwise celebrate every poll).
-CELEBRATION_COOLDOWN_SECONDS = 180.0
+# Followed-team score celebrations: minimum gap between a team's celebrations.
+# The score-diff only fires on an *increase*, so for discrete-scoring sports (a
+# run, a goal) a short gap just dedupes within a poll — every score celebrates.
+# Basketball scores nearly every poll, so it stays throttled; football groups a
+# touchdown with its trailing extra-point / two-point try.
+CELEBRATION_COOLDOWN_SECONDS = 20.0
+SPORT_COOLDOWN_SECONDS = {"basketball": 180.0, "football": 90.0}
 
 FOOTBALL_DELTA_LABELS = {6: "TOUCHDOWN", 3: "FIELD GOAL", 2: "TWO-POINT", 1: "EXTRA POINT"}
 
@@ -104,14 +108,23 @@ def _scorer_from_text(summary: dict, text: str) -> dict | None:
 
 
 def latest_scoring_play(
-    summary: dict, team_abbrev: str | None, prefer_touchdown: bool = False
+    summary: dict,
+    team_abbrev: str | None = None,
+    prefer_touchdown: bool = False,
+    team_id: str | None = None,
 ) -> dict | None:
     plays = summary.get("scoringPlays") or [
         p for p in summary.get("plays", []) if p.get("scoringPlay")
     ]
-    if team_abbrev:
+    if team_abbrev or team_id:
+        # Football/hockey scoring plays carry the team abbreviation; MLB plays
+        # carry only a numeric team id ({"team": {"id": "30"}}) — match either,
+        # so the celebration shows the followed team's play, not the opponent's.
         team_plays = [
-            p for p in plays if (p.get("team") or {}).get("abbreviation") == team_abbrev
+            p
+            for p in plays
+            if (team_abbrev and (p.get("team") or {}).get("abbreviation") == team_abbrev)
+            or (team_id is not None and str((p.get("team") or {}).get("id")) == str(team_id))
         ]
         plays = team_plays or plays
     if prefer_touchdown:
@@ -265,6 +278,7 @@ class SportsCollector(Collector):
                 records = competitor.get("records") or []
                 teams[competitor.get("homeAway", "home")] = {
                     "abbrev": team.get("abbreviation", "?"),
+                    "id": team.get("id"),  # ESPN team id — matches MLB play.team.id
                     "name": team.get("displayName", "?"),
                     "score": competitor.get("score"),
                     "logo": team.get("logo"),
@@ -335,7 +349,8 @@ class SportsCollector(Collector):
             delta = current[index] - previous[index]
             if delta <= 0:
                 continue
-            if now - self._celebrated_at.get(gid, 0.0) < CELEBRATION_COOLDOWN_SECONDS:
+            cooldown = SPORT_COOLDOWN_SECONDS.get(g.get("sport"), CELEBRATION_COOLDOWN_SECONDS)
+            if now - self._celebrated_at.get(gid, 0.0) < cooldown:
                 continue
             self._celebrated_at[gid] = now
             scored.append((g, delta))
@@ -368,7 +383,11 @@ class SportsCollector(Collector):
         side = self._followed_side(game) or "home"
         team = game[side]
         opponent = game["home" if side == "away" else "away"]
-        play = latest_scoring_play(summary, team.get("abbrev")) if summary else None
+        play = (
+            latest_scoring_play(summary, team.get("abbrev"), team_id=team.get("id"))
+            if summary
+            else None
+        )
         text = (play or {}).get("text", "")
         label = (
             _label_from_type(((play or {}).get("type") or {}).get("text") or "")
