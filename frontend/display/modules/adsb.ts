@@ -1,5 +1,6 @@
 import { register } from "./registry";
 import { AIRCRAFT_ICON, AIRCRAFT_PATH } from "../icons";
+import { COASTLINE, AIRPORTS, PLACES } from "./basemap-tampa";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(
@@ -45,7 +46,87 @@ function polar(distanceKm: number, radiusKm: number, bearingDeg: number) {
   return { x: CX + r * Math.sin(rad), y: CY - r * Math.cos(rad) };
 }
 
-function scopeSvg(aircraft: any[], radiusKm: number): string {
+// --- geographic basemap (coastline/airports), projected onto the scope ---
+// Same azimuthal mapping as the planes (bearing + distance from the receiver),
+// so the coast lines up with the aircraft. Mirrors the backend's haversine /
+// bearing so a point computed here lands where the collector would place it.
+const EARTH_KM = 6371;
+
+function geoDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = Math.PI / 180;
+  const p1 = lat1 * r;
+  const p2 = lat2 * r;
+  const dp = (lat2 - lat1) * r;
+  const dl = (lon2 - lon1) * r;
+  const a =
+    Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.sqrt(a));
+}
+
+function geoBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = Math.PI / 180;
+  const p1 = lat1 * r;
+  const p2 = lat2 * r;
+  const dl = (lon2 - lon1) * r;
+  const x = Math.sin(dl) * Math.cos(p2);
+  const y = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return ((Math.atan2(x, y) * 180) / Math.PI + 360) % 360;
+}
+
+// Project lat/lon to scope coords WITHOUT clamping (the scope clipPath trims
+// anything past the rim, so coast lines crossing the edge stay straight).
+function projectGeo(lat: number, lon: number, center: any, radiusKm: number) {
+  const dist = geoDistanceKm(center.lat, center.lon, lat, lon);
+  const rad = (geoBearing(center.lat, center.lon, lat, lon) * Math.PI) / 180;
+  const r = (radiusKm > 0 ? dist / radiusKm : 0) * MAX_R;
+  return { x: CX + r * Math.sin(rad), y: CY - r * Math.cos(rad), dist };
+}
+
+// Building the basemap projects ~2.3k points, so cache it by center+radius
+// (it only changes when the receiver location or range does).
+let basemapCache: { key: string; svg: string } | null = null;
+
+function basemapSvg(center: any, radiusKm: number): string {
+  if (!center || typeof center.lat !== "number") return "";
+  const key = `${center.lat},${center.lon},${radiusKm}`;
+  if (basemapCache && basemapCache.key === key) return basemapCache.svg;
+
+  let coast = "";
+  for (const way of COASTLINE) {
+    let pts = "";
+    let near = false;
+    for (const p of way) {
+      const { x, y, dist } = projectGeo(p[1], p[0], center, radiusKm);
+      pts += `${x.toFixed(1)},${y.toFixed(1)} `;
+      if (dist <= radiusKm * 1.5) near = true;
+    }
+    if (near) coast += `<polyline class="coast-line" points="${pts.trim()}"/>`;
+  }
+
+  let places = "";
+  for (const pl of PLACES) {
+    const { x, y, dist } = projectGeo(pl.lat, pl.lon, center, radiusKm);
+    if (dist > radiusKm * 0.96) continue;
+    places += `<text class="coast-place" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">${escapeHtml(pl.label)}</text>`;
+  }
+
+  let airports = "";
+  for (const a of AIRPORTS) {
+    const { x, y, dist } = projectGeo(a.lat, a.lon, center, radiusKm);
+    if (dist > radiusKm) continue;
+    airports +=
+      `<g class="coast-airport">` +
+      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2"/>` +
+      `<text x="${x.toFixed(1)}" y="${(y - 3.4).toFixed(1)}" text-anchor="middle">${escapeHtml(a.label)}</text>` +
+      `</g>`;
+  }
+
+  const svg = `<g class="radar-basemap" clip-path="url(#radar-clip)">${coast}${places}${airports}</g>`;
+  basemapCache = { key, svg };
+  return svg;
+}
+
+function scopeSvg(aircraft: any[], radiusKm: number, center: any): string {
   const rings = [0.25, 0.5, 0.75, 1]
     .map((f) => {
       const rr = (f * MAX_R).toFixed(1);
@@ -93,13 +174,16 @@ function scopeSvg(aircraft: any[], radiusKm: number): string {
 
   return (
     `<svg class="radar-svg" viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="xMidYMid meet">` +
+    `<defs><clipPath id="radar-clip"><circle cx="${CX}" cy="${CY}" r="${MAX_R}"/></clipPath></defs>` +
     `<circle class="radar-face" cx="${CX}" cy="${CY}" r="${MAX_R}"/>` +
+    basemapSvg(center, radiusKm) +
     sweep +
     rings +
     cross +
     compass +
     planes +
     `<circle class="radar-center" cx="${CX}" cy="${CY}" r="2"/>` +
+    `<text class="radar-attrib" x="${VIEW - 2}" y="${VIEW - 2}" text-anchor="end">© OpenStreetMap</text>` +
     `</svg>`
   );
 }
@@ -145,7 +229,7 @@ register({
     const aircraft: any[] = data?.aircraft ?? [];
     const radiusKm: number = data?.radius_km ?? 40;
     el.innerHTML = `<div class="adsb-radar">
-      <div class="radar-scope">${scopeSvg(aircraft, radiusKm)}</div>
+      <div class="radar-scope">${scopeSvg(aircraft, radiusKm, data?.center)}</div>
       <div class="radar-side">${listHtml(aircraft, data)}</div>
     </div>`;
   },

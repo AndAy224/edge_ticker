@@ -160,6 +160,8 @@ class AdsbCollector(Collector):
                 "count_in_radius": len(aircraft),
                 "count_total": total,
                 "radius_km": self.radius_km,
+                # receiver position so the display can project a basemap onto the scope
+                "center": {"lat": self.latitude, "lon": self.longitude},
             },
             tape=tape,
         )

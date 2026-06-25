@@ -1374,6 +1374,48 @@ body {
   fill: var(--accent);
 }
 
+/* geographic basemap behind the radar — faint coastline, airports, labels */
+.radar-basemap {
+  pointer-events: none;
+}
+
+.coast-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 0.5;
+  stroke-opacity: 0.22;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.coast-place {
+  fill: var(--text);
+  opacity: 0.3;
+  font-size: 5px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.coast-airport circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.7;
+  opacity: 0.75;
+}
+
+.coast-airport text {
+  fill: var(--accent);
+  opacity: 0.85;
+  font-size: 4.6px;
+  font-weight: 700;
+}
+
+.radar-attrib {
+  fill: var(--muted);
+  opacity: 0.5;
+  font-size: 3.6px;
+}
+
 /* slow scanning sweep — purely decorative, disabled for reduced-motion */
 .radar-sweep {
   transform-origin: 100px 100px;
