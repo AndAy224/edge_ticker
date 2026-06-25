@@ -99,6 +99,19 @@ export const AQI_ICON = wrap(
     `<path d="M3 20h6M3 16.5h3"/>`,
 );
 
+// Top-down aircraft silhouette, nose pointing up (north) and centred on (12,12)
+// so a `rotate(track)` aims it along its heading. Exported as a raw path too,
+// for the radar to drop into its own <g transform> markers.
+export const AIRCRAFT_PATH =
+  "M12 2.5C12.6 2.5 13 3.2 13 4.2L13 9L21.5 14L21.5 15.5L13 12.5L12.7 18" +
+  "L16 20L16 21.2L12 19.6L8 21.2L8 20L11.3 18L11 12.5L2.5 15.5L2.5 14" +
+  "L11 9L11 4.2C11 3.2 11.4 2.5 12 2.5Z";
+
+// Filled (not stroked) so it stays legible at small sizes; inherits currentColor.
+export const AIRCRAFT_ICON =
+  `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">` +
+  `<path d="${AIRCRAFT_PATH}"/></svg>`;
+
 /** WMO weather-code groups → icon key (Open-Meteo `weather_code`). */
 export function weatherIcon(code?: number | null): string {
   if (code == null) return WEATHER_ICONS.sun;

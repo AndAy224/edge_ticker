@@ -66,13 +66,15 @@ modules:
     # Private leagues need ESPN_S2 + ESPN_SWID cookies in .env.
 
   # Stretch modules — flip enabled and add to rotation.order to use.
-  # proxmox and adsb also need their env vars in .env (see .env.example).
+  # proxmox needs its env vars in .env (see .env.example). adsb defaults to a
+  # free hosted API — no env needed unless provider: local.
   proxmox:
     enabled: false
     poll_seconds: 60
 
   adsb:
     enabled: false
+    provider: airplaneslive   # airplaneslive | adsblol | adsbfi | local (local needs ADSB_URL)
     poll_seconds: 15
     radius_km: 40
 

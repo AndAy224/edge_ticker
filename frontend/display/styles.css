@@ -1314,11 +1314,135 @@ body {
 
 /* ---- adsb ---- */
 
+/* radar layout: square polar scope on the left, live flight list on the right */
+.adsb-radar {
+  /* .stage-layer is position:absolute (so it's a containing block) but its
+     flex-% height doesn't propagate to children. Fill it directly with absolute
+     inset:0 — a definite height the square scope can resolve height:100% against.
+     This replaces .stage-layer's own padding with our own. */
+  position: absolute;
+  inset: 0;
+  padding: 28px 48px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.radar-scope {
+  flex: 0 0 auto;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.radar-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.radar-face {
+  fill: var(--panel-raised);
+}
+
+.radar-ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.5;
+  opacity: 0.9;
+}
+
+.radar-cross {
+  stroke: var(--line);
+  stroke-width: 0.4;
+  opacity: 0.7;
+}
+
+.radar-rlabel {
+  fill: var(--muted);
+  font-size: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.radar-compass {
+  fill: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.radar-center {
+  fill: var(--accent);
+}
+
+/* slow scanning sweep — purely decorative, disabled for reduced-motion */
+.radar-sweep {
+  transform-origin: 100px 100px;
+  animation: radar-spin 8s linear infinite;
+}
+
+.radar-sweep path {
+  fill: var(--accent);
+  opacity: 0.1;
+}
+
+@keyframes radar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep {
+    animation: none;
+  }
+}
+
+.radar-hit {
+  fill: transparent;
+}
+
+.radar-plane {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.radar-plane path {
+  fill: var(--accent);
+  transition: fill 200ms ease;
+}
+
+.radar-plane.alt-low path {
+  fill: var(--up);
+}
+
+.radar-plane.alt-mid path {
+  fill: var(--accent);
+}
+
+.radar-plane.alt-high path {
+  fill: var(--text);
+}
+
+.radar-plane.alt-unknown path {
+  fill: var(--muted);
+}
+
+.radar-side {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ---- flight list (radar side panel, or whole pane in narrow layouts) ---- */
 .adsb-list {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .adsb-header {
@@ -1330,6 +1454,18 @@ body {
   padding: 0 8px;
 }
 
+.adsb-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adsb-title svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .adsb-count {
   font-size: 20px;
 }
@@ -1337,23 +1473,23 @@ body {
 .adsb-row {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
   background: var(--panel-raised);
   border-radius: 12px;
-  padding: 14px 28px;
-  font-size: 30px;
+  padding: 12px 26px;
+  font-size: 28px;
   font-variant-numeric: tabular-nums;
 }
 
 .adsb-flight {
   font-weight: 700;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .adsb-alt,
 .adsb-speed {
   color: var(--text-dim);
-  min-width: 170px;
+  min-width: 150px;
 }
 
 .adsb-dist {
@@ -1362,8 +1498,172 @@ body {
 
 .adsb-track {
   color: var(--accent);
-  font-size: 32px;
   display: inline-block;
+}
+
+.adsb-track svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* narrow rotation panes: drop the scope, keep the list */
+[data-panes="2"] .radar-scope,
+[data-panes="3"] .radar-scope {
+  display: none;
+}
+
+[data-panes="2"] .adsb-radar,
+[data-panes="3"] .adsb-radar {
+  gap: 0;
+}
+
+/* ---- aircraft detail card ---- */
+.adsb-detail {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+
+.adsb-detail-hero {
+  flex: 0 0 auto;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-raised);
+  border-radius: 28px;
+  color: var(--accent);
+}
+
+.adsb-detail-hero.alt-low {
+  color: var(--up);
+}
+
+.adsb-detail-hero.alt-high {
+  color: var(--text);
+}
+
+.adsb-detail-hero.alt-unknown {
+  color: var(--muted);
+}
+
+.adsb-detail-plane {
+  display: block;
+  width: 160px;
+  height: 160px;
+}
+
+.adsb-detail-plane svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.adsb-detail-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.adsb-detail-call {
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.adsb-detail-sub {
+  font-size: 34px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.adsb-detail-op {
+  font-size: 26px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.adsb-detail-stats {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 40px;
+}
+
+.adsb-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adsb-stat-l {
+  font-size: 22px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.adsb-stat-v {
+  font-size: 38px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.adsb-detail-badge {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: var(--panel-raised);
+  color: var(--text-dim);
+  font-size: 24px;
+}
+
+.vr {
+  display: inline-flex;
+  align-items: center;
+  font-size: 30px;
+  margin-left: 10px;
+}
+
+.vr-up {
+  color: var(--up);
+}
+
+.vr-down {
+  color: var(--down);
+}
+
+.vr-arrow {
+  width: 24px;
+  height: 24px;
+}
+
+/* narrow panes: stack the detail card */
+[data-panes="2"] .adsb-detail,
+[data-panes="3"] .adsb-detail {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+[data-panes="2"] .adsb-detail-hero,
+[data-panes="3"] .adsb-detail-hero {
+  width: 150px;
+  height: 150px;
+}
+
+[data-panes="2"] .adsb-detail-plane,
+[data-panes="3"] .adsb-detail-plane {
+  width: 100px;
+  height: 100px;
+}
+
+[data-panes="2"] .adsb-detail-stats,
+[data-panes="3"] .adsb-detail-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* ---- astro ---- */

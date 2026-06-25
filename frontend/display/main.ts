@@ -644,6 +644,15 @@ function updateScoreChip(): void {
   updateScoreChip();
 };
 
+// Debug/test hook: replace the adsb payload entirely and re-render (for
+// screenshotting the radar when the sky overhead is quiet).
+(window as any).__adsbfake = (stage: any) => {
+  const payload = { module: "adsb", stage, tape: [] } as any;
+  modules.set("adsb", payload);
+  rebuildTape();
+  renderStage();
+};
+
 // Debug/test hook: replace the fantasy payload entirely and re-render,
 // running the same auto-feature side-effects as a real fantasy message.
 (window as any).__fantasyfake = (stage: any) => {
