@@ -1627,6 +1627,50 @@ body {
   margin-top: 4px;
 }
 
+/* origin → destination route (filled in on tap from adsbdb) */
+.adsb-detail-route:empty {
+  display: none;
+}
+
+.adsb-route-line {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.rt-end {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rt-code {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-city {
+  font-size: 24px;
+  color: var(--muted);
+}
+
+.rt-unknown .rt-code {
+  color: var(--muted);
+}
+
+.rt-sep {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.rt-arrow {
+  width: 44px;
+  height: 44px;
+}
+
 .adsb-detail-stats {
   margin-top: 28px;
   display: grid;

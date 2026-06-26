@@ -223,6 +223,46 @@ function stat(label: string, value: string): string {
   return `<div class="adsb-stat"><span class="adsb-stat-l">${label}</span><span class="adsb-stat-v">${value}</span></div>`;
 }
 
+// Origin → destination arrow (no emoji fonts on the device → inline SVG).
+const ROUTE_ARROW =
+  `<svg class="rt-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+  `stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">` +
+  `<path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
+
+function airportHtml(ap: any): string {
+  if (!ap) return `<span class="rt-end rt-unknown"><span class="rt-code">—</span></span>`;
+  const code = ap.iata || ap.icao || "—";
+  const city = ap.city || ap.name || "";
+  return `<span class="rt-end">
+    <span class="rt-code">${escapeHtml(code)}</span>
+    ${city ? `<span class="rt-city">${escapeHtml(city)}</span>` : ""}
+  </span>`;
+}
+
+// ADS-B carries no origin/destination — look the callsign up on tap and patch
+// it into the readout (render base synchronously → fetch → patch if connected).
+function enrichRoute(el: HTMLElement, item: any): void {
+  const slot = el.querySelector(".adsb-detail-route") as HTMLElement | null;
+  if (!slot) return;
+  const callsign = String(item.flight ?? "").trim();
+  // No real callsign (collector fell back to registration/hex) → no route to find.
+  if (!callsign || callsign === item.registration || callsign === item.hex) return;
+  fetch(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      const route = d?.route;
+      if (!route || !el.isConnected || !slot.isConnected) return;
+      if (!route.origin && !route.destination) return;
+      slot.innerHTML = `<div class="adsb-route-line">
+        ${airportHtml(route.origin)}
+        <span class="rt-sep">${ROUTE_ARROW}</span>
+        ${airportHtml(route.destination)}
+      </div>`;
+      slot.classList.add("filled");
+    })
+    .catch(() => {});
+}
+
 register({
   id: "adsb",
   renderStage(el, data) {
@@ -251,6 +291,7 @@ register({
         <div class="adsb-detail-call">${escapeHtml(item.flight)}</div>
         ${subtitle ? `<div class="adsb-detail-sub">${escapeHtml(subtitle)}</div>` : ""}
         ${item.operator ? `<div class="adsb-detail-op">${escapeHtml(item.operator)}</div>` : ""}
+        <div class="adsb-detail-route"></div>
         <div class="adsb-detail-stats">
           ${stat("Altitude", `${fmtAlt(item)}${vrMarkup(item.vert_rate)}`)}
           ${stat("Ground speed", item.speed_kt != null ? `${Math.round(item.speed_kt)} kt` : "—")}
@@ -262,5 +303,6 @@ register({
         ${item.on_ground ? `<div class="adsb-detail-badge">on ground</div>` : ""}
       </div>
     </div>`;
+    enrichRoute(el, item);
   },
 });
