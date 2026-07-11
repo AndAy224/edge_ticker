@@ -12,6 +12,7 @@ import "./modules/astro";
 import "./modules/proxmox";
 import { setWeatherAlerts } from "./modules/weather";
 import "./modules/airquality";
+import "./modules/weather_radar";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { HAOverlay } from "./overlay-ha";
@@ -324,6 +325,7 @@ const MODULE_LABELS: Record<string, string> = {
   adsb: "OVERHEAD",
   airquality: "AIR QUALITY",
   fantasy: "FANTASY",
+  weather_radar: "RADAR",
 };
 
 function paneLabel(id: string | undefined): string {

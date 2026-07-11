@@ -4420,3 +4420,147 @@ body {
   width: 24px;
   height: 24px;
 }
+
+/* ---- weather radar (animated RainViewer loop over a Carto dark basemap) ---- */
+
+/* Full-bleed map: escape the stage-layer padding entirely. */
+.radar-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.radar-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #0b0e13; /* ≈ Carto dark ocean, shown while tiles load */
+}
+
+.radar-viewport img {
+  position: absolute;
+  width: 512px;
+  height: 512px;
+}
+
+.radar-basemap {
+  position: absolute;
+  inset: 0;
+}
+
+/* Dim the basemap so radar colors pop and it sits back with the dark themes. */
+.radar-basemap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 7, 12, 0.3);
+}
+
+/* Frames stack over the basemap; the generated per-layer keyframes cycle
+   their opacity (negative delays keep the loop in phase). */
+.radar-frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.radar-frame img {
+  opacity: 0.8;
+}
+
+.radar-time {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  padding: 6px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(6, 9, 14, 0.72);
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.radar-time.nowcast {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.radar-home {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.radar-home::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: radar-home-pulse 2.4s ease-out infinite;
+}
+
+@keyframes radar-home-pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.radar-loc {
+  position: absolute;
+  left: 20px;
+  bottom: 14px;
+  padding: 4px 14px;
+  border-radius: 10px;
+  background: rgba(6, 9, 14, 0.72);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.radar-attrib {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: rgba(190, 200, 214, 0.55);
+  font-size: 13px;
+}
+
+/* glance reveals the pane title top-left — location label already sits at the
+   bottom, nothing to move; existing themes stay pixel-identical elsewhere. */
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-frame {
+    animation: none !important;
+  }
+  .radar-frame.newest {
+    opacity: 1;
+  }
+}
+
+[data-panes="2"] .radar-time,
+[data-panes="3"] .radar-time {
+  top: 44px; /* below the rotation dots */
+  right: 12px;
+  font-size: 20px;
+  padding: 4px 12px;
+}
+
+[data-panes="2"] .radar-loc,
+[data-panes="3"] .radar-loc {
+  left: 12px;
+  bottom: 10px;
+  font-size: 18px;
+}
