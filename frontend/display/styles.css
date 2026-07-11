@@ -4442,16 +4442,25 @@ body {
   height: 512px;
 }
 
+/* Scaled about its center (= the home location) for fractional zoom levels. */
+.radar-map {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+}
+
 .radar-basemap {
   position: absolute;
   inset: 0;
 }
 
-/* Dim the basemap so radar colors pop and it sits back with the dark themes. */
+/* Dim the basemap so radar colors pop and it sits back with the dark themes.
+   Oversized: it lives inside the scaled map layer, and at fractional zooms the
+   scale drops to 0.707 — inset:0 would leave undimmed edges. */
 .radar-basemap::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -50%;
   background: rgba(4, 7, 12, 0.3);
 }
 
@@ -4467,8 +4476,11 @@ body {
   opacity: 0.8;
 }
 
+/* Chips sit outside the scaled map layer and cycle with the same animation
+   as their frame. */
 .radar-time {
   position: absolute;
+  opacity: 0;
   top: 14px;
   right: 18px;
   padding: 6px 16px;
@@ -4542,10 +4554,12 @@ body {
    bottom, nothing to move; existing themes stay pixel-identical elsewhere. */
 
 @media (prefers-reduced-motion: reduce) {
-  .radar-frame {
+  .radar-frame,
+  .radar-time {
     animation: none !important;
   }
-  .radar-frame.newest {
+  .radar-frame.newest,
+  .radar-time.newest {
     opacity: 1;
   }
 }

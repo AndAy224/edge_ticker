@@ -37,7 +37,9 @@ class WeatherRadarCollector(Collector):
         self.longitude = self.module_config.get(
             "longitude", weather.get("longitude", -82.8001)
         )
-        self.zoom = int(self.module_config.get("zoom", 7))
+        # Fractional zooms work: the display renders the nearest integer tile
+        # level and CSS-scales the map (7 ≈ regional, 8 ≈ metro).
+        self.zoom = float(self.module_config.get("zoom", 7.5))
         # RainViewer palette id (4 = The Weather Channel colors).
         self.color_scheme = int(self.module_config.get("color_scheme", 4))
 

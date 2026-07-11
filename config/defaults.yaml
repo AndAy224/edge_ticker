@@ -49,7 +49,7 @@ modules:
   weather_radar:
     enabled: true
     poll_seconds: 300
-    zoom: 7              # slippy-map zoom; 7 ≈ regional, 8 ≈ metro. Reuses the weather location.
+    zoom: 7.5            # slippy-map zoom, fractional ok; 7 ≈ regional, 8 ≈ metro. Reuses the weather location.
     # Has a stage page — add `weather_radar` to rotation.order above to show it.
 
   airquality:

@@ -13,6 +13,7 @@ function escapeHtml(value: unknown): string {
 }
 
 const TILE_PX = 512; // on-screen size per slippy tile; RainViewer /512/ and Carto @2x render 1:1
+const RADAR_MAX_Z = 7; // RainViewer serves "Zoom Level Not Supported" tiles above this
 const STEP_SECONDS = 0.4; // per-frame dwell
 const NEWEST_DWELL_STEPS = 4; // hold on the latest observed frame
 const NOWCAST_END_DWELL_STEPS = 2; // brief pause on the last forecast frame
@@ -44,39 +45,47 @@ function buildMap(stage: HTMLElement, data: any): void {
   if (!width || !height) return;
 
   const frames: RadarFrame[] = data.frames;
-  const zoom: number = data.zoom ?? 7;
-  const n = 2 ** zoom;
+  // Fractional zoom: tiles come from the nearest integer level and the whole
+  // map layer is CSS-scaled about its center (where home sits) — rounding up
+  // then downscaling keeps the basemap crisp and avoids per-tile seams.
+  const zoom: number = data.zoom ?? 7.5;
+  const z = Math.round(zoom);
+  const scale = 2 ** (zoom - z);
 
-  // Web-Mercator: home location in fractional tile coordinates.
-  const latRad = ((data.center?.lat ?? 0) * Math.PI) / 180;
-  const xf = (((data.center?.lon ?? 0) + 180) / 360) * n;
-  const yf =
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+  // Radar data stops at RADAR_MAX_Z — past that, keep the basemap at z and
+  // upscale the (blobby anyway) radar tiles to match.
+  const rz = Math.min(z, RADAR_MAX_Z);
 
-  const x0 = Math.floor(xf - width / 2 / TILE_PX);
-  const x1 = Math.floor(xf + width / 2 / TILE_PX);
-  const y0 = Math.max(0, Math.floor(yf - height / 2 / TILE_PX));
-  const y1 = Math.min(n - 1, Math.floor(yf + height / 2 / TILE_PX));
-
-  const tiles: { x: number; y: number; left: number; top: number }[] = [];
-  for (let x = x0; x <= x1; x++) {
-    for (let y = y0; y <= y1; y++) {
-      tiles.push({
-        x: ((x % n) + n) % n, // wrap for tile URLs
-        y,
-        left: Math.round((x - xf) * TILE_PX + width / 2),
-        top: Math.round((y - yf) * TILE_PX + height / 2),
-      });
+  // Tile mosaic for one layer at tile-level lz, in pre-scale pixels.
+  const layerImgs = (lz: number, src: (x: number, y: number) => string): string => {
+    const ln = 2 ** lz;
+    const tilePx = TILE_PX * 2 ** (z - lz);
+    // Web-Mercator: home location in fractional tile coordinates at lz.
+    const latRad = ((data.center?.lat ?? 0) * Math.PI) / 180;
+    const xf = (((data.center?.lon ?? 0) + 180) / 360) * ln;
+    const yf =
+      ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * ln;
+    // Range must cover the viewport in pre-scale pixels.
+    const halfW = width / 2 / scale;
+    const halfH = height / 2 / scale;
+    const x0 = Math.floor(xf - halfW / tilePx);
+    const x1 = Math.floor(xf + halfW / tilePx);
+    const y0 = Math.max(0, Math.floor(yf - halfH / tilePx));
+    const y1 = Math.min(ln - 1, Math.floor(yf + halfH / tilePx));
+    let imgs = "";
+    for (let x = x0; x <= x1; x++) {
+      for (let y = y0; y <= y1; y++) {
+        const wx = ((x % ln) + ln) % ln; // wrap for tile URLs
+        const left = Math.round((x - xf) * tilePx + width / 2);
+        const top = Math.round((y - yf) * tilePx + height / 2);
+        imgs +=
+          `<img src="${src(wx, y)}" ` +
+          `style="left:${left}px;top:${top}px;width:${tilePx}px;height:${tilePx}px" ` +
+          `onerror="this.style.display='none'" alt="">`;
+      }
     }
-  }
-  const tileImgs = (src: (x: number, y: number) => string): string =>
-    tiles
-      .map(
-        (t) =>
-          `<img src="${src(t.x, t.y)}" style="left:${t.left}px;top:${t.top}px" ` +
-          `onerror="this.style.display='none'" alt="">`,
-      )
-      .join("");
+    return imgs;
+  };
 
   // Animation slots: 1 step per frame, extra dwell on the newest observation
   // and (when present) the last nowcast frame.
@@ -104,31 +113,37 @@ function buildMap(stage: HTMLElement, data: any): void {
     })
     .join("\n");
 
+  // Frames (tiles, scaled with the map) and timestamp chips (unscaled overlay)
+  // are separate elements sharing the same animation, so they stay in sync.
   let start = 0;
-  const frameDivs = frames
-    .map((f, i) => {
-      const delay = start * STEP_SECONDS - totalSeconds; // negative: loop already in phase
-      start += slots[i];
-      const anim =
-        `animation:radar-win-${slots[i]}-${uid} ${totalSeconds}s linear ${delay}s infinite`;
-      const chip = `<span class="radar-time${f.nowcast ? " nowcast" : ""}">${escapeHtml(
-        frameLabel(f, newestPast),
-      )}</span>`;
-      return (
-        `<div class="radar-frame${f === newestPast ? " newest" : ""}" style="${anim}">` +
-        tileImgs((x, y) => `${data.host}${f.path}/512/${zoom}/${x}/${y}/${data.color ?? 4}/1_1.png`) +
-        chip +
-        `</div>`
-      );
-    })
-    .join("");
+  let frameDivs = "";
+  let chips = "";
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    const delay = start * STEP_SECONDS - totalSeconds; // negative: loop already in phase
+    start += slots[i];
+    const anim =
+      `animation:radar-win-${slots[i]}-${uid} ${totalSeconds}s linear ${delay}s infinite`;
+    const newest = f === newestPast ? " newest" : "";
+    frameDivs +=
+      `<div class="radar-frame${newest}" style="${anim}">` +
+      layerImgs(rz, (x, y) => `${data.host}${f.path}/512/${rz}/${x}/${y}/${data.color ?? 4}/1_1.png`) +
+      `</div>`;
+    chips += `<span class="radar-time${f.nowcast ? " nowcast" : ""}${newest}" style="${anim}">${escapeHtml(
+      frameLabel(f, newestPast),
+    )}</span>`;
+  }
 
   viewport.innerHTML = `
     <style>${css}</style>
-    <div class="radar-basemap">${tileImgs(
-      (x, y) => `https://basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}@2x.png`,
-    )}</div>
-    ${frameDivs}
+    <div class="radar-map" style="transform:scale(${scale.toFixed(4)})">
+      <div class="radar-basemap">${layerImgs(
+        z,
+        (x, y) => `https://basemaps.cartocdn.com/dark_nolabels/${z}/${x}/${y}@2x.png`,
+      )}</div>
+      ${frameDivs}
+    </div>
+    ${chips}
     <div class="radar-home"></div>`;
 }
 
