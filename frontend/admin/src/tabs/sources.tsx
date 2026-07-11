@@ -99,6 +99,7 @@ export function SourcesTab() {
   const weatherAlerts = cfg.modules?.weather_alerts ?? {};
   const adsb = cfg.modules?.adsb ?? {};
   const fantasy = cfg.modules?.fantasy ?? {};
+  const weatherRadar = cfg.modules?.weather_radar ?? {};
   // Existing DBs predate these modules — their config keys may not exist yet.
   const patchWeatherAlerts = (key: string, value: unknown) =>
     patch(
@@ -106,6 +107,10 @@ export function SourcesTab() {
     );
   const patchFantasy = (key: string, value: unknown) =>
     patch((c) => (c.modules.fantasy = { ...(c.modules.fantasy ?? {}), [key]: value }));
+  const patchWeatherRadar = (key: string, value: unknown) =>
+    patch(
+      (c) => (c.modules.weather_radar = { ...(c.modules.weather_radar ?? {}), [key]: value }),
+    );
   const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
@@ -377,6 +382,17 @@ export function SourcesTab() {
           value={adsb.radius_km ?? 40}
           onChange={(v) => patch((c) => (c.modules.adsb.radius_km = v))}
         />
+        <label class="field">
+          Radar zoom ({(weatherRadar.zoom ?? 7.5).toFixed(1)}) — regional ↔ metro
+          <input
+            type="range"
+            min={6}
+            max={8}
+            step={0.1}
+            value={weatherRadar.zoom ?? 7.5}
+            onInput={(e) => patchWeatherRadar("zoom", Number(e.currentTarget.value))}
+          />
+        </label>
         <label class="toggle">
           <input
             type="checkbox"
