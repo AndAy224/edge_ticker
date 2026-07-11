@@ -83,13 +83,35 @@ function inLiveWindow(l: any): boolean {
   return delta <= LIVE_BEFORE_MS && delta >= -LIVE_AFTER_MS;
 }
 
-/** Featured = first Florida launch inside 48h, else the soonest upcoming. */
+function isToday(netIso: string): boolean {
+  const net = new Date(netIso);
+  const now = new Date();
+  return (
+    net.getFullYear() === now.getFullYear() &&
+    net.getMonth() === now.getMonth() &&
+    net.getDate() === now.getDate()
+  );
+}
+
+/** Starship flight day: overrides the featured slot until the flight happens
+ *  (Success/Failure drops it) or scrubs (net moves off today's date). */
+function isStarshipDay(l: any): boolean {
+  return l.starship === true && isToday(l.net);
+}
+
+/** Featured = Starship flying today, else first Florida launch inside 48h,
+ *  else the soonest upcoming. */
 function pickFeatured(launches: any[]): any | undefined {
   const upcoming = launches.filter((l) => l.net && !FINISHED.includes(l.status));
+  const starship = upcoming.find(isStarshipDay);
   const florida = upcoming.find(
     (l) => l.florida && new Date(l.net).getTime() - Date.now() < 48 * 3600 * 1000,
   );
-  return florida ?? upcoming[0];
+  return starship ?? florida ?? upcoming[0];
+}
+
+function flightDayBadge(l: any): string {
+  return isStarshipDay(l) ? `<div class="launch-flightday">STARSHIP FLIGHT DAY</div>` : "";
 }
 
 function statusPill(l: any): string {
@@ -177,10 +199,13 @@ function recentStrip(recent: any[]): string {
 function idleScene(featured: any, rest: any[], recent: any[]): string {
   const [rocket, mission = ""] = String(featured.name ?? "").split(" | ");
   return `<div class="launch-stage">
-    <div class="launch-featured${featured.florida ? " florida" : ""}">
+    <div class="launch-featured${featured.florida ? " florida" : ""}${
+      isStarshipDay(featured) ? " starship" : ""
+    }">
       ${backdrop(featured)}
       <div class="launch-icon">${ROCKET_ICON}</div>
       <div class="launch-main">
+        ${flightDayBadge(featured)}
         <div class="launch-provider">${escapeHtml(featured.provider ?? "")}
           ${statusPill(featured)} ${chipsRow(featured)}
         </div>
@@ -209,8 +234,11 @@ function idleScene(featured: any, rest: any[], recent: any[]): string {
 function liveScene(featured: any): string {
   const [rocket, mission = ""] = String(featured.name ?? "").split(" | ");
   return `<div class="launch-stage">
-    <div class="launch-live${featured.florida ? " florida" : ""}">
+    <div class="launch-live${featured.florida ? " florida" : ""}${
+      isStarshipDay(featured) ? " starship" : ""
+    }">
       ${backdrop(featured)}
+      ${flightDayBadge(featured)}
       <div class="launch-live-head">
         <span class="launch-provider">${escapeHtml(featured.provider ?? "")}</span>
         ${statusPill(featured)} ${goPill(featured)}

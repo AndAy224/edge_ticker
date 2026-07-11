@@ -151,6 +151,7 @@ class LaunchesCollector(Collector):
                     "streak": rocket_config.get("consecutive_successful_launches"),
                 },
                 "florida": _florida(str(location)),
+                "starship": "starship" in str(entry.get("name") or "").lower(),
                 "live": _in_live_window(entry.get("net"), status.get("abbrev"), now),
             })
             if len(launches) >= KEEP:
@@ -162,13 +163,24 @@ class LaunchesCollector(Collector):
         tape: list[TapeItem] = []
         upcoming = [l for l in launches if l.get("net") and l.get("status") not in FINISHED]
         if upcoming:
-            nxt = upcoming[0]
+            # Starship flight day owns the tape slot (backend and kiosk share a clock).
+            today = datetime.now().astimezone().date()
+            ship = next(
+                (
+                    l for l in upcoming
+                    if l["starship"]
+                    and (net := _parse_net(l["net"]))
+                    and net.astimezone().date() == today
+                ),
+                None,
+            )
+            nxt = ship or upcoming[0]
             net = _parse_net(nxt["net"])
             when = net.astimezone().strftime("%a %-I:%M %p") if net else ""
             tape.append(TapeItem(
                 text=f"{nxt['provider']}: {nxt['name']} — {when}"
                 + (" (Canaveral)" if nxt["florida"] else ""),
-                accent="alert" if nxt["live"] else "neutral",
+                accent="alert" if (nxt["live"] or ship is not None) else "neutral",
             ))
 
         return ModulePayload(

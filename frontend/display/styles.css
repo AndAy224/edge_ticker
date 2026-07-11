@@ -4899,6 +4899,55 @@ body {
   font-size: 18px;
 }
 
+/* Starship flight day: the featured slot is overridden until the flight
+   happens or scrubs off today's date. */
+.launch-flightday {
+  display: inline-block;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 4px 14px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--alert) 24%, transparent);
+  color: var(--alert);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  animation: launch-flightday 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes launch-flightday {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+.launch-featured.starship,
+.launch-live.starship {
+  border-color: var(--alert);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--alert) 30%, transparent);
+}
+
+.launch-featured.starship .launch-backdrop {
+  opacity: 0.32;
+}
+
+.launch-featured.starship .launch-icon svg {
+  color: var(--alert);
+}
+
+.launch-live.starship .launch-flightday {
+  align-self: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launch-flightday {
+    animation: none;
+  }
+}
+
 /* Launch-day scene (T−45m .. T+15m): the pane becomes a countdown board. */
 .launch-live {
   position: relative;
