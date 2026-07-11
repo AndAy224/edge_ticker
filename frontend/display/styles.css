@@ -2976,17 +2976,23 @@ body {
   height: 100%;
 }
 
-.wx-graph {
+.wx-graph-box {
+  position: relative;
   width: 100%;
   /* full-width band under the day cards — the two rows share the ~441px
      1-pane content budget (stage layer is 513px, not 600) */
   height: 145px;
 }
 
+.wx-graph {
+  width: 100%;
+  height: 100%;
+}
+
 /* with an active alert the banner needs the top-left corner — drop the
    hourly head and shorten the graph so the bottom-aligned stack sinks
    below it (the banner already names the alert; sun times return with it) */
-.weather-stage:has(.wx-alert-banner) .wx-graph {
+.weather-stage:has(.wx-alert-banner) .wx-graph-box {
   height: 100px;
 }
 
@@ -3016,11 +3022,12 @@ body {
   opacity: 0.35;
 }
 
-.wx-temp-label {
-  fill: var(--text);
-  font-size: 26px;
+.wx-temp-tag {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  font-size: 20px;
   font-weight: 700;
-  text-anchor: middle;
+  color: var(--text);
 }
 
 .wx-hour-labels {

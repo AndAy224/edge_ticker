@@ -73,10 +73,14 @@ function hourlyGraph(hours: any[]): string {
     .join("");
   const minIdx = hours.findIndex((h) => h.temp === min);
   const maxIdx = hours.findIndex((h) => h.temp === max);
-  const label = (i: number, t: number, above: boolean) =>
-    `<text x="${Math.min(GRAPH_W - 40, Math.max(40, x(i))).toFixed(1)}"
-       y="${(y(t) + (above ? -12 : 26)).toFixed(1)}" class="wx-temp-label">${Math.round(t)}°</text>`;
-  return `<svg class="wx-graph" viewBox="0 0 ${GRAPH_W} ${GRAPH_H}" preserveAspectRatio="none">
+  // Labels are HTML overlaid on the box, not SVG text — the svg stretches
+  // with preserveAspectRatio="none", which would squash glyphs.
+  const label = (i: number, t: number) => {
+    const lx = Math.min(97, Math.max(3, (x(i) / GRAPH_W) * 100));
+    const ly = (y(t) / GRAPH_H) * 100;
+    return `<span class="wx-temp-tag" style="left:${lx.toFixed(1)}%;top:${ly.toFixed(1)}%">${Math.round(t)}°</span>`;
+  };
+  return `<div class="wx-graph-box"><svg class="wx-graph" viewBox="0 0 ${GRAPH_W} ${GRAPH_H}" preserveAspectRatio="none">
     <defs><linearGradient id="wx-grad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" class="wx-fill-top"/>
       <stop offset="100%" class="wx-fill-bottom"/>
@@ -85,8 +89,7 @@ function hourlyGraph(hours: any[]): string {
     <polygon fill="url(#wx-grad)" stroke="none"
       points="0,${GRAPH_H - BAR_AREA} ${points} ${GRAPH_W},${GRAPH_H - BAR_AREA}"/>
     <polyline class="wx-temp-line" points="${points}"/>
-    ${label(maxIdx, max, true)}${minIdx !== maxIdx ? label(minIdx, min, true) : ""}
-  </svg>`;
+  </svg>${label(maxIdx, max)}${minIdx !== maxIdx ? label(minIdx, min) : ""}</div>`;
 }
 
 function dayCard(day: any, i: number): string {
