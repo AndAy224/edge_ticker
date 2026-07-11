@@ -191,7 +191,9 @@ function scopeSvg(aircraft: any[], radiusKm: number, center: any): string {
 function listHtml(aircraft: any[], data: any): string {
   const rows = aircraft.length
     ? aircraft
-        .slice(0, 10)
+        // 7 rows + header fit the 528px 1-pane budget; narrower panes are
+        // capped further in CSS via [data-panes] nth-child.
+        .slice(0, 7)
         .map(
           (a) => `<div class="adsb-row ${altBand(a)}" data-detail="${escapeHtml(a.hex)}">
             <span class="adsb-flight">${escapeHtml(a.flight)}</span>

@@ -26,7 +26,9 @@ function uptime(seconds: number): string {
 register({
   id: "proxmox",
   renderStage(el, data) {
-    const nodes: any[] = data?.nodes ?? [];
+    // 6 node cards fit the wide-pane grid (2 rows); narrower panes are
+    // capped further in CSS via [data-panes] nth-child.
+    const nodes: any[] = (data?.nodes ?? []).slice(0, 6);
     const guests = data?.guests ?? { running: 0, total: 0 };
     const storage: any[] = data?.storage ?? [];
     el.innerHTML = `<div class="pve-layout">

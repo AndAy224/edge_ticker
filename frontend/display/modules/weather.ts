@@ -143,7 +143,7 @@ register({
             </div>`
           : ""
       }
-      <div class="wx-days">${daily.slice(0, 3).map(dayCard).join("")}</div>
+      <div class="wx-days">${daily.slice(0, 5).map(dayCard).join("")}</div>
     </div>`;
   },
 });

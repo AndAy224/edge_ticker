@@ -394,12 +394,20 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 8px;
+  /* a wrapped head (BTC-USD + change %) makes the card taller than its grid
+     row budget and the whole stage clips out the top — never wrap */
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .quote-symbol {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .quote-price {
@@ -410,8 +418,9 @@ body {
 }
 
 .quote-change {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
+  flex: none;
 }
 
 .quote-card.up .quote-change,
@@ -564,6 +573,47 @@ body {
 }
 
 [data-panes="3"] .range-label {
+  display: none;
+}
+
+/* narrow panes: compact cards so two grid rows fit the ~432px pane, and cap
+   the visible cards (focus's second pane is ~740px wide → 2 columns, so its
+   cap must be as strict as mosaic's) */
+[data-panes="2"] .quote-card,
+[data-panes="3"] .quote-card {
+  min-height: 0;
+  padding: 14px 18px;
+}
+
+[data-panes="2"] .quote-symbol,
+[data-panes="3"] .quote-symbol {
+  font-size: 22px;
+}
+
+[data-panes="2"] .quote-price,
+[data-panes="3"] .quote-price {
+  font-size: 38px;
+  margin: 2px 0;
+}
+
+[data-panes="2"] .quote-change,
+[data-panes="3"] .quote-change {
+  font-size: 20px;
+}
+
+[data-panes="2"] .quote-delta,
+[data-panes="3"] .quote-delta {
+  font-size: 17px;
+}
+
+[data-panes="2"] .spark,
+[data-panes="3"] .spark {
+  height: 32px;
+}
+
+[data-panes="2"] .quote-card:nth-child(n + 7),
+[data-panes="3"] .quote-card:nth-child(n + 5),
+[data-layout="focus"] .stage-pane:last-child .quote-card:nth-child(n + 5) {
   display: none;
 }
 
@@ -784,13 +834,28 @@ body {
   gap: 28px;
 }
 
+[data-panes="2"] .wx-now-icon {
+  width: 110px;
+  height: 110px;
+}
+
 [data-panes="3"] .wx-now-icon {
   width: 90px;
   height: 90px;
 }
 
+[data-panes="2"] .wx-now-temp {
+  font-size: 72px;
+}
+
 [data-panes="3"] .wx-now-temp {
   font-size: 64px;
+}
+
+/* the wide pane shows 5 forecast days; narrow panes keep today's 3-card row */
+[data-panes="2"] .wx-day:nth-child(n + 4),
+[data-panes="3"] .wx-day:nth-child(n + 4) {
+  display: none;
 }
 
 [data-panes="3"] .wx-day {
@@ -912,7 +977,14 @@ body {
   font-size: 40px;
 }
 
-/* ---- narrow-pane adaptations (data-panes on <html>) ---- */
+/* ---- narrow-pane adaptations (data-panes on <html>) ----
+   Stage layers are bottom-aligned with overflow:hidden, so oversized content
+   clips silently out the TOP. Item-cap convention: the renderer slices the
+   wide-pane maximum in TS; nth-child hiding here fits the narrower panes
+   (keeps data-detail indices aligned with the stage arrays). Pane budgets on
+   the 2560×720 panel: 1-pane ≈ 2024×528, 2-pane ≈ 986×432, 3-pane ≈ 741×432.
+   Caution: the focus layout is panes=2 but its second pane is only ~740px
+   wide — panes=2 rules must survive that width too. */
 
 [data-panes="2"] .stage-layer,
 [data-panes="3"] .stage-layer {
@@ -925,8 +997,20 @@ body {
   grid-template-columns: 1fr;
 }
 
-/* single-column game rows are twice as tall — cap them so the list fits the
-   pane (stage layers bottom-align and would overflow out the top) */
+/* single-column game rows are twice as tall — compact them and cap at 5 so
+   the list fits the pane (stage layers bottom-align and would overflow out
+   the top): 5 × ~66px + 4 × 14px gap ≈ 386px of the ~432px budget */
+[data-panes="2"] .sports-list .game-row,
+[data-panes="3"] .sports-list .game-row {
+  padding: 12px 18px;
+  font-size: 26px;
+}
+
+[data-panes="2"] .sports-list .game-teams strong,
+[data-panes="3"] .sports-list .game-teams strong {
+  font-size: 32px;
+}
+
 [data-panes="2"] .sports-list .game-row:nth-child(n + 6),
 [data-panes="3"] .sports-list .game-row:nth-child(n + 6) {
   display: none;
@@ -1312,6 +1396,54 @@ body {
   color: var(--text-dim);
 }
 
+/* narrow panes: node health is the point — drop the guests/storage side
+   column, compact the node cards, and cap at 3 so the single-column stack
+   fits the ~432px budget (3 × ~125px + gaps ≈ 405px) */
+[data-panes="2"] .pve-side,
+[data-panes="3"] .pve-side {
+  display: none;
+}
+
+[data-panes="2"] .pve-nodes,
+[data-panes="3"] .pve-nodes {
+  gap: 14px;
+}
+
+[data-panes="2"] .pve-nodes .pve-card,
+[data-panes="3"] .pve-nodes .pve-card {
+  padding: 12px 18px;
+}
+
+[data-panes="2"] .pve-nodes .pve-card-head,
+[data-panes="3"] .pve-nodes .pve-card-head {
+  margin-bottom: 6px;
+}
+
+[data-panes="2"] .pve-nodes .pve-name,
+[data-panes="3"] .pve-nodes .pve-name {
+  font-size: 24px;
+}
+
+[data-panes="2"] .pve-nodes .pve-bar-row,
+[data-panes="3"] .pve-nodes .pve-bar-row {
+  margin: 5px 0;
+}
+
+[data-panes="2"] .pve-nodes .pve-bar,
+[data-panes="3"] .pve-nodes .pve-bar {
+  height: 14px;
+}
+
+[data-panes="2"] .pve-nodes .pve-meta,
+[data-panes="3"] .pve-nodes .pve-meta {
+  display: none;
+}
+
+[data-panes="2"] .pve-nodes .pve-card:nth-child(n + 4),
+[data-panes="3"] .pve-nodes .pve-card:nth-child(n + 4) {
+  display: none;
+}
+
 /* ---- adsb ---- */
 
 /* radar layout: square polar scope on the left, live flight list on the right */
@@ -1484,7 +1616,7 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .adsb-header {
@@ -1518,7 +1650,7 @@ body {
   gap: 24px;
   background: var(--panel-raised);
   border-radius: 12px;
-  padding: 12px 26px;
+  padding: 9px 26px;
   font-size: 28px;
   font-variant-numeric: tabular-nums;
 }
@@ -1549,7 +1681,9 @@ body {
   display: block;
 }
 
-/* narrow rotation panes: drop the scope, keep the list */
+/* narrow rotation panes: drop the scope, keep the list — compacted (the
+   speed column goes, distance stops wrapping) and capped at 6 rows so the
+   list fits the ~432px pane */
 [data-panes="2"] .radar-scope,
 [data-panes="3"] .radar-scope {
   display: none;
@@ -1558,6 +1692,44 @@ body {
 [data-panes="2"] .adsb-radar,
 [data-panes="3"] .adsb-radar {
   gap: 0;
+}
+
+[data-panes="2"] .adsb-list,
+[data-panes="3"] .adsb-list {
+  gap: 8px;
+}
+
+[data-panes="2"] .adsb-row,
+[data-panes="3"] .adsb-row {
+  padding: 8px 16px;
+  font-size: 24px;
+  gap: 16px;
+}
+
+[data-panes="2"] .adsb-flight,
+[data-panes="3"] .adsb-flight {
+  min-width: 120px;
+}
+
+[data-panes="2"] .adsb-alt,
+[data-panes="3"] .adsb-alt {
+  min-width: 110px;
+}
+
+[data-panes="2"] .adsb-speed,
+[data-panes="3"] .adsb-speed {
+  display: none;
+}
+
+[data-panes="2"] .adsb-dist,
+[data-panes="3"] .adsb-dist {
+  white-space: nowrap;
+}
+
+/* .adsb-header is the list's first child, so child 8 is the 7th row */
+[data-panes="2"] .adsb-row:nth-child(n + 8),
+[data-panes="3"] .adsb-row:nth-child(n + 8) {
+  display: none;
 }
 
 /* ---- aircraft detail card ---- */
@@ -1831,11 +2003,11 @@ body {
 .astro-moon {
   background: var(--panel-raised);
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 16px 24px;
 }
 
 .astro-moon-pct {
-  font-size: 56px;
+  font-size: 48px;
   font-weight: 700;
 }
 
@@ -1854,7 +2026,7 @@ body {
 }
 
 .astro-target {
-  font-size: 26px;
+  font-size: 24px;
 }
 
 .astro-target-name {
@@ -1870,6 +2042,69 @@ body {
 
 [data-panes="3"] .astro-target-times {
   font-size: 16px;
+}
+
+/* narrow panes stack the hour strip above the moon/targets column — compact
+   everything so the stack fits the ~432px budget: shorter strip, sunrise line
+   dropped (the weather card carries it), moon flattened to one row, 3 targets */
+[data-panes="2"] .astro-layout,
+[data-panes="3"] .astro-layout {
+  gap: 16px;
+}
+
+[data-panes="2"] .astro-strip,
+[data-panes="3"] .astro-strip {
+  height: 100px;
+  margin: 12px 0 6px;
+  gap: 6px;
+}
+
+[data-panes="3"] .astro-hour:nth-child(even) .astro-hour-label {
+  visibility: hidden;
+}
+
+[data-panes="2"] .astro-sun,
+[data-panes="3"] .astro-sun {
+  display: none;
+}
+
+[data-panes="2"] .astro-side,
+[data-panes="3"] .astro-side {
+  gap: 12px;
+}
+
+[data-panes="2"] .astro-moon,
+[data-panes="3"] .astro-moon {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 18px;
+}
+
+[data-panes="2"] .astro-moon-pct,
+[data-panes="3"] .astro-moon-pct {
+  font-size: 32px;
+}
+
+[data-panes="2"] .astro-moon-phase,
+[data-panes="3"] .astro-moon-phase {
+  font-size: 20px;
+}
+
+[data-panes="2"] .astro-targets,
+[data-panes="3"] .astro-targets {
+  padding: 12px 18px;
+  gap: 8px;
+}
+
+[data-panes="2"] .astro-target,
+[data-panes="3"] .astro-target {
+  font-size: 21px;
+}
+
+[data-panes="2"] .astro-target:nth-child(n + 4),
+[data-panes="3"] .astro-target:nth-child(n + 4) {
+  display: none;
 }
 
 /* ---- chrome ---- */
@@ -2771,6 +3006,10 @@ body {
   height: 170px;
 }
 
+/* narrow panes stack the weather blocks — the full-height hourly graph
+   doesn't fit the ~432px column with the now-block and day cards, so it goes
+   at 2 panes too, not just 3 */
+[data-panes="2"] .wx-hourly,
 [data-panes="3"] .wx-hourly {
   display: none;
 }
@@ -2967,15 +3206,33 @@ body {
   height: 170px;
 }
 
+[data-panes="2"] .aq-now-icon {
+  width: 110px;
+  height: 110px;
+}
+
 [data-panes="3"] .aq-now-icon {
   width: 90px;
   height: 90px;
+}
+
+[data-panes="2"] .aq-now-value {
+  font-size: 72px;
 }
 
 [data-panes="3"] .aq-now-value {
   font-size: 64px;
 }
 
+/* a long pollen list must not add wrapped rows in narrow panes */
+[data-panes="2"] .aq-pollen,
+[data-panes="3"] .aq-pollen {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-panes="2"] .aq-hourly,
 [data-panes="3"] .aq-hourly {
   display: none;
 }
@@ -3589,8 +3846,15 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 19px;
-  padding: 2px 0;
+  font-size: 18px;
+  padding: 1px 0;
+}
+
+/* big leagues: cap the right column (10 standings rows + 5 scoreboard games)
+   so it stays inside the 528px 1-pane budget — .ff-panel-head is child 1 */
+.ff-st-row:nth-child(n + 12),
+.ff-sb-row:nth-child(n + 7) {
+  display: none;
 }
 
 .ff-st-rank {
@@ -3731,11 +3995,30 @@ body {
   opacity: 0.75;
 }
 
+/* boxscore columns list full rosters — cap the bench tail so a column never
+   outgrows the pane (detail layers bottom-align and clip out the top like
+   stage layers; .ff-box-team is the column's first child) */
+.ff-box-row:nth-child(n + 17) {
+  display: none;
+}
+
+[data-panes="2"] .ff-box-row:nth-child(n + 12),
+[data-panes="3"] .ff-box-row:nth-child(n + 12) {
+  display: none;
+}
+
+[data-panes="3"] .ff-box .ff-popp {
+  display: none;
+}
+
 .ff-popp {
-  width: 130px;
+  /* wide enough for "vs PIT Sun 8:20 PM" — a wrapped opponent cell doubles
+     every row and pushes the boxscore header out the top of the pane */
+  width: 190px;
   text-align: right;
   font-size: 17px;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .ff-dim {
@@ -3910,8 +4193,28 @@ body {
   display: none;
 }
 
+[data-panes="2"] .ff-live-nums {
+  font-size: 48px;
+}
+
 [data-panes="3"] .ff-live-nums {
-  font-size: 60px;
+  font-size: 44px;
+}
+
+/* narrow panes stack the two fantasy columns — keep the matchup card and
+   standings, drop the trend/scoreboard panels, and cap standings at 8 rows
+   so the stack fits the ~432px budget */
+[data-panes="2"] .ff-trend,
+[data-panes="3"] .ff-trend,
+[data-panes="2"] .ff-scoreboard,
+[data-panes="3"] .ff-scoreboard {
+  display: none;
+}
+
+/* .ff-panel-head is the panel's first child, so child 10 is the 9th row */
+[data-panes="2"] .ff-st-row:nth-child(n + 10),
+[data-panes="3"] .ff-st-row:nth-child(n + 10) {
+  display: none;
 }
 
 [data-panes="3"] .ff-m-pts {

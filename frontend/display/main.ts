@@ -653,6 +653,27 @@ function updateScoreChip(): void {
   renderStage();
 };
 
+// Debug/test hook: jump rotation so `id` is in pane 0 and pin there (for
+// screenshotting a specific module without waiting out the rotation).
+(window as any).__rotshow = (id: string) => {
+  const target = rotation.order.indexOf(id);
+  if (target === -1) return null;
+  rotation.index = target;
+  rotation.pinned = true;
+  closeAllDetails();
+  renderStage();
+  return rotation.order[target];
+};
+
+// Debug/test hook: replace any module's payload and re-render (for
+// screenshotting stress payloads). Modules with auto-feature side effects
+// (sports, fantasy) have dedicated hooks below.
+(window as any).__modfake = (id: string, stage: any) => {
+  modules.set(id, { module: id, stage, tape: [] } as any);
+  rebuildTape();
+  renderStage();
+};
+
 // Debug/test hook: replace the fantasy payload entirely and re-render,
 // running the same auto-feature side-effects as a real fantasy message.
 (window as any).__fantasyfake = (stage: any) => {

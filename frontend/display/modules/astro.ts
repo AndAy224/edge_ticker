@@ -41,7 +41,9 @@ register({
   renderStage(el, data) {
     const hours: any[] = data?.hours ?? [];
     const moon = data?.moon ?? {};
-    const targets: any[] = data?.targets ?? [];
+    // 5 targets fit the wide-pane side column beside the moon card; narrower
+    // panes are capped further in CSS via [data-panes] nth-child.
+    const targets: any[] = (data?.targets ?? []).slice(0, 5);
     const cloudStrip = hours
       .map((h) => {
         const cover = h.total ?? 100;

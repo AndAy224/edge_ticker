@@ -58,7 +58,10 @@ function formatPrice(price: number): string {
 register({
   id: "markets",
   renderStage(el, data) {
-    const quotes: any[] = data?.quotes ?? [];
+    // Wide-pane max (7 cols × 2 rows fit 2024×528); narrower panes are capped
+    // further in CSS via [data-panes] nth-child, which keeps the data-detail
+    // indices aligned with stage.quotes.
+    const quotes: any[] = (data?.quotes ?? []).slice(0, 14);
     el.innerHTML =
       `<div class="markets-grid">` +
       quotes

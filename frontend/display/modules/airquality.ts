@@ -60,8 +60,9 @@ register({
       el.innerHTML = `<div class="empty">Waiting for air-quality data…</div>`;
       return;
     }
-    const pollutants: any[] = data?.pollutants ?? [];
-    const pollen: any[] = data?.pollen ?? [];
+    // 6 pollutant cards fit one row even in the narrowest pane
+    const pollutants: any[] = (data?.pollutants ?? []).slice(0, 6);
+    const pollen: any[] = (data?.pollen ?? []).slice(0, 8);
     const hours: any[] = data?.hourly ?? [];
     const labels = hours
       .map((h, i) => (i % 3 === 0 ? `<span>${hourLabel(h.time)}</span>` : ""))

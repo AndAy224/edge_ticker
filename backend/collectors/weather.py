@@ -63,7 +63,7 @@ class WeatherCollector(Collector):
                     "temperature_unit": "fahrenheit",
                     "wind_speed_unit": "mph",
                     "timezone": "auto",
-                    "forecast_days": 3,
+                    "forecast_days": 5,
                 },
             )
         response.raise_for_status()
@@ -81,15 +81,16 @@ class WeatherCollector(Collector):
             "text": WMO_TEXT.get(code, ""),
         }
         daily_raw = raw.get("daily", {})
+        blank = [None] * len(daily_raw.get("time", []))
         daily = [
             {
                 "date": date,
-                "high": daily_raw.get("temperature_2m_max", [None] * 3)[i],
-                "low": daily_raw.get("temperature_2m_min", [None] * 3)[i],
-                "precip": daily_raw.get("precipitation_probability_max", [None] * 3)[i],
-                "code": daily_raw.get("weather_code", [None] * 3)[i],
+                "high": daily_raw.get("temperature_2m_max", blank)[i],
+                "low": daily_raw.get("temperature_2m_min", blank)[i],
+                "precip": daily_raw.get("precipitation_probability_max", blank)[i],
+                "code": daily_raw.get("weather_code", blank)[i],
                 "text": WMO_TEXT.get(
-                    daily_raw.get("weather_code", [None] * 3)[i], ""
+                    daily_raw.get("weather_code", blank)[i], ""
                 ),
             }
             for i, date in enumerate(daily_raw.get("time", []))
