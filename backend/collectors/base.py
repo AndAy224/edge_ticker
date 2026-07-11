@@ -26,6 +26,11 @@ class Collector(ABC):
     enabled_by_default: bool = True
     # Env vars that must be set for this collector to be viable (else skipped).
     required_env: tuple[str, ...] = ()
+    # Failure retry pacing. Collectors talking to tightly rate-limited APIs
+    # must raise these: fast retries against a 429 burn the hourly budget and
+    # lock the collector out permanently (learned from Launch Library 2).
+    backoff_start: float = 5.0
+    backoff_max: float = MAX_BACKOFF_SECONDS
 
     def __init__(self, config: dict) -> None:
         self.config = config
@@ -36,7 +41,7 @@ class Collector(ABC):
         self._last_payload: ModulePayload | None = None
 
     async def start(self, bus: Bus) -> None:
-        backoff = min(self.interval, 5.0)
+        backoff = min(self.interval, self.backoff_start)
         while True:
             try:
                 raw = await self.fetch()
@@ -47,7 +52,7 @@ class Collector(ABC):
                 self.last_error = None
                 self._last_payload = payload
                 await bus.publish(payload)
-                backoff = min(self.interval, 5.0)
+                backoff = min(self.interval, self.backoff_start)
                 await asyncio.sleep(self.interval)
             except asyncio.CancelledError:
                 raise
@@ -60,7 +65,7 @@ class Collector(ABC):
                     self._last_payload = stale_payload
                     await bus.publish(stale_payload)
                 await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, MAX_BACKOFF_SECONDS)
+                backoff = min(backoff * 2, self.backoff_max)
 
     @abstractmethod
     async def fetch(self) -> Any: ...

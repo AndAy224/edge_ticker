@@ -1,9 +1,12 @@
 """Rocket launches — Launch Library 2 (thespacedevs, keyless), detailed mode.
 
-Free tier allows ~15 requests/hour. Budget: idle polls (default 1800s) make
-two calls (upcoming detailed + recent results) ≈ 4/hr; inside the live launch
-window (T-45m..T+15m) the poll tightens (default 360s) but drops the recent
-call ≈ 10/hr. The display renders its own live countdown from `net`.
+Free tier allows ~15 requests/hour PER IP — dev and prod share it, and a 429
+lockout self-perpetuates if retried fast (the default collector backoff would
+burn the whole budget on retries). Budget: idle polls (default 1800s) make
+one call, plus the recent-results call every 4th poll ≈ 2.5/hr; inside the
+live launch window (T-45m..T+15m) the poll tightens (default 360s, single
+call) ≈ 10/hr; failures retry no sooner than 15 minutes. The display renders
+its own live countdown from `net`.
 
 Florida launches (Cape Canaveral / Kennedy) are flagged: they're visible
 from the Tampa Bay area, spectacularly so at night."""
@@ -63,8 +66,15 @@ def _boosters(entry: dict) -> list[dict]:
     return boosters
 
 
+RECENT_EVERY_N_POLLS = 4
+
+
 class LaunchesCollector(Collector):
     name = "launches"
+    # 429 recovery must be slow: retrying at the default 5s..300s cadence
+    # spends 12+ req/hr on failures alone and never gets back under the limit.
+    backoff_start = 900.0
+    backoff_max = 3600.0
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)
@@ -72,7 +82,8 @@ class LaunchesCollector(Collector):
         self.idle_interval = max(240.0, float(self.module_config.get("poll_seconds", 1800)))
         self.live_interval = max(240.0, float(self.module_config.get("poll_seconds_live", 360)))
         self.interval = self.idle_interval
-        self._recent: list[dict] = []  # last-fetched copy, reused during live windows
+        self._recent: list[dict] = []  # last-fetched copy, reused between refreshes
+        self._polls_since_recent = 0
 
     async def fetch(self) -> dict:
         now = datetime.now(timezone.utc)
@@ -87,8 +98,10 @@ class LaunchesCollector(Collector):
                 _in_live_window(e.get("net"), (e.get("status") or {}).get("abbrev"), now)
                 for e in upcoming.get("results", [])
             )
-            # Recent results ride along on idle polls only (rate budget).
-            if not live or not self._recent:
+            # Recent results ride along on every Nth idle poll (rate budget).
+            self._polls_since_recent += 1
+            if (not live and self._polls_since_recent >= RECENT_EVERY_N_POLLS) or not self._recent:
+                self._polls_since_recent = 0
                 try:
                     prev = await client.get(
                         PREVIOUS_URL, params={"limit": 3, "mode": "list"}
