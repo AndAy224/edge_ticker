@@ -9,7 +9,12 @@ from ..collectors.weather_alerts import TEST_ALERT
 
 router = APIRouter()
 
-ACTIONS = {"next", "prev", "pin", "blank", "wake", "reload", "celebrate_test", "weather_alert_test"}
+ACTIONS = {
+    "next", "prev", "pin", "blank", "wake", "reload",
+    "celebrate_test", "weather_alert_test",
+    # Handled entirely by the display: fabricated Starship flight-day preview.
+    "starship_test",
+}
 
 
 @router.post("/control")

@@ -819,8 +819,94 @@ function handleControl(action: string): void {
     case "reload":
       location.reload();
       break;
+    case "starship_test":
+      startStarshipPreview();
+      break;
   }
 }
+
+// ---- Starship flight-day preview (admin "Test Starship card") ----------------
+// Fabricated payload tour: the flight-day takeover card (10s), then the T−0
+// countdown board (10s), then the real launches payload is restored. Runs on
+// the display only — nothing is written to config or the backend.
+
+let starshipPreviewTimers: number[] = [];
+let starshipPreviewCleanup: (() => void) | null = null;
+
+function starshipPreviewStage(minutesToNet: number): any {
+  const live = minutesToNet <= 45;
+  return {
+    live,
+    recent: [],
+    launches: [{
+      name: "Starship | Flight 13",
+      provider: "SpaceX",
+      mission: "Flight 13",
+      mission_description:
+        "Integrated flight test of Starship and Super Heavy — booster tower-catch attempt and payload bay door demonstration.",
+      orbit: "Sub",
+      orbit_name: "Suborbital",
+      net: new Date(Date.now() + minutesToNet * 60000).toISOString(),
+      status: "Go",
+      status_text: "Go for Launch",
+      pad: "Orbital Launch Mount A",
+      location: "SpaceX Starbase, TX, USA",
+      pad_count: 12,
+      image: "",
+      probability: 75,
+      weather_concerns: null,
+      programs: [],
+      boosters: [{
+        serial: "B14",
+        flight_no: 2,
+        reused: true,
+        landing_attempt: true,
+        landing_type: "RTLS",
+        landing_location: "Tower catch",
+      }],
+      rocket: { full_name: "Starship", total: 12, successes: 8, streak: 3 },
+      florida: false,
+      starship: true,
+      live,
+    }],
+  };
+}
+
+function startStarshipPreview(): void {
+  starshipPreviewCleanup?.(); // restart cleanly on a second button press
+  const real = modules.get("launches");
+  const inserted = !rotation.order.includes("launches");
+  if (inserted) rotation.order.push("launches");
+  const wasPinned = rotation.pinned;
+  const wasIndex = rotation.index;
+  rotation.index = rotation.order.indexOf("launches");
+  rotation.pinned = true; // hold the preview on screen; badge untouched
+
+  const show = (stage: any) => {
+    modules.set("launches", { module: "launches", stage, tape: [] } as any);
+    renderStage();
+  };
+  starshipPreviewCleanup = () => {
+    for (const t of starshipPreviewTimers) clearTimeout(t);
+    starshipPreviewTimers = [];
+    starshipPreviewCleanup = null;
+    if (real) modules.set("launches", real);
+    else modules.delete("launches");
+    if (inserted) rotation.order = rotation.order.filter((id) => id !== "launches");
+    rotation.pinned = wasPinned;
+    rotation.index = Math.min(wasIndex, Math.max(0, rotation.order.length - 1));
+    renderStage();
+  };
+
+  show(starshipPreviewStage(6 * 60)); // flight-day card, T−6h
+  starshipPreviewTimers.push(
+    window.setTimeout(() => show(starshipPreviewStage(9)), 10_000), // T−9m board
+    window.setTimeout(() => starshipPreviewCleanup?.(), 20_000),
+  );
+}
+
+// Debug/test hook: run the same preview from a DevTools/CDP session.
+(window as any).__starshiptest = () => startStarshipPreview();
 
 // ---- Gestures ----------------------------------------------------------------------
 

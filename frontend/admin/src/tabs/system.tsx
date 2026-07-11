@@ -52,10 +52,14 @@ export function SystemTab() {
           <button class="ghost celebrate" onClick={() => control("celebrate_test")}>
             🎉 Test score alert
           </button>
+          <button class="ghost celebrate" onClick={() => control("starship_test")}>
+            🚀 Test Starship card
+          </button>
         </div>
         <p class="hint">
-          Test alert replays the last touchdown from the latest Packers game of
-          last season on the display.
+          Score alert replays the last touchdown from the latest Packers game of
+          last season. Starship test shows the fabricated flight-day card for
+          10s, then the T−0 countdown board for 10s, then restores the display.
         </p>
       </section>
 
