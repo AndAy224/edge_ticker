@@ -111,6 +111,9 @@ export function SourcesTab() {
     patch(
       (c) => (c.modules.weather_radar = { ...(c.modules.weather_radar ?? {}), [key]: value }),
     );
+  const launches = cfg.modules?.launches ?? {};
+  const patchLaunches = (key: string, value: unknown) =>
+    patch((c) => (c.modules.launches = { ...(c.modules.launches ?? {}), [key]: value }));
   const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
@@ -351,6 +354,18 @@ export function SourcesTab() {
           value={news.keep ?? 30}
           onChange={(v) => patch((c) => (c.modules.news.keep = v))}
         />
+      </section>
+
+      <section>
+        <h2>Rocket launches</h2>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={launches.auto_feature === true}
+            onChange={(e) => patchLaunches("auto_feature", e.currentTarget.checked)}
+          />
+          Pin the launch board around T-0 (T−45m → T+15m)
+        </label>
       </section>
 
       <section>

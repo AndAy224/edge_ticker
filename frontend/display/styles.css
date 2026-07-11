@@ -4724,6 +4724,8 @@ body {
 }
 
 .launch-featured {
+  position: relative; /* backdrop image anchors to the card */
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 26px;
@@ -4731,6 +4733,25 @@ body {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
+}
+
+/* Rocket photo behind the card content, heavily dimmed so text stays readable. */
+.launch-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0.22;
+  filter: saturate(0.85);
+  mask-image: linear-gradient(to right, transparent 15%, black 70%);
+  -webkit-mask-image: linear-gradient(to right, transparent 15%, black 70%);
+}
+
+.launch-featured > :not(.launch-backdrop),
+.launch-live > :not(.launch-backdrop) {
+  position: relative; /* above the backdrop */
 }
 
 .launch-featured.florida {
@@ -4774,6 +4795,181 @@ body {
 .launch-status[data-status="TBC"] {
   color: var(--alert);
   border-color: var(--alert);
+}
+
+.launch-status[data-status="In Flight"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  animation: launch-inflight 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes launch-inflight {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+.launch-status[data-status="Success"] {
+  color: var(--up);
+  border-color: var(--up);
+}
+
+.launch-status[data-status="Failure"],
+.launch-status[data-status="Partial Failure"] {
+  color: var(--down);
+  border-color: var(--down);
+}
+
+.launch-chip,
+.launch-go {
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.launch-chip.program {
+  background: var(--muted);
+  color: var(--text);
+}
+
+.launch-chip.orbit {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.launch-go[data-band="go"] {
+  background: color-mix(in srgb, var(--up) 22%, transparent);
+  color: var(--up);
+}
+
+.launch-go[data-band="iffy"] {
+  background: color-mix(in srgb, var(--alert) 22%, transparent);
+  color: var(--alert);
+}
+
+.launch-go[data-band="nogo"] {
+  background: color-mix(in srgb, var(--down) 22%, transparent);
+  color: var(--down);
+}
+
+.launch-desc {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 1100px;
+}
+
+.launch-booster,
+.launch-streak {
+  color: var(--text-dim);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-booster {
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.launch-weather {
+  margin-top: 6px;
+  color: var(--alert);
+  font-size: 18px;
+}
+
+/* Launch-day scene (T−45m .. T+15m): the pane becomes a countdown board. */
+.launch-live {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 26px 36px;
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.launch-live .launch-backdrop {
+  opacity: 0.3;
+  mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
+  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
+}
+
+.launch-live-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.launch-live .launch-count-clock {
+  font-size: 110px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.launch-live-name {
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.launch-live .launch-where,
+.launch-live .launch-booster {
+  margin-top: 4px;
+  font-size: 19px;
+}
+
+.launch-live .launch-visible {
+  margin-top: 8px;
+}
+
+/* Recent-results strip */
+.launch-recent {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 12px;
+  color: var(--text-dim);
+  font-size: 17px;
+}
+
+.launch-recent-label {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+}
+
+.launch-recent-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.launch-recent-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.launch-recent-item.ok .launch-recent-dot {
+  background: var(--up);
+}
+
+.launch-recent-item.bad .launch-recent-dot {
+  background: var(--down);
 }
 
 .launch-name {
@@ -4897,4 +5093,33 @@ body {
 [data-panes="2"] .launch-row-loc,
 [data-panes="3"] .launch-row-loc {
   display: none;
+}
+
+[data-panes="2"] .launch-desc,
+[data-panes="3"] .launch-desc,
+[data-panes="2"] .launch-streak,
+[data-panes="3"] .launch-streak,
+[data-panes="2"] .launch-recent,
+[data-panes="3"] .launch-recent {
+  display: none; /* narrow panes: keep the booster line, drop the trivia */
+}
+
+[data-panes="2"] .launch-booster,
+[data-panes="3"] .launch-booster {
+  font-size: 15px;
+}
+
+[data-panes="2"] .launch-live,
+[data-panes="3"] .launch-live {
+  padding: 16px 20px;
+}
+
+[data-panes="2"] .launch-live .launch-count-clock,
+[data-panes="3"] .launch-live .launch-count-clock {
+  font-size: 62px;
+}
+
+[data-panes="2"] .launch-live-name,
+[data-panes="3"] .launch-live-name {
+  font-size: 22px;
 }

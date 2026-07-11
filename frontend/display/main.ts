@@ -14,7 +14,7 @@ import { setWeatherAlerts } from "./modules/weather";
 import "./modules/airquality";
 import "./modules/weather_radar";
 import "./modules/hurricanes";
-import "./modules/launches";
+import { setLaunchSun } from "./modules/launches";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { HAOverlay } from "./overlay-ha";
@@ -154,6 +154,7 @@ function handleMessage(msg: any): void {
       haStates.clear();
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
       setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);
+      setLaunchSun((modules.get("weather")?.stage as any)?.sun ?? null);
       applyConfig();
       renderWeather();
       // Re-evaluate auto-feature from the snapshot so a mid-game reload
@@ -165,13 +166,18 @@ function handleMessage(msg: any): void {
         if (sports) autoFeatureSports(sports);
         const fantasy = modules.get("fantasy");
         if (fantasy) autoFeatureFantasy(fantasy);
+        const launches = modules.get("launches");
+        if (launches) autoFeatureLaunches(launches);
       }
       updateScoreChip();
       break;
     case "module": {
       const payload: ModulePayload = msg.payload;
       modules.set(payload.module, payload);
-      if (payload.module === "weather") renderWeather();
+      if (payload.module === "weather") {
+        renderWeather();
+        setLaunchSun((payload.stage as any)?.sun ?? null);
+      }
       if (payload.module === "weather_alerts") {
         // Alerts render inside the weather rail/stage, not their own pane.
         setWeatherAlerts(payload.stage?.alerts ?? []);
@@ -185,6 +191,7 @@ function handleMessage(msg: any): void {
         updateScoreChip();
       }
       if (payload.module === "fantasy") autoFeatureFantasy(payload);
+      if (payload.module === "launches") autoFeatureLaunches(payload);
       rebuildTape();
       for (let i = 0; i < paneEls.length; i++) {
         if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
@@ -516,6 +523,18 @@ function autoFeatureSports(payload: ModulePayload): void {
   }
 }
 
+let launchLiveFeatured = false;
+function autoFeatureLaunches(payload: ModulePayload): void {
+  const live = (payload.stage as any)?.live === true;
+  if (live && !launchLiveFeatured) {
+    launchLiveFeatured = true;
+    applyAutoFeature("launches", (config.modules?.launches as any)?.auto_feature === true);
+  } else if (!live && launchLiveFeatured) {
+    launchLiveFeatured = false;
+    clearAutoFeature("launches");
+  }
+}
+
 function autoFeatureFantasy(payload: ModulePayload): void {
   const live = (payload.stage as any)?.matchup?.state === "in";
   if (live && !fantasyLiveFeatured) {
@@ -686,6 +705,16 @@ function updateScoreChip(): void {
   const payload = { module: "fantasy", stage, tape: [] } as any;
   modules.set("fantasy", payload);
   autoFeatureFantasy(payload);
+  rebuildTape();
+  renderStage();
+};
+
+// Debug/test hook: replace the launches payload entirely and re-render,
+// running the same auto-feature side-effects as a real launches message.
+(window as any).__launchfake = (stage: any) => {
+  const payload = { module: "launches", stage, tape: [] } as any;
+  modules.set("launches", payload);
+  autoFeatureLaunches(payload);
   rebuildTape();
   renderStage();
 };

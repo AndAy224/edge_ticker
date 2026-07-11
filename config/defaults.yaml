@@ -59,7 +59,9 @@ modules:
 
   launches:
     enabled: true
-    poll_seconds: 1800   # Launch Library 2 free tier ≈ 15 req/hr — keep this coarse.
+    poll_seconds: 1800      # Launch Library 2 free tier ≈ 15 req/hr — keep this coarse.
+    poll_seconds_live: 360  # tighter poll inside the launch window (T-45m..T+15m)
+    auto_feature: false     # pin the launch board around T-0 (like sports auto_feature)
     # Has a stage page — add `launches` to rotation.order above to show it.
 
   airquality:
