@@ -728,14 +728,24 @@ body {
 
 /* ---- weather stage page ---- */
 
+/* wide panes: now-block + day cards on top, the temp/precip graph spanning
+   the full width below (narrow panes override back to a flex column and hide
+   the graph). The top-left above the bottom-aligned now-block stays free for
+   the absolute alert banner. */
 .weather-stage {
   width: 100%;
-  display: flex;
-  align-items: flex-end;
-  gap: 56px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "now days"
+    "hourly hourly";
+  align-items: end;
+  column-gap: 56px;
+  row-gap: 20px;
 }
 
 .wx-now {
+  grid-area: now;
   flex: none;
   display: flex;
   align-items: center;
@@ -781,6 +791,8 @@ body {
 }
 
 .wx-days {
+  grid-area: days;
+  justify-self: end;
   display: flex;
   gap: 20px;
 }
@@ -788,7 +800,7 @@ body {
 .wx-day {
   background: var(--panel-raised);
   border-radius: 16px;
-  padding: 22px 30px;
+  padding: 16px 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -803,8 +815,8 @@ body {
 }
 
 .wx-day-icon {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   color: var(--accent);
 }
 
@@ -829,6 +841,8 @@ body {
 
 [data-panes="2"] .weather-stage,
 [data-panes="3"] .weather-stage {
+  /* back to the stacked column (the base is a grid on wide panes) */
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 28px;
@@ -982,7 +996,8 @@ body {
    clips silently out the TOP. Item-cap convention: the renderer slices the
    wide-pane maximum in TS; nth-child hiding here fits the narrower panes
    (keeps data-detail indices aligned with the stage arrays). Pane budgets on
-   the 2560×720 panel: 1-pane ≈ 2024×528, 2-pane ≈ 986×432, 3-pane ≈ 741×432.
+   the 2560×720 panel (the stage layer is ~513px tall, not 600):
+   1-pane ≈ 2024×441, 2-pane ≈ 986×429, 3-pane ≈ 741×429.
    Caution: the focus layout is panes=2 but its second pane is only ~740px
    wide — panes=2 rules must survive that width too. */
 
@@ -2927,6 +2942,7 @@ body {
 /* ---- weather hourly forecast graph ---- */
 
 .wx-hourly {
+  grid-area: hourly;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2962,7 +2978,20 @@ body {
 
 .wx-graph {
   width: 100%;
-  height: 250px;
+  /* full-width band under the day cards — the two rows share the ~441px
+     1-pane content budget (stage layer is 513px, not 600) */
+  height: 145px;
+}
+
+/* with an active alert the banner needs the top-left corner — drop the
+   hourly head and shorten the graph so the bottom-aligned stack sinks
+   below it (the banner already names the alert; sun times return with it) */
+.weather-stage:has(.wx-alert-banner) .wx-graph {
+  height: 100px;
+}
+
+.weather-stage:has(.wx-alert-banner) .wx-hourly-head {
+  display: none;
 }
 
 .wx-temp-line {
@@ -3000,10 +3029,6 @@ body {
   font-size: 18px;
   color: var(--text-dim);
   padding: 0 4px;
-}
-
-[data-panes="2"] .wx-graph {
-  height: 170px;
 }
 
 /* narrow panes stack the weather blocks — the full-height hourly graph
