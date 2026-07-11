@@ -4578,3 +4578,323 @@ body {
   bottom: 10px;
   font-size: 18px;
 }
+
+/* ---- hurricanes (NHC tropical tracker) ----
+   Map plumbing (.radar-viewport/.radar-map/.radar-basemap/.radar-home) is
+   shared with the radar module — see slippymap.ts. */
+
+.hurr-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.hurr-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.hurr-cone {
+  fill: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1.5;
+}
+
+.hurr-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+
+.hurr-track-dot {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.hurr-name {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 3px 12px;
+  border-radius: 9px;
+  border: 1px solid;
+  background: rgba(6, 9, 14, 0.78);
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hurr-quiet {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(6, 9, 14, 0.72);
+  color: var(--text-dim);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.hurr-cards {
+  position: absolute;
+  left: 20px;
+  bottom: 14px;
+  display: flex;
+  gap: 14px;
+}
+
+.hurr-card {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid;
+  background: rgba(6, 9, 14, 0.8);
+}
+
+.hurr-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hurr-cat {
+  padding: 2px 9px;
+  border-radius: 7px;
+  color: #10141a;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.hurr-card-name {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.hurr-card-stats {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.hurr-card-dist {
+  color: var(--text-dim);
+  font-size: 17px;
+}
+
+[data-panes="2"] .hurr-cards,
+[data-panes="3"] .hurr-cards {
+  left: 12px;
+  bottom: 10px;
+  gap: 10px;
+}
+
+[data-panes="2"] .hurr-card:nth-child(n + 3),
+[data-panes="3"] .hurr-card:nth-child(n + 2) {
+  display: none; /* narrow panes: the map matters more than a card wall */
+}
+
+[data-panes="2"] .hurr-card-name,
+[data-panes="3"] .hurr-card-name {
+  font-size: 21px;
+}
+
+[data-panes="2"] .hurr-card-stats,
+[data-panes="3"] .hurr-card-stats {
+  font-size: 15px;
+}
+
+[data-panes="2"] .hurr-quiet,
+[data-panes="3"] .hurr-quiet {
+  top: 44px; /* below the rotation dots */
+  font-size: 19px;
+  padding: 5px 14px;
+  white-space: nowrap;
+}
+
+/* ---- launches (Launch Library 2) ---- */
+
+.launch-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.launch-featured {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 20px 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.launch-featured.florida {
+  border-color: var(--accent);
+}
+
+.launch-icon svg {
+  width: 64px;
+  height: 64px;
+  color: var(--accent);
+}
+
+.launch-provider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 19px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.launch-status {
+  padding: 2px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 15px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.launch-status[data-status="Go"] {
+  color: var(--up);
+  border-color: var(--up);
+}
+
+.launch-status[data-status="Hold"],
+.launch-status[data-status="TBD"],
+.launch-status[data-status="TBC"] {
+  color: var(--alert);
+  border-color: var(--alert);
+}
+
+.launch-name {
+  color: var(--text);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.launch-mission {
+  color: var(--text);
+  font-size: 22px;
+}
+
+.launch-where {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 18px;
+}
+
+.launch-visible {
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.launch-count {
+  margin-left: auto;
+  text-align: right;
+  flex: none;
+}
+
+.launch-count-clock {
+  color: var(--text);
+  font-size: 46px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-count-net {
+  color: var(--text-dim);
+  font-size: 18px;
+}
+
+.launch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.launch-row {
+  display: grid;
+  grid-template-columns: 220px 1fr auto;
+  gap: 18px;
+  align-items: baseline;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 20px;
+}
+
+.launch-row-net {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-row-name {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launch-row-loc {
+  color: var(--text-dim);
+}
+
+.launch-row.florida .launch-row-name {
+  color: var(--accent);
+}
+
+[data-panes="2"] .launch-icon,
+[data-panes="3"] .launch-icon {
+  display: none;
+}
+
+[data-panes="2"] .launch-featured,
+[data-panes="3"] .launch-featured {
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 14px 18px;
+}
+
+[data-panes="2"] .launch-name,
+[data-panes="3"] .launch-name {
+  font-size: 26px;
+}
+
+[data-panes="2"] .launch-count,
+[data-panes="3"] .launch-count {
+  margin-left: 0;
+  text-align: left;
+}
+
+[data-panes="2"] .launch-count-clock,
+[data-panes="3"] .launch-count-clock {
+  font-size: 34px;
+}
+
+[data-panes="2"] .launch-row:nth-child(n + 3),
+[data-panes="3"] .launch-row:nth-child(n + 2) {
+  display: none;
+}
+
+[data-panes="2"] .launch-row,
+[data-panes="3"] .launch-row {
+  grid-template-columns: 150px 1fr;
+  font-size: 17px;
+}
+
+[data-panes="2"] .launch-row-loc,
+[data-panes="3"] .launch-row-loc {
+  display: none;
+}

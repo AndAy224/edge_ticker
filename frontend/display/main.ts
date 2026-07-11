@@ -13,6 +13,8 @@ import "./modules/proxmox";
 import { setWeatherAlerts } from "./modules/weather";
 import "./modules/airquality";
 import "./modules/weather_radar";
+import "./modules/hurricanes";
+import "./modules/launches";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { HAOverlay } from "./overlay-ha";
@@ -326,6 +328,8 @@ const MODULE_LABELS: Record<string, string> = {
   airquality: "AIR QUALITY",
   fantasy: "FANTASY",
   weather_radar: "RADAR",
+  hurricanes: "TROPICS",
+  launches: "LAUNCHES",
 };
 
 function paneLabel(id: string | undefined): string {
