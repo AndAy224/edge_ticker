@@ -73,8 +73,11 @@ blanking. Updates later: `sudo bash deploy/update.sh`.
 
 1. Drop a `Collector` subclass in `backend/collectors/yourmodule.py`
    (see [base.py](backend/collectors/base.py) — implement `fetch()` and `shape()`).
+   Backend discovery is automatic.
 2. Drop a renderer in `frontend/display/modules/yourmodule.ts` that calls
-   `register(...)`, and import it from `main.ts`.
-3. Add the module to `rotation.order` and `modules.yourmodule` in config.
-
-Neither step touches core files; discovery is automatic on the backend.
+   `register(...)`; import it from `main.ts` and add a `MODULE_LABELS` entry
+   there (pane-header title).
+3. Add the module id to `STAGE_MODULES` in
+   `frontend/admin/src/tabs/modules.tsx` so the admin can add it to the
+   rotation.
+4. Add the module to `rotation.order` and `modules.yourmodule` in config.
