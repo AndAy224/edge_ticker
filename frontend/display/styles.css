@@ -1675,6 +1675,14 @@ body {
   min-width: 180px;
 }
 
+/* Origin → destination, filled in from the cached route lookup. */
+.adsb-route {
+  min-width: 190px;
+  color: var(--text-dim);
+  font-size: 22px;
+  white-space: nowrap;
+}
+
 .adsb-alt,
 .adsb-speed {
   color: var(--text-dim);
@@ -1724,6 +1732,12 @@ body {
 [data-panes="2"] .adsb-flight,
 [data-panes="3"] .adsb-flight {
   min-width: 120px;
+}
+
+[data-panes="2"] .adsb-route,
+[data-panes="3"] .adsb-route {
+  min-width: 130px;
+  font-size: 17px;
 }
 
 [data-panes="2"] .adsb-alt,

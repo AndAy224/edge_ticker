@@ -188,6 +188,69 @@ function scopeSvg(aircraft: any[], radiusKm: number, center: any): string {
   );
 }
 
+// Route labels for the list rows: callsign -> "TPA → ATL" (null = looked up,
+// nothing known). Rendered from cache synchronously; unknown callsigns are
+// fetched after render and patched in place. The backend proxy caches
+// upstream lookups for an hour, so at the 15s payload cadence each overhead
+// flight costs one lookup, not one per render.
+const routeLabels = new Map<string, string | null>();
+const routePending = new Set<string>();
+
+function rowCallsign(a: any): string {
+  const callsign = String(a.flight ?? "").trim();
+  // Collector falls back to registration/hex when there's no real callsign —
+  // those have no route to look up.
+  return !callsign || callsign === a.registration || callsign === a.hex
+    ? ""
+    : callsign;
+}
+
+function routeSpan(a: any): string {
+  const callsign = rowCallsign(a);
+  if (!callsign) return `<span class="adsb-route"></span>`;
+  const label = routeLabels.get(callsign);
+  return `<span class="adsb-route" data-route-for="${escapeHtml(callsign)}">${escapeHtml(
+    label ?? "",
+  )}</span>`;
+}
+
+function enrichListRoutes(el: HTMLElement): void {
+  for (const span of Array.from(
+    el.querySelectorAll<HTMLElement>(".adsb-route[data-route-for]"),
+  )) {
+    const callsign = span.dataset.routeFor!;
+    if (routeLabels.has(callsign) || routePending.has(callsign)) continue;
+    routePending.add(callsign);
+    fetch(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const route = d?.route;
+        const code = (ap: any) => ap?.iata || ap?.icao || "";
+        const from = code(route?.origin);
+        const to = code(route?.destination);
+        routeLabels.set(callsign, from && to ? `${from} → ${to}` : null);
+      })
+      .catch(() => {
+        routePending.delete(callsign); // transient failure — retry next render
+      })
+      .then(() => {
+        routePending.delete(callsign);
+        // 24/7 kiosk: don't let a season of callsigns accumulate.
+        if (routeLabels.size > 500) routeLabels.clear();
+        const label = routeLabels.get(callsign);
+        if (!label || !el.isConnected) return;
+        // Patch every pane showing this flight, not just ours.
+        for (const s of Array.from(
+          document.querySelectorAll<HTMLElement>(
+            `.adsb-route[data-route-for="${CSS.escape(callsign)}"]`,
+          ),
+        )) {
+          s.textContent = label;
+        }
+      });
+  }
+}
+
 function listHtml(aircraft: any[], data: any): string {
   const rows = aircraft.length
     ? aircraft
@@ -197,6 +260,7 @@ function listHtml(aircraft: any[], data: any): string {
         .map(
           (a) => `<div class="adsb-row ${altBand(a)}" data-detail="${escapeHtml(a.hex)}">
             <span class="adsb-flight">${escapeHtml(a.flight)}</span>
+            ${routeSpan(a)}
             <span class="adsb-alt">${fmtAlt(a)}</span>
             <span class="adsb-speed">${a.speed_kt != null ? `${Math.round(a.speed_kt)} kt` : "—"}</span>
             <span class="adsb-dist">${a.distance_km} km ${escapeHtml(a.direction)}</span>
@@ -274,6 +338,7 @@ register({
       <div class="radar-scope">${scopeSvg(aircraft, radiusKm, data?.center)}</div>
       <div class="radar-side">${listHtml(aircraft, data)}</div>
     </div>`;
+    enrichListRoutes(el);
   },
   getDetailItem(stage, key) {
     const list: any[] = stage?.aircraft ?? [];
