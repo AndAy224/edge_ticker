@@ -4364,3 +4364,27 @@ body {
   height: 34px;
   flex: none;
 }
+
+/* glance reveals the pane title in that corner — drop the banner below it */
+[data-theme="glance"] .wx-alert-banner {
+  top: 58px;
+}
+
+/* narrow panes: the stacked weather column reaches the top-left (and mosaic
+   parks the clock chip there) — tuck a compact banner into the top-right,
+   which stays free below the rotation dots */
+[data-panes="2"] .wx-alert-banner,
+[data-panes="3"] .wx-alert-banner {
+  left: auto;
+  right: 28px;
+  top: 44px;
+  font-size: 20px;
+  padding: 6px 14px;
+  gap: 10px;
+}
+
+[data-panes="2"] .wx-alert-banner svg,
+[data-panes="3"] .wx-alert-banner svg {
+  width: 24px;
+  height: 24px;
+}
