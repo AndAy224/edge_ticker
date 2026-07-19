@@ -47,6 +47,16 @@ def compass(degrees: float | None) -> str:
     return COMPASS[round(degrees / 22.5) % 16]
 
 
+def movement_phrase(direction: str, mph: float | None) -> str:
+    """Storm-motion readout: NHC omits a motion fix (None) on new systems,
+    and reports 0 mph when a storm is stationary."""
+    if mph is None:
+        return "movement TBD"
+    if mph == 0:
+        return "stationary"
+    return f"moving {direction} {mph} mph"
+
+
 def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     rlat1, rlon1, rlat2, rlon2 = map(math.radians, (lat1, lon1, lat2, lon2))
     a = (
@@ -239,7 +249,7 @@ class HurricanesCollector(Collector):
                 text=(
                     f"{storm['category']} {storm['name']} — {storm['wind_mph']} mph, "
                     f"{storm['distance_mi']} mi {direction_from_home}, "
-                    f"moving {storm['movement_dir']} {storm['movement_mph']} mph"
+                    f"{movement_phrase(storm['movement_dir'], storm['movement_mph'])}"
                 ),
                 accent="alert",
                 priority=5,

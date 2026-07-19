@@ -135,6 +135,14 @@ function buildMap(stage: HTMLElement, data: any): void {
     ${data.quiet ? `<div class="hurr-quiet">No active Atlantic systems</div>` : ""}`;
 }
 
+// NHC omits a motion fix (null) on newly-formed systems, and reports 0 mph
+// when a storm is stationary — mirror the collector's movement_phrase().
+function movementPhrase(dir: unknown, mph: unknown): string {
+  if (mph == null) return "movement TBD";
+  if (mph === 0) return "stationary";
+  return `moving ${escapeHtml(dir)} ${escapeHtml(mph)} mph`;
+}
+
 function stormCard(s: any): string {
   const color = categoryColor(s.category);
   return `<div class="hurr-card" style="border-color:${color}">
@@ -144,7 +152,7 @@ function stormCard(s: any): string {
     </div>
     <div class="hurr-card-stats">
       ${s.wind_mph} mph · ${escapeHtml(s.pressure_mb ?? "—")} mb ·
-      moving ${escapeHtml(s.movement_dir)} ${escapeHtml(s.movement_mph ?? "")} mph
+      ${movementPhrase(s.movement_dir, s.movement_mph)}
     </div>
     <div class="hurr-card-dist">${s.distance_mi} mi ${escapeHtml(s.bearing_from_home)} of ${escapeHtml(
       s.home_name ?? "home",
