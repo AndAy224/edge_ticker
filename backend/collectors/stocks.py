@@ -68,6 +68,12 @@ class MarketsCollector(Collector):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.symbols: list[str] = self.module_config.get("symbols", ["SPY", "QQQ"])
+        # Symbols the stage leads with (hero cards); the rest become the
+        # watchlist. Absent from older config DBs — the display falls back to
+        # the first two quotes.
+        self.featured: list[str] = [
+            str(s).upper() for s in self.module_config.get("featured", [])
+        ]
         self.interval = float(self.module_config.get("poll_seconds", 60))
         self.finnhub_key = os.environ.get("FINNHUB_KEY", "").strip()
         self._client: httpx.AsyncClient | None = None
@@ -380,4 +386,8 @@ class MarketsCollector(Collector):
                     accent="up" if up else "down",
                 )
             )
-        return ModulePayload(module=self.name, stage={"quotes": quotes}, tape=tape)
+        return ModulePayload(
+            module=self.name,
+            stage={"quotes": quotes, "featured": self.featured},
+            tape=tape,
+        )

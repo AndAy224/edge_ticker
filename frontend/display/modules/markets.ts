@@ -55,37 +55,107 @@ function formatPrice(price: number): string {
   });
 }
 
+// Plain-language names for the tickers worth spelling out; anything else just
+// shows its symbol.
+const LABELS: Record<string, string> = {
+  VTI: "Total market",
+  VOO: "S&P 500",
+  SPY: "S&P 500",
+  QQQ: "Nasdaq 100",
+  DIA: "Dow 30",
+  IWM: "Russell 2000",
+  SPCX: "SpaceX",
+  "BTC-USD": "Bitcoin",
+  "ETH-USD": "Ethereum",
+  "DOGE-USD": "Dogecoin",
+};
+
+function tickClass(q: any): string {
+  const last = lastPrices.get(q.symbol);
+  const tick = last == null || last === q.price ? "" : q.price > last ? "tick-up" : "tick-down";
+  lastPrices.set(q.symbol, q.price);
+  return tick;
+}
+
+function changeBadge(q: any, up: boolean): string {
+  return `<span class="quote-change">${up ? "▲" : "▼"} ${Math.abs(q.pct ?? 0).toFixed(2)}%</span>`;
+}
+
+function heroCard(q: any, index: number): string {
+  const up = (q.change ?? 0) >= 0;
+  const priceText = formatPrice(q.price ?? 0);
+  const label = LABELS[q.symbol] ?? "";
+  return `<div class="quote-hero ${up ? "up" : "down"}" data-detail="${index}">
+    <div class="hero-head">
+      <span class="hero-symbol">${escapeHtml(q.symbol)}</span>
+      ${label ? `<span class="hero-label">${escapeHtml(label)}</span>` : ""}
+      ${changeBadge(q, up)}
+    </div>
+    <div class="hero-price ${tickClass(q)}"${priceText.length > 8 ? " data-long" : ""}>${priceText}
+      <span class="quote-delta">${up ? "+" : "−"}${Math.abs(q.change ?? 0).toFixed(2)}</span>
+    </div>
+    <div class="hero-chart">${sparkline(q.spark ?? [], q.prev_close ?? null, `spk-h${index}`)}</div>
+    ${rangeBar(q)}
+  </div>`;
+}
+
+function watchRow(q: any, index: number): string {
+  const up = (q.change ?? 0) >= 0;
+  return `<div class="watch-row ${up ? "up" : "down"}" data-detail="${index}">
+    <span class="watch-symbol">${escapeHtml(q.symbol)}</span>
+    <span class="watch-spark">${sparkline(q.spark ?? [], q.prev_close ?? null, `spk-w${index}`)}</span>
+    <span class="watch-price ${tickClass(q)}">${formatPrice(q.price ?? 0)}</span>
+    ${changeBadge(q, up)}
+  </div>`;
+}
+
+/** How the board is doing as a whole: advancers vs decliners and the average
+ *  move across everything on it. */
+function breadth(quotes: any[]): string {
+  if (!quotes.length) return "";
+  const ups = quotes.filter((q) => (q.change ?? 0) >= 0).length;
+  const downs = quotes.length - ups;
+  const avg = quotes.reduce((sum, q) => sum + (q.pct ?? 0), 0) / quotes.length;
+  return `<div class="mk-breadth">
+    <div class="breadth-head">
+      <span>${ups} of ${quotes.length} up</span>
+      <span class="breadth-avg ${avg >= 0 ? "up" : "down"}">avg ${avg >= 0 ? "+" : "−"}${Math.abs(avg).toFixed(2)}%</span>
+    </div>
+    <div class="breadth-bar">
+      ${ups ? `<span class="breadth-up" style="flex:${ups}"></span>` : ""}
+      ${downs ? `<span class="breadth-down" style="flex:${downs}"></span>` : ""}
+    </div>
+  </div>`;
+}
+
 register({
   id: "markets",
   renderStage(el, data) {
-    // Wide-pane max (7 cols × 2 rows fit 2024×528); narrower panes are capped
-    // further in CSS via [data-panes] nth-child, which keeps the data-detail
-    // indices aligned with stage.quotes.
+    // data-detail carries the index into stage.quotes, so keep the original
+    // position when the list is split into heroes and watchlist.
     const quotes: any[] = (data?.quotes ?? []).slice(0, 14);
-    el.innerHTML =
-      `<div class="markets-grid">` +
-      quotes
-        .map((q, i) => {
-          const up = (q.change ?? 0) >= 0;
-          const last = lastPrices.get(q.symbol);
-          const tick =
-            last == null || last === q.price ? "" : q.price > last ? "tick-up" : "tick-down";
-          lastPrices.set(q.symbol, q.price);
-          const priceText = formatPrice(q.price ?? 0);
-          return `<div class="quote-card ${up ? "up" : "down"}" data-detail="${i}">
-            <div class="quote-head">
-              <span class="quote-symbol">${escapeHtml(q.symbol)}</span>
-              <span class="quote-change">${up ? "▲" : "▼"} ${Math.abs(q.pct ?? 0).toFixed(2)}%</span>
-            </div>
-            <div class="quote-price ${tick}"${priceText.length > 8 ? " data-long" : ""}>${priceText}
-              <span class="quote-delta">${up ? "+" : "−"}${Math.abs(q.change ?? 0).toFixed(2)}</span>
-            </div>
-            ${sparkline(q.spark ?? [], q.prev_close ?? null, `spk-${i}`)}
-            ${rangeBar(q)}
-          </div>`;
-        })
-        .join("") +
-      `</div>`;
+    if (!quotes.length) {
+      el.innerHTML = `<div class="empty">Waiting for market data…</div>`;
+      return;
+    }
+    const featured: string[] = data?.featured ?? [];
+    const heroIdx: number[] = [];
+    featured.forEach((sym) => {
+      const i = quotes.findIndex((q) => q.symbol === sym);
+      if (i >= 0 && !heroIdx.includes(i)) heroIdx.push(i);
+    });
+    // no (or partial) config — lead with whatever is first on the board
+    for (let i = 0; heroIdx.length < 2 && i < quotes.length; i += 1) {
+      if (!heroIdx.includes(i)) heroIdx.push(i);
+    }
+    const watchIdx = quotes.map((_, i) => i).filter((i) => !heroIdx.includes(i));
+    el.innerHTML = `<div class="markets-stage">
+      <div class="mk-heroes">${heroIdx.map((i) => heroCard(quotes[i], i)).join("")}</div>
+      <div class="mk-side">
+        <div class="mk-watch">${watchIdx.map((i) => watchRow(quotes[i], i)).join("")}</div>
+        ${breadth(quotes)}
+      </div>
+    </div>`;
   },
   getDetailItem(stage, key) {
     return stage?.quotes?.[Number(key)];

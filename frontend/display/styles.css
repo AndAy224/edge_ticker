@@ -376,59 +376,184 @@ body {
 
 /* ---- markets ---- */
 
-.markets-grid {
+/* Two featured symbols carry the page; everything else is a watchlist rail
+   with a breadth read at its foot. Equal cards made every symbol look equally
+   important and stretched their charts to fill the pane. */
+.markets-stage {
   width: 100%;
-  /* one row of 7 cards is ~235px in a 441px pane — stretch so the row fills it
-     (and two rows still split it evenly) instead of leaving a void up top */
   align-self: stretch;
   min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  grid-auto-rows: 1fr;
+  display: flex;
+  gap: 24px;
+}
+
+.mk-heroes {
+  flex: 1.25;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
-.quote-card {
+.quote-hero {
+  flex: 1;
+  min-height: 0;
   background: var(--panel-raised);
-  border-radius: 16px;
-  padding: 20px 24px;
-  min-height: 160px;
+  border-radius: 18px;
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
-.quote-head {
+.hero-head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  /* a wrapped head (BTC-USD + change %) makes the card taller than its grid
-     row budget and the whole stage clips out the top — never wrap */
-  flex-wrap: nowrap;
+  gap: 14px;
   white-space: nowrap;
 }
 
-.quote-symbol {
-  font-size: 24px;
+.hero-symbol {
+  font-size: 27px;
   font-weight: 700;
+}
+
+.hero-label {
+  font-size: 22px;
   color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
 }
 
-.quote-price {
-  font-size: 48px;
+.hero-head .quote-change {
+  margin-left: auto;
+  font-size: 25px;
+}
+
+.hero-price {
+  font-size: 44px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  margin: 6px 0;
+  line-height: 1.05;
   white-space: nowrap;
 }
 
-/* six-figure quotes (crypto) wrapped the delta onto a second line */
-.quote-price[data-long] {
-  font-size: 38px;
+.hero-price[data-long] {
+  font-size: 34px;
+}
+
+/* the chart takes the slack, but in a wide card — so it reads as a chart
+   rather than a stretched sparkline */
+.hero-chart {
+  flex: 1;
+  min-height: 64px;
+  margin: 6px 0 4px;
+}
+
+.hero-chart .spark {
+  height: 100%;
+}
+
+.mk-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mk-watch {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watch-row {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 134px minmax(0, 1fr) auto 104px; /* fits DOGE-USD */
+  align-items: center;
+  gap: 18px;
+  background: var(--panel-raised);
+  border-radius: 12px;
+  padding: 0 18px;
+}
+
+.watch-symbol {
+  font-size: 23px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watch-spark {
+  min-width: 0;
+  height: 34px;
+}
+
+.watch-spark .spark {
+  height: 34px;
+  min-height: 0;
+  opacity: 0.85;
+}
+
+.watch-price {
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.watch-row .quote-change {
+  font-size: 22px;
+  text-align: right;
+}
+
+.mk-breadth {
+  flex: none;
+  background: var(--panel-raised);
+  border-radius: 12px;
+  padding: 10px 18px;
+}
+
+.breadth-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+.breadth-avg.up {
+  color: var(--up);
+}
+
+.breadth-avg.down {
+  color: var(--down);
+}
+
+.breadth-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin-top: 8px;
+}
+
+.breadth-up,
+.breadth-down {
+  border-radius: 5px;
+}
+
+.breadth-up {
+  background: var(--up);
+}
+
+.breadth-down {
+  background: var(--down);
 }
 
 .quote-change {
@@ -437,14 +562,16 @@ body {
   flex: none;
 }
 
-.quote-card.up .quote-change,
-.quote-card.up .quote-delta,
+.quote-hero.up .quote-change,
+.quote-hero.up .quote-delta,
+.watch-row.up .quote-change,
 .markets-detail.up .quote-change {
   color: var(--up);
 }
 
-.quote-card.down .quote-change,
-.quote-card.down .quote-delta,
+.quote-hero.down .quote-change,
+.quote-hero.down .quote-delta,
+.watch-row.down .quote-change,
 .markets-detail.down .quote-change {
   color: var(--down);
 }
@@ -473,11 +600,13 @@ body {
   }
 }
 
-.quote-price.tick-up {
+.hero-price.tick-up,
+.watch-price.tick-up {
   animation: tick-up 0.8s ease;
 }
 
-.quote-price.tick-down {
+.hero-price.tick-down,
+.watch-price.tick-down {
   animation: tick-down 0.8s ease;
 }
 
@@ -563,12 +692,12 @@ body {
   transform: translate(-50%, -50%);
 }
 
-.quote-card.up .range-marker,
+.quote-hero.up .range-marker,
 .markets-detail.up .range-marker {
   background: var(--up);
 }
 
-.quote-card.down .range-marker,
+.quote-hero.down .range-marker,
 .markets-detail.down .range-marker {
   background: var(--down);
 }
@@ -592,44 +721,82 @@ body {
   display: none;
 }
 
-/* narrow panes: compact cards so two grid rows fit the ~432px pane, and cap
-   the visible cards (focus's second pane is ~740px wide → 2 columns, so its
-   cap must be as strict as mosaic's) */
-[data-panes="2"] .quote-card,
-[data-panes="3"] .quote-card {
-  min-height: 0;
-  padding: 14px 18px;
+/* narrow panes: shrink the heroes and trim the watchlist tail */
+[data-panes="2"] .markets-stage,
+[data-panes="3"] .markets-stage {
+  gap: 16px;
 }
 
-[data-panes="2"] .quote-symbol,
-[data-panes="3"] .quote-symbol {
+[data-panes="2"] .quote-hero,
+[data-panes="3"] .quote-hero {
+  padding: 12px 18px;
+}
+
+[data-panes="2"] .hero-symbol,
+[data-panes="3"] .hero-symbol {
+  font-size: 24px;
+}
+
+[data-panes="2"] .hero-label,
+[data-panes="3"] .hero-label {
+  font-size: 18px;
+}
+
+[data-panes="2"] .hero-price,
+[data-panes="3"] .hero-price {
+  font-size: 38px;
+}
+
+[data-panes="2"] .hero-price[data-long],
+[data-panes="3"] .hero-price[data-long] {
+  font-size: 30px;
+}
+
+[data-panes="2"] .hero-head .quote-change,
+[data-panes="3"] .hero-head .quote-change {
   font-size: 22px;
 }
 
-[data-panes="2"] .quote-price,
-[data-panes="3"] .quote-price {
-  font-size: 38px;
-  margin: 2px 0;
+[data-panes="2"] .watch-row {
+  grid-template-columns: 100px minmax(0, 1fr) auto 88px;
+  padding: 0 14px;
+  gap: 12px;
 }
 
-[data-panes="2"] .quote-change,
-[data-panes="3"] .quote-change {
-  font-size: 20px;
+[data-panes="2"] .watch-symbol {
+  font-size: 21px;
 }
 
-[data-panes="2"] .quote-delta,
-[data-panes="3"] .quote-delta {
-  font-size: 17px;
+[data-panes="2"] .watch-price {
+  font-size: 24px;
 }
 
-[data-panes="2"] .spark,
-[data-panes="3"] .spark {
-  height: 32px;
+[data-panes="2"] .watch-row .quote-change {
+  font-size: 19px;
 }
 
-[data-panes="2"] .quote-card:nth-child(n + 7),
-[data-panes="3"] .quote-card:nth-child(n + 5),
-[data-layout="focus"] .stage-pane:last-child .quote-card:nth-child(n + 5) {
+[data-panes="2"] .watch-row:nth-child(n + 5),
+[data-layout="focus"] .stage-pane:last-child .watch-row:nth-child(n + 4) {
+  display: none;
+}
+
+/* mosaic is too narrow for a rail — heroes go side by side over the breadth
+   strip and the watchlist drops out */
+[data-panes="3"] .markets-stage {
+  flex-direction: column;
+}
+
+[data-panes="3"] .mk-heroes {
+  flex: 1;
+  flex-direction: row;
+  gap: 12px;
+}
+
+[data-panes="3"] .mk-side {
+  flex: none;
+}
+
+[data-panes="3"] .mk-watch {
   display: none;
 }
 
@@ -2439,46 +2606,20 @@ body {
   top: 20px;
 }
 
-/* compact quote cards: symbol+pct / sparkline / price */
-[data-theme="glance"] .quote-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  border-radius: 10px;
+/* hairline cards, lighter numerals */
+[data-theme="glance"] .quote-hero,
+[data-theme="glance"] .watch-row,
+[data-theme="glance"] .mk-breadth {
   border: 1px solid var(--line);
-  padding: 16px 20px;
-  min-height: 150px;
+  border-radius: 10px;
 }
 
-[data-theme="glance"] .quote-head {
-  order: 0;
-}
-
-[data-theme="glance"] .spark {
-  order: 1;
-  height: 46px;
-}
-
-[data-theme="glance"] .quote-price {
-  order: 2;
-  font-size: 34px;
+[data-theme="glance"] .hero-price {
   font-weight: 500;
-  margin: 0;
-}
-
-[data-theme="glance"] .quote-range {
-  order: 3;
-  margin-top: 4px;
 }
 
 [data-theme="glance"] .quote-delta {
   font-size: 18px;
-}
-
-[data-theme="glance"] .quote-symbol {
-  font-size: 24px;
-  color: var(--text);
 }
 
 [data-theme="glance"] .quote-change {
