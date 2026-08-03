@@ -47,6 +47,78 @@ function listHtml(games: any[]): string {
     : `<div class="empty">No games today</div>`;
 }
 
+/** "tonight 8:40 PM" for today, "Wed 8/6 · 8:00 PM" otherwise. */
+function whenLine(start: string | null): string {
+  if (!start) return "";
+  const d = new Date(start);
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (d.toDateString() !== new Date().toDateString()) {
+    return `${d.toLocaleDateString([], { weekday: "short" })} ${d.getMonth() + 1}/${d.getDate()} · ${time}`;
+  }
+  return `${d.getHours() >= 17 ? "tonight" : "today"} ${time}`;
+}
+
+function heroTeam(team: any, mine: boolean): string {
+  return `<div class="sb-team${mine ? " mine" : ""}">
+    ${team?.logo ? `<img class="sb-logo" src="${escapeHtml(team.logo)}" alt="">` : ""}
+    <div class="sb-abbrev">${escapeHtml(team?.abbrev ?? "")}</div>
+    ${team?.record ? `<div class="sb-record">${escapeHtml(team.record)}</div>` : ""}
+  </div>`;
+}
+
+function heroHtml(g: any, index: number): string {
+  const pre = g.state === "pre";
+  const live = g.state === "in";
+  const side = g.followed_side;
+  // an away night for my team reads "at <them>", a home night "vs <them>"
+  const opponent = side === "away" ? g.home : g.away;
+  const context = side
+    ? `${escapeHtml(g.league)} · ${side === "away" ? "at" : "vs"} ${escapeHtml(opponent?.name ?? "")}`
+    : escapeHtml(g.league);
+  const status = pre
+    ? whenLine(g.start)
+    : `${escapeHtml(g.away?.score ?? "")} — ${escapeHtml(g.home?.score ?? "")}`;
+  return `<div class="sb-hero${g.followed ? " followed" : ""}" data-detail="${index}">
+    <div class="sb-matchup">
+      ${heroTeam(g.away, side === "away")}
+      <span class="sb-at">${side === "home" ? "vs" : "@"}</span>
+      ${heroTeam(g.home, side === "home")}
+    </div>
+    <div class="sb-status${live ? " live" : ""}">
+      ${live ? '<span class="live-dot"></span>' : ""}${status}
+    </div>
+    <div class="sb-context">${pre ? context : `${escapeHtml(g.detail ?? "")} · ${context}`}</div>
+  </div>`;
+}
+
+function boardRow(g: any, index: number): string {
+  const pre = g.state === "pre";
+  const live = g.state === "in";
+  const right = pre ? gameTime(g.start) : escapeHtml(g.detail ?? "");
+  const score = (t: any) => (pre ? "" : `<b>${escapeHtml(t?.score ?? "")}</b>`);
+  return `<div class="sb-row${live ? " live" : ""}${g.followed ? " followed" : ""}" data-detail="${index}">
+    <span class="sb-side">${escapeHtml(g.away?.abbrev ?? "")}${score(g.away)}</span>
+    <span class="sb-vs">@</span>
+    <span class="sb-side">${escapeHtml(g.home?.abbrev ?? "")}${score(g.home)}</span>
+    <span class="sb-when">${live ? '<span class="live-dot"></span>' : ""}${right}</span>
+  </div>`;
+}
+
+/** Lead with the followed game (the collector sorts it first), everything else
+ *  compacts into the rail beside it. */
+function boardHtml(games: any[]): string {
+  if (!games.length) return `<div class="empty">No games today</div>`;
+  let heroIndex = games.findIndex((g) => g.followed);
+  if (heroIndex < 0) heroIndex = 0;
+  const rest = games
+    .map((game, i) => ({ game, i }))
+    .filter(({ i }) => i !== heroIndex);
+  return `<div class="sports-board">
+    ${heroHtml(games[heroIndex], heroIndex)}
+    <div class="sb-list">${rest.map(({ game, i }) => boardRow(game, i)).join("")}</div>
+  </div>`;
+}
+
 function linescoreHtml(g: any): string {
   const away: any[] = g.away?.linescores ?? [];
   const home: any[] = g.home?.linescores ?? [];
@@ -114,7 +186,7 @@ register({
       for (const g of tracked) enrichTracker(el, g);
       return;
     }
-    el.innerHTML = listHtml(games);
+    el.innerHTML = boardHtml(games);
   },
   getDetailItem(stage, key) {
     if (key === "__list") return { __list: true, games: stage?.games ?? [] };

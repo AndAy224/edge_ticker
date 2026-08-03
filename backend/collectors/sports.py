@@ -291,7 +291,7 @@ class SportsCollector(Collector):
                 }
             if "home" not in teams or "away" not in teams:
                 return None
-            return {
+            game = {
                 "id": event.get("id"),
                 "sport": league.get("sport"),
                 "league": str(league["league"]).upper(),
@@ -302,6 +302,10 @@ class SportsCollector(Collector):
                 "away": teams["away"],
                 "followed": self._is_followed(teams),
             }
+            # Which side is mine — the display leads with the followed game and
+            # needs to know whether it's a home or away night.
+            game["followed_side"] = self._followed_side(game)
+            return game
         except Exception as exc:
             log.debug("unparseable event in %s: %s", league.get("league"), exc)
             return None

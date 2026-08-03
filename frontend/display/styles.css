@@ -802,6 +802,163 @@ body {
 
 /* ---- sports ---- */
 
+/* Board: the followed game leads, everything else compacts into the rail.
+   Logos, records and team colours all ship in the payload — the old list
+   printed abbreviations and a kickoff time and nothing else. */
+.sports-board {
+  width: 100%;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  gap: 24px;
+}
+
+.sb-hero {
+  flex: 1.1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 18px 26px;
+}
+
+.sb-hero.followed {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.sb-matchup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.sb-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sb-logo {
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+}
+
+.sb-abbrev {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sb-team.mine .sb-abbrev {
+  color: var(--accent);
+}
+
+.sb-record {
+  font-size: 20px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-at {
+  font-size: 24px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sb-status {
+  font-size: 34px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-status .live-dot {
+  margin-right: 10px;
+}
+
+.sb-context {
+  font-size: 20px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.sb-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sb-row {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 96px auto 96px 1fr;
+  align-items: center;
+  gap: 14px;
+  background: var(--panel-raised);
+  border-radius: 12px;
+  padding: 0 18px;
+  border-left: 4px solid transparent;
+  font-size: 26px;
+}
+
+.sb-row.followed {
+  border-left-color: var(--accent);
+}
+
+.sb-row.live {
+  border-left-color: var(--alert);
+}
+
+.sb-side {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.sb-side:first-child {
+  justify-content: flex-end;
+}
+
+.sb-side b {
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-vs {
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+.sb-when .live-dot {
+  margin-right: 8px;
+}
+
+.sb-when {
+  text-align: right;
+  font-size: 21px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* seven rows is what fits beside the hero */
+.sb-row:nth-child(n + 8) {
+  display: none;
+}
+
+
 .sports-list {
   width: 100%;
   display: grid;
@@ -864,6 +1021,8 @@ body {
 }
 
 .live-dot {
+  display: inline-block;
+  flex: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -1283,6 +1442,68 @@ body {
 [data-panes="3"] .stage-layer {
   /* extra top room keeps the page dots clear of pane content */
   padding: 48px 28px 36px;
+}
+
+[data-panes="2"] .sports-board,
+[data-panes="3"] .sports-board {
+  gap: 14px;
+}
+
+[data-panes="2"] .sb-logo,
+[data-panes="3"] .sb-logo {
+  width: 60px;
+  height: 60px;
+}
+
+[data-panes="2"] .sb-abbrev,
+[data-panes="3"] .sb-abbrev {
+  font-size: 28px;
+}
+
+[data-panes="2"] .sb-matchup,
+[data-panes="3"] .sb-matchup {
+  gap: 22px;
+}
+
+[data-panes="2"] .sb-status,
+[data-panes="3"] .sb-status {
+  font-size: 26px;
+}
+
+[data-panes="2"] .sb-row,
+[data-panes="3"] .sb-row {
+  font-size: 22px;
+  grid-template-columns: 78px auto 78px 1fr;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+[data-panes="2"] .sb-when,
+[data-panes="3"] .sb-when {
+  font-size: 18px;
+}
+
+[data-panes="2"] .sb-row:nth-child(n + 6) {
+  display: none;
+}
+
+/* mosaic: hero on top, three games under it */
+[data-panes="3"] .sports-board {
+  flex-direction: column;
+}
+
+[data-panes="3"] .sb-hero {
+  flex: none;
+  padding: 12px 18px;
+  gap: 8px;
+}
+
+[data-panes="3"] .sb-context {
+  display: none;
+}
+
+[data-panes="3"] .sb-row:nth-child(n + 4) {
+  display: none;
 }
 
 [data-panes="2"] .sports-list,
@@ -2758,6 +2979,8 @@ body {
 [data-theme="glance"] .game-row,
 [data-theme="glance"] .news-lead,
 [data-theme="glance"] .news-row,
+[data-theme="glance"] .sb-hero,
+[data-theme="glance"] .sb-row,
 [data-theme="glance"] .pve-card,
 [data-theme="glance"] .adsb-row,
 [data-theme="glance"] .astro-moon,
