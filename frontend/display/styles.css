@@ -1169,96 +1169,119 @@ body {
    the full width below (narrow panes override back to a flex column and hide
    the graph). The top-left above the bottom-aligned now-block stays free for
    the absolute alert banner. */
+/* Rain-first planner: what the day is doing, when the wet part lands, and
+   how much daylight is left. The big current-conditions block used to repeat
+   the rail verbatim, so it survives only as a chip in rail-less layouts. */
 .weather-stage {
   width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas:
-    "now days"
-    "hourly hourly";
-  align-items: end;
-  column-gap: 56px;
-  row-gap: 20px;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.wx-now {
-  grid-area: now;
+.wx-head {
   flex: none;
   display: flex;
-  align-items: center;
-  gap: 32px;
-  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-.wx-now-icon {
-  width: 140px;
-  height: 140px;
-  flex: none;
+.wx-verdict-main {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.wx-verdict-sub {
+  font-size: 22px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.wx-nowchip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.wx-nowchip-icon {
+  width: 44px;
+  height: 44px;
   color: var(--accent);
 }
 
-.wx-now-icon svg,
+.wx-nowchip-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wx-nowchip-temp {
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.wx-nowchip-text {
+  font-size: 22px;
+  color: var(--text-dim);
+}
+
+/* the rail already prints current conditions in these layouts */
+[data-layout="rail-left"] .wx-nowchip,
+[data-layout="rail-right"] .wx-nowchip,
+[data-layout="split"] .wx-nowchip,
+[data-layout="banner"] .wx-nowchip {
+  display: none;
+}
+
+.wx-nowchip-icon svg,
 .wx-day-icon svg {
   width: 100%;
   height: 100%;
 }
 
-.wx-now-temp {
-  font-size: 88px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.wx-now-text {
-  font-size: 32px;
-  color: var(--text-dim);
-  margin-top: 6px;
-}
-
-.wx-now-meta {
-  font-size: 24px;
-  color: var(--text-dim);
-  margin-top: 8px;
-}
-
-.wx-now-loc {
-  font-size: 24px;
-  color: var(--text-dim);
-  margin-top: 4px;
-}
-
 .wx-days {
-  grid-area: days;
-  justify-self: end;
+  flex: none;
   display: flex;
-  gap: 20px;
+  gap: 16px;
 }
 
 .wx-day {
+  flex: 1;
+  min-width: 0;
   background: var(--panel-raised);
   border-radius: 16px;
-  padding: 16px 26px;
+  padding: 10px 20px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  min-width: 190px;
+  justify-content: center;
+  gap: 14px;
+}
+
+.wx-day-text {
+  min-width: 0;
 }
 
 .wx-day-name {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .wx-day-icon {
-  width: 56px;
-  height: 56px;
+  width: 42px;
+  height: 42px;
+  flex: none;
   color: var(--accent);
 }
 
 .wx-day-temps {
-  font-size: 30px;
+  font-size: 27px;
+  white-space: nowrap;
 }
 
 .wx-day-temps span {
@@ -1266,9 +1289,12 @@ body {
 }
 
 .wx-day-precip {
-  font-size: 20px;
+  font-size: 19px;
   color: var(--text-dim);
-  min-height: 24px;
+}
+
+.wx-day-temps span {
+  color: var(--text-dim);
 }
 
 [data-theme="glance"] .wx-day {
@@ -1276,31 +1302,47 @@ body {
   border-radius: 10px;
 }
 
+[data-panes="2"] .wx-verdict-main,
+[data-panes="3"] .wx-verdict-main {
+  font-size: 26px;
+}
+
+[data-panes="2"] .wx-verdict-sub,
+[data-panes="3"] .wx-verdict-sub {
+  font-size: 19px;
+}
+
+[data-panes="2"] .wx-daylight,
+[data-panes="3"] .wx-daylight {
+  font-size: 17px;
+  gap: 10px;
+}
+
+[data-panes="3"] .wx-dl-note {
+  display: none;
+}
+
 [data-panes="2"] .weather-stage,
 [data-panes="3"] .weather-stage {
-  /* back to the stacked column (the base is a grid on wide panes) */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 28px;
+  gap: 10px;
 }
 
-[data-panes="2"] .wx-now-icon {
-  width: 110px;
-  height: 110px;
+[data-panes="2"] .wx-nowchip-icon {
+  width: 36px;
+  height: 36px;
 }
 
-[data-panes="3"] .wx-now-icon {
-  width: 90px;
-  height: 90px;
+[data-panes="3"] .wx-nowchip-icon {
+  width: 32px;
+  height: 32px;
 }
 
-[data-panes="2"] .wx-now-temp {
-  font-size: 72px;
+[data-panes="2"] .wx-nowchip-temp {
+  font-size: 30px;
 }
 
-[data-panes="3"] .wx-now-temp {
-  font-size: 64px;
+[data-panes="3"] .wx-nowchip-temp {
+  font-size: 26px;
 }
 
 /* the wide pane shows 5 forecast days; narrow panes keep today's 3-card row */
@@ -3612,27 +3654,68 @@ body {
 
 /* ---- weather hourly forecast graph ---- */
 
-.wx-hourly {
-  grid-area: hourly;
+.wx-timeline {
   flex: 1;
+  min-height: 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.wx-hourly-head {
+/* rain chance, one cell per hour, aligned with the curve above it */
+.wx-rain {
+  flex: none;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 22px;
-  color: var(--text-dim);
+  gap: 2px;
+  height: 26px;
 }
 
-.wx-sun {
-  display: inline-flex;
+.wx-rain-cell {
+  flex: 1;
+  border-radius: 3px;
+  background: var(--muted);
+}
+
+.wx-daylight {
+  flex: none;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
+  font-size: 20px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-dl-track {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.wx-dl-fill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--alert), var(--accent));
+}
+
+.wx-dl-marker {
+  position: absolute;
+  top: -3px;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+.wx-dl-note {
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .wx-sun-icon {
@@ -3649,26 +3732,14 @@ body {
 
 .wx-graph-box {
   position: relative;
+  flex: 1;
+  min-height: 60px;
   width: 100%;
-  /* full-width band under the day cards — the two rows share the ~441px
-     1-pane content budget (stage layer is 513px, not 600) */
-  height: 145px;
 }
 
 .wx-graph {
   width: 100%;
   height: 100%;
-}
-
-/* with an active alert the banner needs the top-left corner — drop the
-   hourly head and shorten the graph so the bottom-aligned stack sinks
-   below it (the banner already names the alert; sun times return with it) */
-.weather-stage:has(.wx-alert-banner) .wx-graph-box {
-  height: 100px;
-}
-
-.weather-stage:has(.wx-alert-banner) .wx-hourly-head {
-  display: none;
 }
 
 .wx-temp-line {
@@ -3688,11 +3759,6 @@ body {
   stop-opacity: 0;
 }
 
-.wx-precip-bar {
-  fill: var(--accent);
-  opacity: 0.35;
-}
-
 .wx-temp-tag {
   position: absolute;
   transform: translate(-50%, -120%);
@@ -3702,18 +3768,21 @@ body {
 }
 
 .wx-hour-labels {
-  display: flex;
-  justify-content: space-between;
+  flex: none;
+  position: relative;
+  height: 22px;
   font-size: 18px;
   color: var(--text-dim);
-  padding: 0 4px;
 }
 
-/* narrow panes stack the weather blocks — the full-height hourly graph
-   doesn't fit the ~432px column with the now-block and day cards, so it goes
-   at 2 panes too, not just 3 */
-[data-panes="2"] .wx-hourly,
-[data-panes="3"] .wx-hourly {
+.wx-hour-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* mosaic is too short for the timeline once the verdict and day strip are in */
+[data-panes="3"] .wx-timeline {
   display: none;
 }
 
@@ -5235,9 +5304,8 @@ body {
 /* one-line alert banner pinned to the top of the weather stage page (the
    stage layer bottom-aligns its content, so the top corner is free) */
 .wx-alert-banner {
-  position: absolute;
-  top: 30px;
-  left: 48px;
+  flex: none;
+  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: 14px;
