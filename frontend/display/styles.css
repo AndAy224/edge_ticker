@@ -879,46 +879,129 @@ body {
 
 /* ---- news ---- */
 
-/* two-column grid: one headline per row wastes the 2560px width and tall
-   lists overflow off the top of the bottom-aligned stage (kiosk — no scroll) */
-.news-list {
+/* Lead story with its teaser, digest alongside. Eight equal headlines wasted
+   the summary the collector already fetches and cut every title mid-word; the
+   stage is bottom-aligned with no scroll, so what's shown has to fit. */
+.news-stage {
   width: 100%;
   align-self: stretch;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-auto-rows: 1fr;
-  gap: 14px 24px;
+  display: flex;
+  gap: 24px;
+}
+
+.news-lead {
+  flex: 1.15;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 18px 26px;
+}
+
+.lead-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.lead-source {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 5px;
+  padding: 2px 10px;
+}
+
+.lead-age {
+  font-size: 20px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.news-lead.fresh .lead-age {
+  color: var(--alert);
+}
+
+.lead-title {
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lead-summary {
+  font-size: 25px;
+  line-height: 1.32;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lead-foot {
+  margin-top: auto;
+  font-size: 19px;
+  color: var(--text-dim);
+}
+
+.news-digest {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .news-row {
+  flex: 1;
+  min-height: 0;
   background: var(--panel-raised);
   border-radius: 12px;
-  padding: 12px 20px;
+  padding: 6px 18px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 2px;
+  border-left: 4px solid transparent;
 }
 
-/* 5 rows need 476px of a 441px pane — the top row was clipping out of the
-   bottom-aligned stage and colliding with the pane label */
-.news-row:nth-child(n + 9) {
+/* breaking, on the same 15-minute rule the tape uses */
+.news-row.fresh {
+  border-left-color: var(--alert);
+}
+
+/* four digest rows is what fits beside the lead */
+.news-row:nth-child(n + 5) {
   display: none;
 }
 
 .news-title {
-  font-size: 28px;
+  flex: none;
+  font-size: 24px;
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.22;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .news-meta {
-  font-size: 18px;
+  flex: none;
+  font-size: 17px;
   color: var(--text-dim);
-  margin-top: 4px;
 }
 
 /* ---- weather stage page ---- */
@@ -1234,13 +1317,58 @@ body {
 }
 
 /* news drops to one column in narrow panes, with caps to fit pane height */
-[data-panes="2"] .news-list,
-[data-panes="3"] .news-list {
-  grid-template-columns: 1fr;
+[data-panes="2"] .news-stage,
+[data-panes="3"] .news-stage {
+  gap: 14px;
 }
 
-[data-panes="2"] .news-row:nth-child(n + 5),
-[data-panes="3"] .news-row:nth-child(n + 5) {
+[data-panes="2"] .lead-title {
+  font-size: 34px;
+  -webkit-line-clamp: 4;
+}
+
+[data-panes="2"] .lead-summary {
+  font-size: 21px;
+}
+
+[data-panes="2"] .lead-foot,
+[data-panes="3"] .lead-foot {
+  display: none;
+}
+
+[data-panes="2"] .news-title {
+  font-size: 21px;
+}
+
+[data-panes="2"] .news-row:nth-child(n + 4) {
+  display: none;
+}
+
+/* mosaic can't hold two columns — lead on top, two headlines under it */
+[data-panes="3"] .news-stage {
+  flex-direction: column;
+}
+
+[data-panes="3"] .news-lead {
+  flex: none;
+  padding: 12px 18px;
+  gap: 6px;
+}
+
+[data-panes="3"] .lead-title {
+  font-size: 30px;
+  -webkit-line-clamp: 3;
+}
+
+[data-panes="3"] .lead-summary {
+  display: none;
+}
+
+[data-panes="3"] .news-title {
+  font-size: 21px;
+}
+
+[data-panes="3"] .news-row:nth-child(n + 3) {
   display: none;
 }
 
@@ -2628,6 +2756,7 @@ body {
 
 /* flat hairline cards for the other modules */
 [data-theme="glance"] .game-row,
+[data-theme="glance"] .news-lead,
 [data-theme="glance"] .news-row,
 [data-theme="glance"] .pve-card,
 [data-theme="glance"] .adsb-row,
