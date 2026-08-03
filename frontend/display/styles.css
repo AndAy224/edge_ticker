@@ -3667,14 +3667,42 @@ body {
 .wx-rain {
   flex: none;
   display: flex;
+  align-items: flex-end;
   gap: 2px;
-  height: 26px;
+  height: 34px;
 }
 
 .wx-rain-cell {
   flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  overflow: hidden;
+}
+
+.wx-rain-fill {
+  width: 100%;
   border-radius: 3px;
   background: var(--muted);
+}
+
+/* dry → soaking; each step is a visible jump rather than a 1% nudge */
+.wx-rain-fill[data-step="1"] {
+  background: color-mix(in srgb, var(--accent) 45%, var(--muted));
+}
+
+.wx-rain-fill[data-step="2"] {
+  background: color-mix(in srgb, var(--accent) 75%, var(--muted));
+}
+
+.wx-rain-fill[data-step="3"] {
+  background: var(--accent);
+}
+
+.wx-rain-fill[data-step="4"] {
+  background: color-mix(in srgb, var(--accent) 80%, var(--text));
 }
 
 .wx-daylight {

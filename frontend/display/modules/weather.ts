@@ -79,17 +79,27 @@ function tempGraph(hours: any[]): string {
   </svg>${tag(maxIdx, max)}${minIdx !== maxIdx ? tag(minIdx, min) : ""}</div>`;
 }
 
-/** Rain chance as a band under the curve — one cell per hour, inked by
- *  probability, so a wet evening is visible as a block rather than a row of
- *  stubs. */
+/** Rain chance per hour, encoded as height *and* a stepped colour. A smooth
+ *  colour ramp alone was unreadable: a summer day sits between 13% and 40%
+ *  the whole way across, and those mixes land on the same dark slate. Steps
+ *  make neighbouring hours jump a whole tone. */
+function rainStep(p: number): number {
+  if (p < 15) return 0;
+  if (p < 30) return 1;
+  if (p < 50) return 2;
+  if (p < 70) return 3;
+  return 4;
+}
+
 function rainBand(hours: any[]): string {
   if (!hours.length) return "";
   const cells = hours
     .map((h) => {
       const p = Math.min(100, Math.max(0, h.precip ?? 0));
-      // ramp from the track colour to the accent — plain opacity left a 13%
-      // hour and a 40% hour looking the same on a dark panel
-      return `<span class="wx-rain-cell" style="background:color-mix(in srgb, var(--accent) ${p}%, var(--muted))"></span>`;
+      const height = Math.max(8, p);
+      return `<span class="wx-rain-cell">
+        <span class="wx-rain-fill" data-step="${rainStep(p)}" style="height:${height}%"></span>
+      </span>`;
     })
     .join("");
   return `<div class="wx-rain">${cells}</div>`;
@@ -120,9 +130,13 @@ function verdict(daily: any[], hours: any[]): string {
   const withRain = hours.filter((h) => h.precip != null);
   if (withRain.length) {
     const wettest = withRain.reduce((a, b) => (b.precip > a.precip ? b : a));
-    if (wettest.precip >= 30) sub = `wettest around ${hourLabel(wettest.time)}`;
-    else if (wettest.precip >= 15) sub = `slight chance around ${hourLabel(wettest.time)}`;
-    else sub = "little rain expected";
+    if (wettest.precip >= 30) {
+      sub = `wettest around ${hourLabel(wettest.time)} · ${wettest.precip}%`;
+    } else if (wettest.precip >= 15) {
+      sub = `slight chance around ${hourLabel(wettest.time)} · ${wettest.precip}%`;
+    } else {
+      sub = "little rain expected";
+    }
   }
   return `<div class="wx-verdict">
     <div class="wx-verdict-main">${escapeHtml(main)}</div>
