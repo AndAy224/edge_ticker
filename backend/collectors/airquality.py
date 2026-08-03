@@ -91,7 +91,9 @@ class AirQualityCollector(Collector):
                     "current": ",".join(current_fields),
                     "hourly": "us_aqi,pm2_5",
                     "timezone": "auto",
-                    "forecast_days": 1,
+                    # 2 days so the "next 24 hours" series survives the
+                    # midnight cutoff — shape() trims it back to 24 points.
+                    "forecast_days": 2,
                 },
             )
         response.raise_for_status()

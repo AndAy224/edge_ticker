@@ -3063,21 +3063,43 @@ body {
 /* ---- air quality ---- */
 
 .airquality-stage {
+  /* AQI band palette — AirNow's standard hues, pulled down a little so they sit
+     in every theme. Scoped to the module so a theme can override them. */
+  --aq-good: #35c26a;
+  --aq-moderate: #e0c04a;
+  --aq-usg: #ef8b3c;
+  --aq-unhealthy: #e2544c;
+  --aq-very: #a05ac2;
+  --aq-hazard: #96455e;
   --aq-color: var(--text);
+  width: 100%;
+  /* stretch past .stage-layer's flex-end so the trend strip absorbs the slack
+     instead of leaving a void above a bottom-hugging band */
+  align-self: stretch;
   display: flex;
-  align-items: flex-end;
-  gap: 56px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.airquality-stage[data-accent="up"] {
-  --aq-color: var(--up);
+.airquality-stage[data-band="good"] {
+  --aq-color: var(--aq-good);
 }
-.airquality-stage[data-accent="alert"] {
-  --aq-color: var(--alert);
+.airquality-stage[data-band="moderate"] {
+  --aq-color: var(--aq-moderate);
 }
-.airquality-stage[data-accent="down"] {
-  --aq-color: var(--down);
+.airquality-stage[data-band="usg"] {
+  --aq-color: var(--aq-usg);
+}
+.airquality-stage[data-band="unhealthy"] {
+  --aq-color: var(--aq-unhealthy);
+}
+.airquality-stage[data-band="very"] {
+  --aq-color: var(--aq-very);
+}
+.airquality-stage[data-band="hazard"] {
+  --aq-color: var(--aq-hazard);
 }
 
 .aq-now {
@@ -3088,9 +3110,18 @@ body {
   min-width: 0;
 }
 
+.aq-now-main {
+  min-width: 0;
+}
+
+.aq-now-side {
+  margin-left: auto;
+  text-align: right;
+}
+
 .aq-now-icon {
-  width: 140px;
-  height: 140px;
+  width: 104px;
+  height: 104px;
   flex: none;
   color: var(--aq-color);
 }
@@ -3101,7 +3132,7 @@ body {
 }
 
 .aq-now-value {
-  font-size: 88px;
+  font-size: 72px;
   font-weight: 700;
   line-height: 1;
   color: var(--aq-color);
@@ -3115,31 +3146,103 @@ body {
 }
 
 .aq-now-category {
-  font-size: 32px;
-  margin-top: 6px;
+  font-size: 28px;
+  margin-top: 4px;
 }
 
 .aq-now-meta {
-  font-size: 24px;
+  font-size: 22px;
   color: var(--text-dim);
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .aq-now-loc {
-  font-size: 24px;
+  font-size: 26px;
+  color: var(--text);
+}
+
+/* ---- AQI band gauge ---- */
+
+.aq-band {
+  flex: none;
+}
+
+.aq-band-track {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  height: 22px;
+}
+
+.aq-band-seg {
+  flex: 1;
+  border-radius: 5px;
+  opacity: 0.28;
+}
+
+.aq-band-seg[data-active] {
+  opacity: 1;
+}
+
+.aq-band-seg[data-band="good"] {
+  background: var(--aq-good);
+}
+.aq-band-seg[data-band="moderate"] {
+  background: var(--aq-moderate);
+}
+.aq-band-seg[data-band="usg"] {
+  background: var(--aq-usg);
+}
+.aq-band-seg[data-band="unhealthy"] {
+  background: var(--aq-unhealthy);
+}
+.aq-band-seg[data-band="very"] {
+  background: var(--aq-very);
+}
+.aq-band-seg[data-band="hazard"] {
+  background: var(--aq-hazard);
+}
+
+.aq-band-marker {
+  position: absolute;
+  top: -9px;
+  bottom: -9px;
+  width: 6px;
+  margin-left: -3px; /* centre on the value; `left` is set inline */
+  border-radius: 3px;
+  background: var(--text);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+
+.aq-band-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 17px;
   color: var(--text-dim);
-  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-band-names {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  text-align: center;
+  margin-top: 2px;
+  font-size: 17px;
+  color: var(--text-dim);
 }
 
 .aq-hourly {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .aq-hourly-head {
+  flex: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3147,9 +3250,20 @@ body {
   color: var(--text-dim);
 }
 
+.aq-hourly-trend {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.aq-graph-box {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .aq-graph {
+  display: block;
   width: 100%;
-  height: 250px;
+  height: 100%;
 }
 
 .aq-graph-line {
@@ -3169,52 +3283,102 @@ body {
   stop-opacity: 0;
 }
 
-.aq-graph-label {
-  fill: var(--text);
-  font-size: 26px;
-  font-weight: 700;
-  text-anchor: middle;
-}
-
+/* labels are absolutely positioned at their true x% — see hourTicks() */
 .aq-hour-labels {
-  display: flex;
-  justify-content: space-between;
+  flex: none;
+  position: relative;
+  height: 22px;
   font-size: 18px;
   color: var(--text-dim);
-  padding: 0 4px;
+}
+
+.aq-hour-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .aq-pollutants {
+  flex: none;
   display: flex;
-  gap: 20px;
+  gap: 16px;
 }
 
 .aq-pollutant {
+  flex: 1;
+  min-width: 0;
   background: var(--panel-raised);
   border-radius: 16px;
-  padding: 18px 26px;
+  padding: 12px 18px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 120px;
+  gap: 6px;
+}
+
+.aq-pollutant[data-band="good"] {
+  --aq-cell: var(--aq-good);
+}
+.aq-pollutant[data-band="moderate"] {
+  --aq-cell: var(--aq-moderate);
+}
+.aq-pollutant[data-band="usg"] {
+  --aq-cell: var(--aq-usg);
+}
+.aq-pollutant[data-band="unhealthy"] {
+  --aq-cell: var(--aq-unhealthy);
+}
+.aq-pollutant[data-band="very"] {
+  --aq-cell: var(--aq-very);
+}
+.aq-pollutant[data-band="hazard"] {
+  --aq-cell: var(--aq-hazard);
+}
+
+.aq-pollutant[data-dominant] {
+  box-shadow: inset 0 0 0 2px var(--aq-cell);
+}
+
+.aq-pollutant-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .aq-pollutant-label {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-dim);
 }
 
-.aq-pollutant-value {
-  font-size: 34px;
+.aq-pollutant-sub {
+  font-size: 28px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-pollutant-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.aq-pollutant-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--aq-cell, var(--aq-color));
+}
+
+.aq-pollutant-value {
+  font-size: 18px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .aq-pollutant-value span {
   font-size: 16px;
-  font-weight: 500;
-  color: var(--text-dim);
   margin-left: 4px;
 }
 
@@ -3243,31 +3407,55 @@ body {
 
 [data-panes="2"] .airquality-stage,
 [data-panes="3"] .airquality-stage {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 24px;
-}
-
-[data-panes="2"] .aq-graph {
-  height: 170px;
+  gap: 16px;
 }
 
 [data-panes="2"] .aq-now-icon {
-  width: 110px;
-  height: 110px;
+  width: 88px;
+  height: 88px;
 }
 
 [data-panes="3"] .aq-now-icon {
-  width: 90px;
-  height: 90px;
+  width: 76px;
+  height: 76px;
 }
 
 [data-panes="2"] .aq-now-value {
-  font-size: 72px;
+  font-size: 64px;
 }
 
 [data-panes="3"] .aq-now-value {
-  font-size: 64px;
+  font-size: 56px;
+}
+
+/* the band names don't fit a narrow gauge — the ticks and the category in the
+   hero still say where we are */
+[data-panes="2"] .aq-band-names,
+[data-panes="3"] .aq-band-names,
+[data-panes="3"] .aq-band-ticks {
+  display: none;
+}
+
+/* cards are rank-ordered by sub-AQI, so trimming the tail drops the least
+   interesting pollutants first */
+[data-panes="2"] .aq-pollutant:nth-child(n + 5),
+[data-panes="3"] .aq-pollutant:nth-child(n + 4) {
+  display: none;
+}
+
+[data-panes="2"] .aq-pollutants,
+[data-panes="3"] .aq-pollutants {
+  gap: 12px;
+}
+
+[data-panes="2"] .aq-pollutant,
+[data-panes="3"] .aq-pollutant {
+  padding: 12px 14px;
+}
+
+[data-panes="2"] .aq-pollutant-sub,
+[data-panes="3"] .aq-pollutant-sub {
+  font-size: 26px;
 }
 
 /* a long pollen list must not add wrapped rows in narrow panes */
@@ -3278,21 +3466,20 @@ body {
   white-space: nowrap;
 }
 
-[data-panes="2"] .aq-hourly,
 [data-panes="3"] .aq-hourly {
   display: none;
 }
 
+/* with the trend strip gone there is nothing left to absorb the slack, so the
+   cards take it instead of leaving a void under the gauge */
 [data-panes="3"] .aq-pollutants {
-  width: 100%;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 [data-panes="3"] .aq-pollutant {
-  min-width: 0;
-  flex: 1;
-  padding: 12px 14px;
+  justify-content: center;
+  gap: 12px;
 }
 
 /* ---- live score chip (followed game, shown on non-sports pages) ---- */
