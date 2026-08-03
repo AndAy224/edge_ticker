@@ -71,12 +71,13 @@ register({
           const tick =
             last == null || last === q.price ? "" : q.price > last ? "tick-up" : "tick-down";
           lastPrices.set(q.symbol, q.price);
+          const priceText = formatPrice(q.price ?? 0);
           return `<div class="quote-card ${up ? "up" : "down"}" data-detail="${i}">
             <div class="quote-head">
               <span class="quote-symbol">${escapeHtml(q.symbol)}</span>
               <span class="quote-change">${up ? "▲" : "▼"} ${Math.abs(q.pct ?? 0).toFixed(2)}%</span>
             </div>
-            <div class="quote-price ${tick}">${formatPrice(q.price ?? 0)}
+            <div class="quote-price ${tick}"${priceText.length > 8 ? " data-long" : ""}>${priceText}
               <span class="quote-delta">${up ? "+" : "−"}${Math.abs(q.change ?? 0).toFixed(2)}</span>
             </div>
             ${sparkline(q.spark ?? [], q.prev_close ?? null, `spk-${i}`)}

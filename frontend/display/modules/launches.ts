@@ -157,10 +157,13 @@ function streakLine(l: any): string {
 }
 
 function whereLine(l: any): string {
-  const padNo = l.pad_count != null ? ` · pad launch #${l.pad_count + 1}` : "";
-  return `<div class="launch-where">${escapeHtml(l.pad ?? "")} · ${escapeHtml(
-    l.location ?? "",
-  )}${padNo}</div>`;
+  // join only what exists — a missing location left a dangling " · " on the card
+  const parts = [
+    escapeHtml(l.pad ?? ""),
+    escapeHtml(l.location ?? ""),
+    l.pad_count != null ? `pad launch #${l.pad_count + 1}` : "",
+  ].filter(Boolean);
+  return `<div class="launch-where">${parts.join(" · ")}</div>`;
 }
 
 function visibilityHint(l: any): string {
