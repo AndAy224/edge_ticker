@@ -99,6 +99,30 @@ export const AQI_ICON = wrap(
     `<path d="M3 20h6M3 16.5h3"/>`,
 );
 
+/** Moon disc with the lit fraction drawn as a terminator ellipse: an outer
+ *  semicircle on the lit limb (right when waxing, northern hemisphere) closed
+ *  by a half-ellipse whose x-radius collapses to 0 at quarter phase and back
+ *  out to r at new/full. Filled, not stroked — it reads as a disc at 2 m. */
+export function moonGlyph(illumination: number, waxing: boolean): string {
+  const r = 46;
+  const c = 50;
+  const lit = Math.min(1, Math.max(0, illumination / 100));
+  const rx = (r * Math.abs(1 - 2 * lit)).toFixed(2);
+  const outer = waxing ? 1 : 0;
+  // the terminator bulges away from the lit limb once past quarter phase
+  const term = lit > 0.5 ? outer : 1 - outer;
+  const path =
+    `M ${c},${c - r} A ${r},${r} 0 0 ${outer} ${c},${c + r} ` +
+    `A ${rx},${r} 0 0 ${term} ${c},${c - r} Z`;
+  return (
+    `<svg viewBox="0 0 100 100" aria-hidden="true">` +
+    `<circle cx="${c}" cy="${c}" r="${r}" class="moon-dark"/>` +
+    `<path d="${path}" class="moon-lit"/>` +
+    `<circle cx="${c}" cy="${c}" r="${r}" class="moon-rim"/>` +
+    `</svg>`
+  );
+}
+
 // Top-down aircraft silhouette, nose pointing up (north) and centred on (12,12)
 // so a `rotate(track)` aims it along its heading. Exported as a raw path too,
 // for the radar to drop into its own <g transform> markers.

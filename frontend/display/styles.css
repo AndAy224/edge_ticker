@@ -1957,9 +1957,25 @@ body {
 
 .astro-layout {
   width: 100%;
+  /* stretch past .stage-layer's flex-end: the cloud strip absorbs the slack
+     instead of floating in a fixed-height box with a void above it */
+  align-self: stretch;
+  min-height: 0;
   display: grid;
   grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr;
   gap: 28px;
+}
+
+.astro-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.astro-head,
+.astro-sun {
+  flex: none;
 }
 
 .astro-head {
@@ -1979,38 +1995,74 @@ body {
 }
 
 .astro-strip {
+  flex: 1;
+  min-height: 80px;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 10px;
-  height: 220px;
-  margin: 20px 0 8px;
+  margin: 16px 0 8px;
 }
 
 .astro-hour {
   flex: 1;
-  height: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   align-items: center;
   gap: 6px;
 }
 
-.astro-hour-bar {
+/* hours outside the dark window still forecast, but nothing is shootable then */
+.astro-hour[data-twilight] {
+  opacity: 0.42;
+}
+
+/* the track is always full height: cloud presses down from the top, the clear
+   remainder below it is the shootable part */
+.astro-hour-track {
+  flex: 1;
   width: 100%;
-  border-radius: 6px 6px 0 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--panel-raised);
 }
 
-.astro-hour-bar[data-quality="good"] {
+/* shaded by the dominant deck — an opaque low deck kills the hour, high cirrus
+   is still workable */
+.astro-hour-cloud {
+  width: 100%;
+  background: var(--text-dim);
+}
+
+.astro-hour-cloud[data-layer="low"] {
+  opacity: 0.62;
+}
+
+.astro-hour-cloud[data-layer="mid"] {
+  opacity: 0.42;
+}
+
+.astro-hour-cloud[data-layer="high"] {
+  opacity: 0.24;
+}
+
+.astro-hour-clear {
+  width: 100%;
+  margin-top: auto;
   background: var(--up);
+  opacity: 0.88; /* a full-height wall of pure --up is loud at panel scale */
 }
 
-.astro-hour-bar[data-quality="ok"] {
-  background: var(--alert);
+.astro-hour-clear[data-quality="ok"] {
+  opacity: 0.74;
 }
 
-.astro-hour-bar[data-quality="bad"] {
-  background: var(--muted);
+.astro-hour-clear[data-quality="bad"] {
+  opacity: 0.58;
 }
 
 .astro-hour-label {
@@ -2026,13 +2078,65 @@ body {
 .astro-side {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   gap: 20px;
 }
 
 .astro-moon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 20px;
   background: var(--panel-raised);
   border-radius: 16px;
   padding: 16px 24px;
+}
+
+.astro-moon-glyph {
+  width: 84px;
+  height: 84px;
+  flex: none;
+}
+
+.astro-moon-glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* fixed lunar palette: --text for the lit limb inverts on light themes (a
+   black gibbous moon), so the disc carries its own two tones */
+.moon-dark {
+  fill: #2f3742;
+}
+
+.moon-lit {
+  fill: #efe6cd;
+}
+
+.moon-rim {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.astro-window {
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.astro-window[data-clear="yes"] {
+  color: var(--up);
+}
+
+.astro-window[data-clear="none"] {
+  color: var(--text-dim);
+}
+
+/* glance floats a pane label over the top-left corner; this is the only stage
+   whose own title starts up there, so drop it clear of the label */
+[data-theme="glance"] .astro-head {
+  padding-top: 24px;
 }
 
 .astro-moon-pct {
@@ -2046,11 +2150,15 @@ body {
 }
 
 .astro-targets {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   background: var(--panel-raised);
   border-radius: 16px;
   padding: 16px 24px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -2078,14 +2186,26 @@ body {
    dropped (the weather card carries it), moon flattened to one row, 3 targets */
 [data-panes="2"] .astro-layout,
 [data-panes="3"] .astro-layout {
+  grid-template-rows: 1fr auto;
   gap: 16px;
 }
 
 [data-panes="2"] .astro-strip,
 [data-panes="3"] .astro-strip {
-  height: 100px;
+  min-height: 70px;
   margin: 12px 0 6px;
   gap: 6px;
+}
+
+[data-panes="2"] .astro-moon-glyph,
+[data-panes="3"] .astro-moon-glyph {
+  width: 56px;
+  height: 56px;
+}
+
+[data-panes="2"] .astro-targets,
+[data-panes="3"] .astro-targets {
+  flex: none;
 }
 
 [data-panes="3"] .astro-hour:nth-child(even) .astro-hour-label {
@@ -2104,8 +2224,6 @@ body {
 
 [data-panes="2"] .astro-moon,
 [data-panes="3"] .astro-moon {
-  display: flex;
-  align-items: baseline;
   gap: 14px;
   padding: 10px 18px;
 }
@@ -2134,6 +2252,16 @@ body {
 [data-panes="2"] .astro-target:nth-child(n + 4),
 [data-panes="3"] .astro-target:nth-child(n + 4) {
   display: none;
+}
+
+/* three panes: the strip is the headline, so buy its height back from the
+   target list rather than squeezing it to a 50px sliver */
+[data-panes="3"] .astro-target:nth-child(n + 3) {
+  display: none;
+}
+
+[data-panes="3"] .astro-strip {
+  min-height: 90px;
 }
 
 /* ---- chrome ---- */
