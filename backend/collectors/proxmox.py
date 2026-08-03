@@ -40,6 +40,7 @@ class ProxmoxCollector(Collector):
         nodes = []
         guests_running = 0
         guests_total = 0
+        guests: list[dict] = []
         storage = []
         for r in resources:
             kind = r.get("type")
@@ -57,20 +58,39 @@ class ProxmoxCollector(Collector):
                 )
             elif kind in ("qemu", "lxc"):
                 guests_total += 1
-                if r.get("status") == "running":
+                running = r.get("status") == "running"
+                if running:
                     guests_running += 1
+                # The same poll already carries every guest; the stage leads
+                # with the busiest ones rather than just a count.
+                guests.append(
+                    {
+                        "vmid": r.get("vmid"),
+                        "name": r.get("name") or f"{kind}-{r.get('vmid')}",
+                        "type": kind,
+                        "running": running,
+                        "cpu": round((r.get("cpu") or 0) * 100, 1),
+                        "mem_gb": round((r.get("mem") or 0) / 2**30, 1),
+                        "maxmem_gb": round((r.get("maxmem") or 0) / 2**30, 1),
+                    }
+                )
             elif kind == "storage" and r.get("maxdisk"):
+                used = r.get("disk") or 0
                 storage.append(
                     {
                         "name": r.get("storage"),
                         "node": r.get("node"),
-                        "pct": round((r.get("disk") or 0) / r["maxdisk"] * 100, 1),
-                        "used_gb": round((r.get("disk") or 0) / 2**30, 1),
+                        "pct": round(used / r["maxdisk"] * 100, 1),
+                        "used_gb": round(used / 2**30, 1),
                         "total_gb": round(r["maxdisk"] / 2**30, 1),
+                        "free_gb": round((r["maxdisk"] - used) / 2**30, 1),
                     }
                 )
         storage.sort(key=lambda s: -s["pct"])
         nodes.sort(key=lambda n: n["name"] or "")
+        # busiest first; stopped guests are represented by the count alone
+        guests.sort(key=lambda g: (not g["running"], -g["cpu"]))
+        busiest = [g for g in guests if g["running"]][:10]
 
         tape = []
         for node in nodes:
@@ -85,7 +105,11 @@ class ProxmoxCollector(Collector):
             module=self.name,
             stage={
                 "nodes": nodes,
-                "guests": {"running": guests_running, "total": guests_total},
+                "guests": {
+                    "running": guests_running,
+                    "total": guests_total,
+                    "busiest": busiest,
+                },
                 "storage": storage[:6],
             },
             tape=tape,

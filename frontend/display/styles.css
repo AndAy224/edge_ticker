@@ -1907,6 +1907,149 @@ body {
   gap: 24px;
 }
 
+/* single node: the card was two bars and a lot of dark, so it grows a table of
+   what's actually running (the same poll already carries every guest) */
+.pve-solo {
+  align-self: stretch;
+  min-height: 0;
+  grid-template-columns: 1.6fr 1fr;
+}
+
+.pve-solo .pve-node {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.pve-rule {
+  height: 1px;
+  background: var(--line);
+}
+
+.pve-guests {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+/* the collector sends up to 10; the head is child 1, so this leaves 5 rows —
+   what the card actually holds beside the node bars */
+.pve-guest:nth-child(n + 7) {
+  display: none;
+}
+
+.pve-guest {
+  display: grid;
+  grid-template-columns: 70px 1fr 190px 130px;
+  align-items: center;
+  gap: 14px;
+  font-size: 22px;
+}
+
+.pve-guests-head {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.pve-vmid {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.pve-guest-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pve-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 10px;
+  background: var(--up);
+}
+
+.pve-guest-cpu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pve-mini {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.pve-mini span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.pve-guest-pct {
+  width: 54px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.pve-guest-mem {
+  text-align: right;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* storage with free space in the units you think in */
+.pve-solo .pve-storage {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.pve-store-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 22px;
+}
+
+.pve-store-name {
+  font-weight: 600;
+}
+
+.pve-store .pve-bar {
+  display: block;
+  margin: 5px 0 3px;
+}
+
+.pve-store-free {
+  font-size: 17px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.pve-bar-pct.hot {
+  color: var(--down);
+}
+
 .pve-nodes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -2049,6 +2192,32 @@ body {
 
 [data-panes="2"] .pve-nodes .pve-card:nth-child(n + 4),
 [data-panes="3"] .pve-nodes .pve-card:nth-child(n + 4) {
+  display: none;
+}
+
+[data-panes="2"] .pve-guest,
+[data-panes="3"] .pve-guest {
+  font-size: 19px;
+  grid-template-columns: 56px 1fr 120px 96px;
+  gap: 10px;
+}
+
+[data-panes="2"] .pve-guest:nth-child(n + 6),
+[data-panes="3"] .pve-guest:nth-child(n + 5) {
+  display: none;
+}
+
+[data-panes="2"] .pve-store-top,
+[data-panes="3"] .pve-store-top {
+  font-size: 19px;
+}
+
+[data-panes="3"] .pve-store-free {
+  display: none;
+}
+
+[data-panes="2"] .pve-store:nth-child(n + 5),
+[data-panes="3"] .pve-store:nth-child(n + 4) {
   display: none;
 }
 
