@@ -3186,6 +3186,18 @@ body {
   padding-top: 56px;
 }
 
+/* .hurr-stage is absolute inset:0, so the quiet-season chip sits outside the
+   layer and the band above never reaches it — the one stage that does have to
+   dodge the label individually. In mosaic the label is pushed to left:200px to
+   clear the clock chip, which walks it straight under the centred chip.
+   The [data-panes] variants are (0,2,0) and sit later in the file, so they have
+   to be matched attribute-for-attribute or split and mosaic keep their 44px. */
+[data-theme="glance"] .hurr-quiet,
+[data-theme="glance"][data-panes="2"] .hurr-quiet,
+[data-theme="glance"][data-panes="3"] .hurr-quiet {
+  top: 56px;
+}
+
 [data-theme="glance"][data-layout="focus"] .stage-pane:first-child .pane-header,
 [data-theme="glance"][data-layout="mosaic"] .stage-pane:first-child .pane-header {
   left: 200px; /* clear the clock chip */
