@@ -45,6 +45,16 @@
   --overlay-bg: rgba(7, 9, 12, 0.97);
   --rail-width: 440px;
   --tape-height: 120px;
+  /* Read by crossfade() in main.ts, not used by any CSS property here. A theme
+     that gives the stage swap a longer animation raises --stage-exit-ms so the
+     outgoing layer isn't yanked mid-flight, and sets --stage-label-ms to hold
+     the pane-header text until its own chrome animation reaches the midpoint.
+     The defaults are today's behaviour, so every theme that ignores them keeps
+     the 320ms removal and the synchronous label swap by construction. They live
+     here rather than in themes.ts because applyAppearance() writes theme vars
+     inline on <html> and never clears them — a key there leaks forever. */
+  --stage-exit-ms: 320;
+  --stage-label-ms: 0;
 }
 
 * {
@@ -3321,6 +3331,17 @@ body {
   --lc-ry: 96px; /* elbow outer radius, vertical — must exceed --lc-bar */
   --lc-elbow-h: 180px;
   --lc-band: 60px; /* bar + gap + breathing room, reserved on .stage-layer */
+
+  /* module swap: a hard wipe, not a dissolve. --lc-swap and --lc-swap-ease are
+     shared verbatim by lc-wipe and lc-sweep — the bar only stays welded to the
+     wipe edge because both curves are identical. --stage-exit-ms must exceed
+     --lc-swap or main.ts pulls the outgoing layer while the wipe is still
+     running and the uncovered strip flashes black. */
+  --lc-swap: 380ms;
+  --lc-swap-ease: cubic-bezier(0.3, 0, 0.1, 1);
+  --lc-sweep-w: 14px;
+  --stage-exit-ms: 420;
+  --stage-label-ms: 190;
 }
 
 /* ---- the elbow ----
@@ -3515,6 +3536,112 @@ body {
    specificity, and only padding-top should be taken from here. */
 [data-theme="lcars"] .stage-layer {
   padding-top: var(--lc-band);
+}
+
+/* ---- the module swap: a wipe, led by a bar ----
+   Okudagram graphics never dissolve, so a module change is a hard edge marching
+   across the pane with an orange band riding it. main.ts tags a genuine change
+   of module (or of open detail) with .swap-in / .swap-out; a routine data
+   refresh keeps the class off and falls through to the generic fade, which is
+   the only reason a markets pane doesn't wipe itself every few seconds.
+
+   The wipe is on the INCOMING layer, not the outgoing one. Giving it the page's
+   own background makes it opaque, so revealing it left-to-right covers the old
+   module in the same motion — one clip animation instead of two, and no
+   sync question between them. */
+[data-theme="lcars"] .stage-layer.swap-in {
+  background: var(--bg);
+  animation: lc-wipe var(--lc-swap) var(--lc-swap-ease);
+}
+
+/* crossfade() still applies .enter for one frame. Under the wipe that would add
+   a dissolve on top of it — (0,4,0) here beats the base .stage-layer.enter. */
+[data-theme="lcars"] .stage-layer.swap-in.enter {
+  opacity: 1;
+}
+
+/* The outgoing layer is simply covered, so it must NOT fade: the part of it the
+   wipe hasn't reached yet has to stay solid until the edge gets there. */
+[data-theme="lcars"] .stage-layer.swap-out {
+  opacity: 1;
+  transition: none;
+}
+
+/* The leading bar. It rides on the incoming layer rather than on the pane so it
+   shares that layer's style pass — clip-path is a main-thread property, and a
+   transform-driven bar (compositor) would visibly drift off the edge whenever
+   the main thread stalls, which is exactly what the adsb pane's spinning radar
+   does. Same duration and easing as lc-wipe, so the two are welded.
+   Absolute (a static pseudo would become a flex item of the layer and shove the
+   module sideways), z-index 1 to clear .adsb-radar / .radar-stage, and the
+   resting clip hides it once the animation ends and reverts. */
+[data-theme="lcars"] .stage-layer.swap-in::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: var(--lc-bar);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  background: var(--lc-orange);
+  pointer-events: none;
+  clip-path: inset(0 100% 0 0);
+  animation: lc-sweep var(--lc-swap) var(--lc-swap-ease);
+}
+
+/* At progress p the band covers [p·W − w, p·W] while lc-wipe reveals [0, p·W],
+   so it always sits flush inside the leading edge. The negative left inset is
+   what keeps the band a constant width as it enters; if it ever gets clamped
+   the only artifact is a brief grow-in over the first few pixels. */
+@keyframes lc-sweep {
+  from {
+    clip-path: inset(0 100% 0 calc(0% - var(--lc-sweep-w)));
+  }
+  to {
+    clip-path: inset(0 0 0 calc(100% - var(--lc-sweep-w)));
+  }
+}
+
+@keyframes lc-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* The label pill retracts, swaps text at the midpoint, and re-extends. main.ts
+   restarts .swapping on the pane and holds the textContent for
+   --stage-label-ms so the new name appears while the pill is off-screen.
+   translateX, not clip-path: the 8px black separator is a box-shadow, which a
+   clip would erase for the whole animation but a translate carries along. The
+   extra --lc-gap clears that separator, and under focus/mosaic it tucks the
+   pill behind the 200px cap instead of leaving it in the gutter. */
+[data-theme="lcars"] .stage-pane.swapping .pane-header {
+  animation: lc-pill var(--lc-swap) var(--lc-swap-ease);
+}
+
+@keyframes lc-pill {
+  0% {
+    transform: translateX(0);
+  }
+  45%,
+  55% {
+    transform: translateX(calc(-100% - var(--lc-gap)));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* The pill leaves the pane, and panes aren't stacking contexts (position:
+   relative, z-index auto), so without this it would slide across its neighbour
+   rather than out of view. `clip` rather than `hidden` so the pane doesn't
+   become a scroll container. */
+[data-theme="lcars"] .stage-pane {
+  overflow: clip;
 }
 
 /* dots become blocks sitting in the bar */
@@ -3760,6 +3887,12 @@ body {
   box-shadow: none; /* free-floating pill — there is no bar to sit on */
 }
 
+/* banner suppresses .stage-pane::before, so there is no bar for the sweep to
+   start under — inset from the top instead and it leaves a 44px unswept strip. */
+[data-theme="lcars"][data-layout="banner"] .stage-layer.swap-in::before {
+  top: 0;
+}
+
 /* ---- zen: stage hidden, so this is the standby screen ---- */
 
 [data-theme="lcars"][data-layout="zen"] {
@@ -3865,6 +3998,30 @@ body {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--lc-lilac);
+}
+
+/* Fall all the way back to the generic crossfade rather than to a hard cut.
+   Resetting the two custom properties to their :root values is what tells
+   main.ts to stop deferring the label and to go back to the 320ms removal —
+   the TypeScript reads them and needs no reduced-motion branch of its own. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="lcars"] {
+    --stage-exit-ms: 320;
+    --stage-label-ms: 0;
+  }
+  [data-theme="lcars"] .stage-layer.swap-in,
+  [data-theme="lcars"] .stage-layer.swap-in::before,
+  [data-theme="lcars"] .stage-pane.swapping .pane-header {
+    animation: none;
+  }
+  [data-theme="lcars"] .stage-layer.swap-in {
+    background: none;
+  }
+  [data-theme="lcars"] .stage-layer.swap-in.enter,
+  [data-theme="lcars"] .stage-layer.swap-out {
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
 }
 
 /* ---- score celebration overlay ---- */

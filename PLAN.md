@@ -186,7 +186,7 @@ interface ModuleRenderer {
 }
 ```
 
-Rotation engine reads the enabled-module order from config, swaps stage content with a 300 ms crossfade, updates page dots.
+Rotation engine reads the enabled-module order from config, swaps stage content with a 300 ms crossfade, updates page dots. The swap animation is theme-dependent: themes can raise `--stage-exit-ms`/`--stage-label-ms` to take longer (LCARS wipes instead of fading). Only a genuine change of module or open detail animates — a routine data refresh re-renders quietly.
 
 ### v1 data sources
 

@@ -46,6 +46,17 @@ const scoreChip = document.getElementById("score-chip")!;
 let paneEls: HTMLElement[] = [];
 const paneDetailTimers = new Map<number, number>(); // pane index -> auto-close timer
 
+// What each pane is currently showing: the module id, or `id#detailKey` while a
+// detail layer is up. renderPane() runs on every payload for a visible module,
+// not just on a rotation step, so this is what separates a real change of view
+// (worth animating) from a routine data refresh (which must stay quiet).
+let paneView: (string | undefined)[] = [];
+const paneLabelTimers = new Map<number, number>(); // pane index -> deferred label
+
+// Cached from CSS custom properties in applyAppearance(); see the :root block.
+let swapExitMs = 320;
+let swapLabelMs = 0;
+
 function layoutPanes(): number {
   const layout = config.appearance?.layout ?? DEFAULT_LAYOUT;
   return (LAYOUTS[layout] ?? LAYOUTS[DEFAULT_LAYOUT]).panes;
@@ -316,6 +327,9 @@ function syncPanes(): void {
   const count = effectivePaneCount();
   document.documentElement.dataset.panes = String(count);
   if (paneEls.length === count) return;
+  // Resize rather than clear: growing 2→3 panes leaves panes 0-1 on the same
+  // modules, and clearing would make them all read as changed and wipe.
+  paneView.length = count;
   stageEl.replaceChildren();
   paneEls = Array.from({ length: count }, (_, i) => {
     const pane = document.createElement("div");
@@ -354,6 +368,14 @@ function applyAppearance(): void {
   }
   const layout = config.appearance?.layout ?? DEFAULT_LAYOUT;
   root.dataset.layout = layout in LAYOUTS ? layout : DEFAULT_LAYOUT;
+  // Stage-swap timings come from CSS, not from THEMES: applyAppearance writes
+  // theme vars inline on <html> and never clears the outgoing theme's, so a
+  // thirteenth key in themes.ts would leak into every theme picked afterwards.
+  // Read after the attribute is set — getComputedStyle forces the recalc, so
+  // the new theme's block is already in effect. Once per config apply.
+  const cs = getComputedStyle(root);
+  swapExitMs = parseFloat(cs.getPropertyValue("--stage-exit-ms")) || 320;
+  swapLabelMs = parseFloat(cs.getPropertyValue("--stage-label-ms")) || 0;
 }
 
 // ---- Stage -------------------------------------------------------------------
@@ -368,8 +390,6 @@ function renderStage(): void {
 
 function renderPane(i: number): void {
   const id = paneModule(i);
-  const header = paneEls[i].querySelector<HTMLElement>(".pane-header");
-  if (header) header.textContent = paneLabel(id);
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   if (!id) {
@@ -389,19 +409,69 @@ function renderPane(i: number): void {
       }
     }
   }
-  crossfade(paneEls[i], layer);
+  crossfade(i, layer, id, paneLabel(id));
 }
 
-function crossfade(container: HTMLElement, layer: HTMLElement): void {
-  // Only layers fade out — panes also hold a persistent .pane-header.
+/**
+ * Swap a pane's contents. `view` identifies what the pane is about to show (the
+ * module id, or `id#detailKey` for a detail layer); when it differs from what
+ * the pane was showing this is a real change and themes may animate it, and
+ * when it matches this is a routine data refresh and stays quiet.
+ */
+function crossfade(
+  pane: number,
+  layer: HTMLElement,
+  view: string | undefined,
+  label: string,
+): void {
+  const container = paneEls[pane];
+  // Only layers are replaced — panes also hold a persistent .pane-header.
   const previous = Array.from(container.querySelectorAll(":scope > .stage-layer"));
+  // A pane with nothing in it yet isn't changing views, it's arriving: at boot
+  // and after every pane rebuild there is no outgoing layer to wipe away.
+  const swap = previous.length > 0 && paneView[pane] !== view;
+  paneView[pane] = view;
+
+  // swap-in/swap-out are additive markers on top of the existing enter/exit, so
+  // a theme that ignores them behaves exactly as it did before.
   layer.classList.add("enter");
+  if (swap) layer.classList.add("swap-in");
   container.appendChild(layer);
+  // Deliberately no style read between the append and this rAF: `.enter` is
+  // never observed in computed style, so no theme fades the incoming layer in.
   requestAnimationFrame(() => layer.classList.remove("enter"));
   for (const el of previous) {
     el.classList.add("exit");
-    setTimeout(() => el.remove(), 320);
+    if (swap) el.classList.add("swap-out");
+    setTimeout(() => el.remove(), swap ? swapExitMs : 320);
   }
+
+  // Drop the marker once the animation is done, so the sweep pseudo-element
+  // doesn't linger on a layer that stays on screen for the next 25 seconds.
+  if (swap) setTimeout(() => layer.classList.remove("swap-in"), swapExitMs);
+
+  const header = container.querySelector<HTMLElement>(".pane-header");
+  clearTimeout(paneLabelTimers.get(pane));
+  paneLabelTimers.delete(pane);
+  if (!header) return;
+  if (!swap || swapLabelMs <= 0) {
+    header.textContent = label; // themes that don't animate the chrome
+    return;
+  }
+  // The pane header is persistent, so its animation needs an explicit restart.
+  // The forced reflow is nearly free here — renderPane just replaced the pane's
+  // subtree, so layout is already dirty and this only pulls the cost forward.
+  container.classList.remove("swapping");
+  void container.offsetWidth;
+  container.classList.add("swapping");
+  // Land the new label while the chrome is mid-animation and out of sight.
+  paneLabelTimers.set(
+    pane,
+    window.setTimeout(() => {
+      paneLabelTimers.delete(pane);
+      header.textContent = label;
+    }, swapLabelMs),
+  );
 }
 
 function renderDots(): void {
@@ -445,7 +515,10 @@ function handleStageTap(target: EventTarget | null): void {
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   renderer.renderDetail(layer, item);
-  crossfade(paneEls[pane], layer);
+  // Keyed by the detail item, so drilling from one detail into another counts
+  // as a change of view too. Both close paths route back through renderPane(),
+  // whose key is the bare module id, so returning also reads as a change.
+  crossfade(pane, layer, `${id}#${key}`, paneLabel(id));
   clearTimeout(paneDetailTimers.get(pane));
   paneDetailTimers.set(
     pane,
