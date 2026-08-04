@@ -3520,15 +3520,25 @@ body {
 /* dots become blocks sitting in the bar */
 /* the rotation can hold 9+ modules, so keep the blocks small or the row eats
    the whole right end of the bar */
+/* On its own black plinth, because the row has three different backgrounds to
+   survive: it lands on the bar's tail blocks in most layouts (and long rotations
+   push it across the sun/peri gutter, leaving one dot stranded on the 8px black
+   separator), and on the bare stage in banner. Periwinkle is the problem case —
+   the ice active dot is only 1.6:1 against it, i.e. the one dot that has to read
+   is the one that vanishes. The plinth makes every layout the black-backed case. */
 [data-theme="lcars"] #page-dots {
-  top: 13px;
-  right: 26px;
+  top: 9px;
+  right: 20px;
   gap: 6px;
   align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: #000;
 }
 
-/* plum, not black: banner suppresses the pane bars, and black blocks on the
-   black stage would make the inactive dots vanish entirely */
+/* plum, not black: the dots always sit on the black plinth above (and in banner
+   on the bare black stage too), so black blocks would vanish entirely */
 [data-theme="lcars"] .dot {
   width: 18px;
   height: 18px;
@@ -3589,6 +3599,11 @@ body {
 [data-theme="lcars"] #tape::before {
   content: "47-1701-D";
   flex: 0 0 200px;
+  /* positioned so it paints ABOVE #tape-track: the track is a later child, so an
+     unpositioned cap sits underneath and the marquee scrolls its items straight
+     across the block. Items must vanish behind the cap, not over it. */
+  position: relative;
+  z-index: 1;
   height: 64px;
   margin-right: var(--lc-gap);
   background: var(--lc-mars);
