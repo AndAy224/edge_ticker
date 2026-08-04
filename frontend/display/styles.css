@@ -3991,6 +3991,18 @@ body {
   padding-top: var(--lc-band);
 }
 
+/* Same story for the quiet-season chip: .hurr-stage is absolute inset:0, so the
+   chip's top:22px is measured from the pane, not from inside the layer padding,
+   and it lands under the bar. Sits where #pin-badge and .stale-dot sit.
+   The [data-panes] variants have to be matched attribute-for-attribute — their
+   rule is (0,2,0) like a bare [data-theme] one but sits later in the file, so
+   an unqualified override would lose on order in split and mosaic. */
+[data-theme="lcars"] .hurr-quiet,
+[data-theme="lcars"][data-panes="2"] .hurr-quiet,
+[data-theme="lcars"][data-panes="3"] .hurr-quiet {
+  top: calc(var(--lc-bar) + var(--lc-gap) + 10px);
+}
+
 [data-theme="lcars"] .ha-col-title {
   display: block;
   font-family: var(--lc-font);
