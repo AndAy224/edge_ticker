@@ -3,4 +3,5 @@
 * text=auto eol=lf
 *.png binary
 *.jpg binary
+*.woff2 binary
 deploy/cursor/** binary

@@ -1,5 +1,35 @@
 /* edge-ticker display — designed for 2560x720, mounted above eye line */
 
+/* Antonio (SIL OFL 1.1, see fonts/OFL.txt) — the open stand-in for Swiss 911
+   Ultra Compressed. Used ONLY by the lcars theme, and only on chrome: the
+   appliance ships nothing but DejaVu, and "23:59" at 96px DejaVu is ~310px,
+   which does not fit the 208px the split layout leaves for the clock.
+   Never put this on .tape-item — tape.ts measures scrollWidth once in a rAF to
+   derive --tape-duration and never recomputes, so a late-loading face would
+   leave the marquee speed permanently wrong. Imported (not public/) so Vite
+   emits it into dist/assets, which is the only path the backend mounts. */
+@font-face {
+  font-family: "Antonio";
+  src: url("./fonts/Antonio-latin.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Antonio";
+  src: url("./fonts/Antonio-latin-ext.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --bg: #07090c;
   --panel: #10141a;
@@ -3243,6 +3273,583 @@ body {
 [data-theme="glance"] .ha-tile.light.on {
   background: #2a2410;
   border-color: var(--alert);
+}
+
+/* ---- lcars theme (Star Trek TNG Okudagram) ----------------------------------
+   Pure black, an elbow-swept frame, flat colour blocks, ultra-condensed caps.
+   Structure and typography only; colours come from the vars below plus the
+   twelve in themes.ts. No TypeScript and no DOM changes — the frame is drawn
+   entirely with pseudo-elements and multi-stop gradients on chrome that already
+   exists, so every other theme stays byte-identical.
+
+   Three rules that are load-bearing and non-obvious:
+     - `*` at the top of this file does NOT match ::before/::after, so every
+       frame pseudo declares its own box-sizing. Without it the 432px elbow
+       paints 564px wide and reads as a design mistake rather than a bug.
+     - #app is grid and #rail/#tape/#page-dots are flex, so a static pseudo
+       becomes a layout item. Frame pseudos are absolute; the two intentional
+       in-flow ones are #tape::before and #page-dots::before.
+     - pointer-events must be none on all of them: handleStageTap() resolves
+       taps with closest(".stage-pane"), and a hit on #app::before reports #app
+       and silently swallows the tap.
+
+   Geometry lives in the custom properties below so each layout re-declares the
+   numbers rather than the rules. Deliberately NOT overridden anywhere: font-size
+   on #clock/#date/.weather-* — [data-layout=…] #clock and [data-theme=…] #clock
+   have identical (1,1,0) specificity, and since this block is later in the file
+   it would flatten zen's 190px and banner's 64px clock. Leaving size alone lets
+   the layout rules keep winning. */
+
+[data-theme="lcars"] {
+  /* Okudagram block palette — scoped here, never in themes.ts, so it evaporates
+     the moment data-theme changes (applyAppearance never clears inline vars). */
+  --lc-orange: #ff9c00;
+  --lc-tan: #ffcc99;
+  --lc-lilac: #cc99cc;
+  --lc-peri: #9999cc;
+  --lc-mars: #cc6666;
+  --lc-sun: #ffcc00;
+  --lc-ice: #99ccff;
+  --lc-plum: #664466;
+  --lc-font: "Antonio", "Inter", "Segoe UI", system-ui, sans-serif;
+
+  --lc-col: 132px; /* sidebar column = the elbow's vertical arm */
+  --lc-bar: 44px; /* horizontal bar height */
+  --lc-gap: 8px; /* the black separator, everywhere */
+  --lc-cap: 22px; /* pill / bar-end radius (= bar / 2) */
+  --lc-rx: 200px; /* elbow outer radius, horizontal — must exceed --lc-col */
+  --lc-ry: 96px; /* elbow outer radius, vertical — must exceed --lc-bar */
+  --lc-elbow-h: 180px;
+  --lc-band: 60px; /* bar + gap + breathing room, reserved on .stage-layer */
+}
+
+/* ---- the elbow ----
+   One element: thick left border, thin top border, elliptical corner. CSS draws
+   the padding-edge curve at (outer radius − border width), so this yields the
+   big outer sweep AND the small inner one — 68x52 here. The width tracks
+   --rail-width, so the split layout's 380px rail needs no override. */
+[data-theme="lcars"] #app::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  left: 0;
+  top: 0;
+  width: calc(var(--rail-width) - var(--lc-gap));
+  height: var(--lc-elbow-h);
+  border-left: var(--lc-col) solid var(--lc-tan);
+  border-top: var(--lc-bar) solid var(--lc-tan);
+  border-top-left-radius: var(--lc-rx) var(--lc-ry);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ---- rail: the block column is the background, so it costs no DOM ----
+   background-origin must be border-box or the padding-left below shifts the
+   positioning area and the column lands inboard instead of flush left. */
+[data-theme="lcars"] #rail {
+  position: relative;
+  overflow: hidden; /* if the font 404s the clock clips here, not over the stage */
+  background-color: #000;
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  background-size: var(--lc-col) calc(100% - var(--lc-elbow-h) - var(--lc-gap));
+  background-position: left calc(var(--lc-elbow-h) + var(--lc-gap));
+  background-image: linear-gradient(
+    to bottom,
+    var(--lc-orange) 0 96px,
+    #000 96px 104px,
+    var(--lc-tan) 104px 232px,
+    #000 232px 240px,
+    var(--lc-lilac) 240px 300px,
+    #000 300px 308px,
+    var(--lc-peri) 308px 100%
+  );
+  padding: 40px 24px 40px calc(var(--lc-col) + 24px);
+}
+
+/* The clock is "9:56 PM", not "23:59" — tickClock() formats hour:minute with
+   the locale's am/pm, so it is far wider than the digits alone suggest. At the
+   inherited 96px it wraps and the wrapped line clips off the top of the rail.
+   Sizing it here means re-declaring it for zen and banner below, since those
+   layout rules have identical (1,1,0) specificity and sit earlier in the file. */
+[data-theme="lcars"] #clock {
+  font-family: var(--lc-font);
+  font-size: 68px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--lc-tan);
+}
+
+[data-theme="lcars"] #date {
+  font-family: var(--lc-font);
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lc-lilac);
+}
+
+/* a station code under the date — one of the few pseudo slots left free */
+[data-theme="lcars"] #date::after {
+  content: "LCARS 24-471";
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72em;
+  letter-spacing: 0.2em;
+  color: var(--lc-peri);
+}
+
+[data-theme="lcars"] .weather-temp {
+  font-family: var(--lc-font);
+  font-weight: 600;
+  color: var(--lc-sun);
+}
+
+[data-theme="lcars"] .weather-text,
+[data-theme="lcars"] .weather-loc {
+  font-family: var(--lc-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lc-lilac);
+}
+
+[data-theme="lcars"] .weather-meta {
+  font-family: var(--lc-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lc-peri);
+}
+
+/* ---- stage: pane bars, block labels, the reserved band ---- */
+
+/* the 1px hairline becomes a proper black gutter — and stops depending on
+   --line, which LCARS keeps dark */
+[data-theme="lcars"] .stage-pane + .stage-pane {
+  border-left: var(--lc-gap) solid #000;
+}
+
+/* Right-anchored stops: the label pill is left-anchored and its width varies
+   with the module name, so keeping the fixed run at the RIGHT guarantees the
+   pill always lands on one uniform block at every pane width. */
+[data-theme="lcars"] .stage-pane::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lc-bar);
+  border-radius: var(--lc-cap);
+  pointer-events: none;
+  z-index: 3; /* under .pane-header (4), dots/pin/chip (5), score-chip (6) */
+  background: linear-gradient(
+    to left,
+    var(--lc-peri) 0 180px,
+    #000 180px 188px,
+    var(--lc-sun) 188px 262px,
+    #000 262px 270px,
+    var(--lc-lilac) 270px 560px,
+    #000 560px 568px,
+    var(--lc-orange) 568px 700px,
+    #000 700px 708px,
+    var(--lc-tan) 708px 100%
+  );
+}
+
+/* narrow panes: drop to a short run so the tail never starves */
+[data-theme="lcars"][data-panes="2"] .stage-pane::before,
+[data-theme="lcars"][data-panes="3"] .stage-pane::before {
+  background: linear-gradient(
+    to left,
+    var(--lc-peri) 0 180px,
+    #000 180px 188px,
+    var(--lc-sun) 188px 262px,
+    #000 262px 270px,
+    var(--lc-tan) 270px 100%
+  );
+}
+
+/* the bar runs to the screen edge on the outside pane */
+[data-theme="lcars"] .stage-pane:first-child::before {
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+}
+
+[data-theme="lcars"] .pane-header {
+  display: block;
+  top: 0;
+  left: 0;
+  height: var(--lc-bar);
+  line-height: var(--lc-bar);
+  padding: 0 26px;
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+  background: var(--lc-orange);
+  color: #000; /* black on colour — the LCARS signature */
+  font-family: var(--lc-font);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  /* the black gap to the next segment; box-shadow follows border-radius and
+     costs no layout, unlike an outline */
+  box-shadow: var(--lc-gap) 0 0 0 #000;
+}
+
+[data-theme="lcars"] .stage-pane:nth-child(1) .pane-header::after {
+  content: " 01-47";
+  opacity: 0.5;
+}
+
+[data-theme="lcars"] .stage-pane:nth-child(2) .pane-header::after {
+  content: " 02-13";
+  opacity: 0.5;
+}
+
+[data-theme="lcars"] .stage-pane:nth-child(3) .pane-header::after {
+  content: " 03-88";
+  opacity: 0.5;
+}
+
+/* one band reserved once, so no module has to dodge the bar individually.
+   Longhand on purpose: [data-panes] sets the padding shorthand at the same
+   specificity, and only padding-top should be taken from here. */
+[data-theme="lcars"] .stage-layer {
+  padding-top: var(--lc-band);
+}
+
+/* dots become blocks sitting in the bar */
+/* the rotation can hold 9+ modules, so keep the blocks small or the row eats
+   the whole right end of the bar */
+[data-theme="lcars"] #page-dots {
+  top: 13px;
+  right: 26px;
+  gap: 6px;
+  align-items: center;
+}
+
+/* plum, not black: banner suppresses the pane bars, and black blocks on the
+   black stage would make the inactive dots vanish entirely */
+[data-theme="lcars"] .dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--lc-plum);
+}
+
+[data-theme="lcars"] .dot.active {
+  background: var(--lc-ice);
+}
+
+/* these three sit at the old 18-24px offsets, which now land on the bar */
+[data-theme="lcars"] #pin-badge {
+  top: calc(var(--lc-bar) + var(--lc-gap) + 10px);
+  left: 28px;
+  border: none;
+  border-radius: var(--lc-cap);
+  background: var(--lc-sun);
+  color: #000;
+  font-family: var(--lc-font);
+  letter-spacing: 0.14em;
+  padding: 5px 18px;
+}
+
+[data-theme="lcars"] .stale-dot {
+  top: calc(var(--lc-bar) + var(--lc-gap) + 12px);
+  right: 28px;
+  border-radius: 4px;
+  background: var(--lc-mars);
+  opacity: 1;
+}
+
+[data-theme="lcars"] #clock-chip {
+  font-family: var(--lc-font);
+  font-weight: 600;
+  color: var(--lc-tan);
+}
+
+[data-theme="lcars"] #score-chip {
+  font-family: var(--lc-font);
+  border-radius: var(--lc-cap);
+}
+
+/* ---- tape: the bottom bar, with an in-flow cap block ----
+   In-flow rather than absolute for two reasons: #tape has no `position`, so an
+   absolute pseudo would anchor to #app; and an overlay would sit on top of the
+   scrolling items. #tape-track must then be flex:none or its width:max-content
+   collapses and the marquee items compress. --tape-duration is unaffected:
+   tape.ts measures .tape-half, which never sees this sibling. */
+[data-theme="lcars"] #tape {
+  border-top: none;
+}
+
+[data-theme="lcars"] #tape-track {
+  flex: none;
+}
+
+[data-theme="lcars"] #tape::before {
+  content: "47-1701-D";
+  flex: 0 0 200px;
+  height: 64px;
+  margin-right: var(--lc-gap);
+  background: var(--lc-mars);
+  color: #000;
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
+  font-family: var(--lc-font);
+  font-size: 30px;
+  letter-spacing: 0.08em;
+}
+
+[data-theme="lcars"] .tape-sep {
+  color: var(--lc-plum);
+}
+
+/* ---- rail-right: mirror the elbow, flip the column, move the tape cap ---- */
+
+[data-theme="lcars"][data-layout="rail-right"] #app::before {
+  left: auto;
+  right: 0;
+  border-left: 0;
+  border-right: var(--lc-col) solid var(--lc-tan);
+  border-top-left-radius: 0;
+  border-top-right-radius: var(--lc-rx) var(--lc-ry);
+}
+
+[data-theme="lcars"][data-layout="rail-right"] #rail {
+  background-position: right calc(var(--lc-elbow-h) + var(--lc-gap));
+  padding: 40px calc(var(--lc-col) + 32px) 40px 40px;
+  text-align: right;
+}
+
+/* The pane bars need no mirroring: pane 0 already gets square-left (it meets
+   either the screen edge or the elbow's gap) and round-right (a terminal end),
+   which is correct on both sides. The tape cap is likewise left in place —
+   #tape-track is width:max-content and consumes the row, so an `order: 1` cap
+   is pushed past the right edge and clipped away by #tape's overflow. */
+
+/* ---- split: 380px rail needs a narrower column or the clock has no room ---- */
+
+[data-theme="lcars"][data-layout="split"] {
+  --lc-col: 108px;
+  --lc-rx: 170px;
+}
+
+[data-theme="lcars"][data-layout="split"] #clock {
+  font-size: 56px;
+}
+
+/* ---- rail-less layouts ----
+   full-stage has no clock chip, so a cap there would be an empty orange block
+   sitting on top of the pane label. Drop the elbow entirely and let the label —
+   already square on its left edge — butt against the screen edge. */
+[data-theme="lcars"][data-layout="full-stage"] #app::before {
+  display: none;
+}
+
+/* focus and mosaic DO show the chip, so the cap becomes the block that holds it */
+[data-theme="lcars"][data-layout="focus"] #app::before,
+[data-theme="lcars"][data-layout="mosaic"] #app::before {
+  width: 200px;
+  height: var(--lc-bar);
+  border: none;
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+  background: var(--lc-orange);
+  z-index: 5; /* the chip that sits in it is z-index 5 */
+}
+
+[data-theme="lcars"][data-layout="focus"] .stage-pane:first-child::before,
+[data-theme="lcars"][data-layout="mosaic"] .stage-pane:first-child::before {
+  left: calc(200px + var(--lc-gap));
+  border-radius: var(--lc-cap);
+}
+
+/* the label clears the cap — but unlike glance's dodge at :3149 it now abuts a
+   block that carries the time, rather than a bare floating chip */
+[data-theme="lcars"][data-layout="focus"] .stage-pane:first-child .pane-header,
+[data-theme="lcars"][data-layout="mosaic"] .stage-pane:first-child .pane-header {
+  left: calc(200px + var(--lc-gap));
+}
+
+[data-theme="lcars"][data-layout="focus"] #clock-chip,
+[data-theme="lcars"][data-layout="mosaic"] #clock-chip {
+  top: 0;
+  left: 24px;
+  height: var(--lc-bar);
+  line-height: var(--lc-bar);
+  color: #000;
+  font-size: 30px;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="lcars"][data-layout="focus"] #pin-badge,
+[data-theme="lcars"][data-layout="mosaic"] #pin-badge {
+  top: calc(var(--lc-bar) + var(--lc-gap) + 10px);
+}
+
+/* ---- banner: the rail IS the bar, black text on colour ---- */
+
+[data-theme="lcars"][data-layout="banner"] #app::before,
+[data-theme="lcars"][data-layout="banner"] .stage-pane::before {
+  display: none; /* two stacked bars would read as clutter */
+}
+
+[data-theme="lcars"][data-layout="banner"] #rail {
+  color: #000;
+  border-bottom: var(--lc-gap) solid #000;
+  padding: 0 48px 0 calc(var(--lc-col) + 32px);
+  background-size: 100% 100%;
+  background-position: left top;
+  background-image: linear-gradient(
+    to right,
+    var(--lc-orange) 0 var(--lc-col),
+    #000 var(--lc-col) calc(var(--lc-col) + 8px),
+    var(--lc-tan) calc(var(--lc-col) + 8px) 1640px,
+    #000 1640px 1648px,
+    var(--lc-lilac) 1648px 2080px,
+    #000 2080px 2088px,
+    var(--lc-peri) 2088px 100%
+  );
+}
+
+/* re-declare the size the layout rule would have set: [data-layout=banner]
+   #clock is (1,1,0), same as the base lcars rule, which sits later in the file */
+[data-theme="lcars"][data-layout="banner"] #clock {
+  font-size: 64px;
+  color: #000;
+}
+
+[data-theme="lcars"][data-layout="banner"] .weather-temp {
+  color: #000;
+}
+
+[data-theme="lcars"][data-layout="banner"] #date,
+[data-theme="lcars"][data-layout="banner"] .weather-text,
+[data-theme="lcars"][data-layout="banner"] .weather-meta,
+[data-theme="lcars"][data-layout="banner"] .weather-loc {
+  color: rgba(0, 0, 0, 0.62);
+}
+
+[data-theme="lcars"][data-layout="banner"] #date::after {
+  display: none; /* no room in a 110px strip */
+}
+
+[data-theme="lcars"][data-layout="banner"] .stage-layer {
+  padding-top: 56px;
+}
+
+[data-theme="lcars"][data-layout="banner"] .pane-header {
+  top: 12px;
+  box-shadow: none; /* free-floating pill — there is no bar to sit on */
+}
+
+/* ---- zen: stage hidden, so this is the standby screen ---- */
+
+[data-theme="lcars"][data-layout="zen"] {
+  --lc-col: 180px;
+  --lc-bar: 64px;
+  --lc-cap: 32px;
+  --lc-rx: 300px;
+  --lc-ry: 140px;
+  --lc-elbow-h: 260px;
+}
+
+[data-theme="lcars"][data-layout="zen"] #app::before {
+  width: 760px; /* no rail-width to track — the rail is the whole screen */
+}
+
+/* same specificity tie as banner above — restore zen's giant readout */
+[data-theme="lcars"][data-layout="zen"] #clock {
+  font-size: 190px;
+}
+
+[data-theme="lcars"][data-layout="zen"] #rail {
+  align-items: center;
+  padding-left: calc(var(--lc-col) + 48px);
+  background-image: linear-gradient(
+    to bottom,
+    var(--lc-orange) 0 84px,
+    #000 84px 92px,
+    var(--lc-lilac) 92px 190px,
+    #000 190px 198px,
+    var(--lc-peri) 198px 100%
+  );
+}
+
+/* #rail::after is free in every layout — zen spends it on the bar continuation
+   to the right of the (much larger) elbow */
+[data-theme="lcars"][data-layout="zen"] #rail::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: 0;
+  left: calc(760px + var(--lc-gap));
+  right: 48px;
+  height: var(--lc-bar);
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    var(--lc-sun) 0 340px,
+    #000 340px 348px,
+    var(--lc-lilac) 348px 900px,
+    #000 900px 908px,
+    var(--lc-peri) 908px 100%
+  );
+}
+
+/* ---- module surfaces: flat cards with a colour rule, not bordered boxes ---- */
+
+[data-theme="lcars"] .quote-hero,
+[data-theme="lcars"] .sb-hero,
+[data-theme="lcars"] .news-lead,
+[data-theme="lcars"] .pve-card,
+[data-theme="lcars"] .astro-moon,
+[data-theme="lcars"] .astro-targets {
+  border-radius: 0 18px 18px 0;
+  border-left: 10px solid var(--lc-orange);
+}
+
+[data-theme="lcars"] .watch-row,
+[data-theme="lcars"] .game-row,
+[data-theme="lcars"] .news-row,
+[data-theme="lcars"] .sb-row,
+[data-theme="lcars"] .adsb-row,
+[data-theme="lcars"] .wx-day {
+  border-radius: 0 12px 12px 0;
+  border-left: 8px solid var(--lc-peri);
+}
+
+/* glance hardcodes #2a2410 here for the same reason: --panel-raised is too
+   close to the lit state to read, so the "on" tile needs its own literal */
+[data-theme="lcars"] .ha-tile {
+  border-radius: 0 12px 12px 0;
+  border-left: 8px solid var(--lc-peri);
+}
+
+[data-theme="lcars"] .ha-tile.light.on {
+  background: #3a2400;
+  border-left-color: var(--lc-orange);
+}
+
+/* .adsb-radar is absolute inset:0 and deliberately replaces .stage-layer's
+   padding with its own, so the reserved band never reaches it and the first
+   flight row would sit under the bar. The full-bleed map and launch backdrop
+   need no equivalent — those are meant to run edge to edge beneath the frame. */
+[data-theme="lcars"] .adsb-radar {
+  padding-top: var(--lc-band);
+}
+
+[data-theme="lcars"] .ha-col-title {
+  display: block;
+  font-family: var(--lc-font);
+  font-size: 20px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lc-lilac);
 }
 
 /* ---- score celebration overlay ---- */

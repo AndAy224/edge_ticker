@@ -94,6 +94,31 @@ export const THEMES: Record<string, Theme> = {
       "--overlay-bg": "rgba(46, 52, 64, 0.97)",
     },
   },
+  // LCARS ships exactly these twelve and no more. applyAppearance() writes theme
+  // vars as inline styles on <html> and never removes the outgoing theme's, so a
+  // thirteenth key here would leak into every theme picked afterwards. The
+  // Okudagram block colours live in the [data-theme="lcars"] CSS block instead,
+  // where they evaporate when the attribute changes.
+  lcars: {
+    label: "LCARS",
+    vars: {
+      "--bg": "#000000",
+      "--panel": "#000000",
+      "--panel-raised": "#14100c",
+      "--text": "#ffcc99",
+      "--text-dim": "#cc9966",
+      // not Okuda colours: canonical Mars reads too close to the orange chrome
+      // to signal a loss across a room, so gain/loss get the only green and rose
+      "--up": "#4de0a0",
+      "--down": "#ff4477",
+      "--alert": "#ffcc00",
+      "--accent": "#99ccff",
+      // deliberately not near-black — three chart gridlines stroke with it
+      "--line": "#4a3d5c",
+      "--muted": "#806a94",
+      "--overlay-bg": "rgba(0, 0, 0, 0.97)",
+    },
+  },
 };
 
 export interface LayoutDef {
