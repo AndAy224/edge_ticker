@@ -1899,8 +1899,7 @@ body {
 }
 
 .climate-btn,
-.media-btn,
-.fan-btn {
+.media-btn {
   background: var(--panel);
   border: 2px solid var(--muted);
   border-radius: 14px;
@@ -1928,18 +1927,41 @@ body {
   text-align: left;
 }
 
-.fan-controls {
+/* One button per stop, sharing the tile's full width — the side column is the
+   narrow 1fr, so the buttons flex rather than take a fixed 100px. */
+.fan-speeds {
   display: flex;
-  align-items: center;
-  gap: 22px;
-  margin-top: 4px;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
 }
 
-.fan-speed {
-  font-size: 34px;
-  color: var(--text-dim);
-  min-width: 96px;
-  text-align: center;
+.fan-speed-btn {
+  flex: 1;
+  min-width: 0;
+  height: 92px;
+  background: var(--panel);
+  border: 2px solid var(--muted);
+  border-radius: 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fan-speed-btn.active {
+  background: var(--panel-raised);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.fan-speed-btn:disabled {
+  opacity: 0.4;
 }
 
 .ha-empty {

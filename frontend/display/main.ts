@@ -677,6 +677,13 @@ function haTransitionToast(entityId: string, previous: string | undefined, state
   rebuildTape();
 };
 
+// Debug/test hook: drive the swipe-up overlay without a live Home Assistant —
+// replaces its state map (mapping still comes from config) and opens it.
+(window as any).__hafake = (states: Record<string, any>, status = "connected") => {
+  overlay.setStates(states, status);
+  overlay.open();
+};
+
 function haAlertItems(): { text: string; accent: "alert"; priority: number }[] {
   const items: { text: string; accent: "alert"; priority: number }[] = [];
   for (const alert of config.ha?.alerts ?? []) {

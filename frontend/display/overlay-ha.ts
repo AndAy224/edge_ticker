@@ -21,6 +21,69 @@ function escapeHtml(value: unknown): string {
   );
 }
 
+/** Word labels for the common speed counts; anything else falls back to "N%". */
+const SPEED_LABELS: Record<number, string[]> = {
+  1: ["On"],
+  2: ["Low", "High"],
+  3: ["Low", "Med", "High"],
+  4: ["Low", "Med", "High", "Max"],
+};
+
+interface FanSpeedButton {
+  label: string;
+  /** the data-* attribute the click handler dispatches on */
+  attr: string;
+  active: boolean;
+}
+
+/**
+ * One button per stop the fan actually has: Off plus each speed. Percentage fans
+ * get their stops from `percentage_step` (a 3-speed fan reports 33.33 → Off/Low/
+ * Med/High); preset-only fans get one button per named mode. A fan with neither
+ * is plain on/off and gets no row at all — its name button already toggles it.
+ */
+function fanSpeeds(attrs: Record<string, any> | undefined, on: boolean): FanSpeedButton[] {
+  if (!attrs) return [];
+  const off = (active: boolean): FanSpeedButton => ({
+    label: "Off",
+    attr: 'data-fan-off="1"',
+    active,
+  });
+
+  if (typeof attrs.percentage === "number" || typeof attrs.percentage_step === "number") {
+    const step =
+      typeof attrs.percentage_step === "number" && attrs.percentage_step > 0
+        ? attrs.percentage_step
+        : 100 / 3;
+    const count = Math.min(Math.max(Math.round(100 / step), 1), 6);
+    const pct = typeof attrs.percentage === "number" ? attrs.percentage : 0;
+    // A fan reported off keeps no active speed even if it remembers a percentage.
+    const current = on && pct > 0 ? Math.min(Math.max(Math.round(pct / step), 1), count) : 0;
+    const labels = SPEED_LABELS[count];
+    const buttons = [off(current === 0)];
+    for (let i = 1; i <= count; i++) {
+      const value = Math.min(Math.round(i * step), 100);
+      buttons.push({
+        label: labels ? labels[i - 1]! : `${value}%`,
+        attr: `data-fan-pct="${value}"`,
+        active: current === i,
+      });
+    }
+    return buttons;
+  }
+
+  const modes: string[] = Array.isArray(attrs.preset_modes) ? attrs.preset_modes : [];
+  if (!modes.length) return [];
+  return [
+    off(!on),
+    ...modes.slice(0, 5).map((mode) => ({
+      label: mode,
+      attr: `data-fan-preset="${escapeHtml(mode)}"`,
+      active: on && attrs.preset_mode === mode,
+    })),
+  ];
+}
+
 export class HAOverlay {
   private mapping: HAMapping = { scenes: [], lights: [], fans: [], climate: null, media: null };
   private states: Record<string, HAEntityState> = {};
@@ -162,8 +225,9 @@ export class HAOverlay {
       </div>`;
     }
 
-    // Fan tiles: name toggles on/off (generic data-domain path); the −/+ speed
-    // buttons use a dedicated, capability-aware handler in onClick().
+    // Fan tiles: name toggles on/off (generic data-domain path); one button per
+    // speed stop, so a speed change is a single absolute service call rather
+    // than a run of relative steps. Handled in onClick().
     const fans = this.mapping.fans
       .slice(0, 8)
       .map((id) => {
@@ -171,19 +235,23 @@ export class HAOverlay {
         const on = s?.state === "on";
         const pct = s?.attributes?.percentage;
         const preset = s?.attributes?.preset_mode;
-        const speed =
-          typeof pct === "number" ? `${pct}%` : preset ? escapeHtml(preset) : on ? "On" : "Off";
+        // "On · 66%" while running; a fan that is off just reads "Off".
+        const speed = typeof pct === "number" ? `${pct}%` : preset ? escapeHtml(preset) : "";
+        const state = on ? (speed ? `On · ${speed}` : "On") : "Off";
+        const buttons = fanSpeeds(s?.attributes, on)
+          .map(
+            (b) => `<button class="fan-speed-btn ${b.active ? "active" : ""}"
+              ${offline ? "disabled" : ""} data-entity="${escapeHtml(id)}"
+              ${b.attr}>${escapeHtml(b.label)}</button>`,
+          )
+          .join("");
         return `<div class="ha-tile fan ${on ? "on" : ""}">
           <button class="fan-toggle" ${offline ? "disabled" : ""}
             data-domain="fan" data-service="toggle" data-entity="${escapeHtml(id)}">
             <span class="tile-name">${escapeHtml(this.friendlyName(id))}</span>
-            <span class="tile-state">${on ? "On" : "Off"}</span>
+            <span class="tile-state">${state}</span>
           </button>
-          <span class="fan-controls">
-            <button class="fan-btn" ${offline ? "disabled" : ""} data-fan-delta="-1" data-entity="${escapeHtml(id)}">−</button>
-            <span class="fan-speed">${speed}</span>
-            <button class="fan-btn" ${offline ? "disabled" : ""} data-fan-delta="1" data-entity="${escapeHtml(id)}">+</button>
-          </span>
+          ${buttons ? `<span class="fan-speeds">${buttons}</span>` : ""}
         </div>`;
       })
       .join("");
@@ -215,24 +283,23 @@ export class HAOverlay {
       return;
     }
 
-    const fanBtn = target.closest<HTMLElement>("[data-fan-delta]");
+    // Fan speed row: absolute service calls, so one tap is one call and tapping
+    // the speed you are already on is a no-op at the fan.
+    const fanBtn = target.closest<HTMLElement>(
+      "[data-fan-off], [data-fan-pct], [data-fan-preset]",
+    );
     if (fanBtn) {
       const entityId = fanBtn.dataset.entity!;
-      const dir = Number(fanBtn.dataset.fanDelta);
-      const attrs = this.states[entityId]?.attributes;
-      if (!attrs) return;
-      if (typeof attrs.percentage === "number") {
-        // Percentage fan: HA steps by the fan's native percentage_step and
-        // turns it on from off / off at the bottom.
-        this.send("fan", dir > 0 ? "increase_speed" : "decrease_speed", entityId);
-      } else if (Array.isArray(attrs.preset_modes) && attrs.preset_modes.length) {
-        // Preset-only fan: step through its named modes.
-        const modes = attrs.preset_modes as string[];
-        const i = Math.min(
-          Math.max(modes.indexOf(attrs.preset_mode) + dir, 0),
-          modes.length - 1,
-        );
-        this.send("fan", "set_preset_mode", entityId, { preset_mode: modes[i] });
+      if (fanBtn.dataset.fanOff) {
+        this.send("fan", "turn_off", entityId);
+      } else if (fanBtn.dataset.fanPct) {
+        this.send("fan", "set_percentage", entityId, {
+          percentage: Number(fanBtn.dataset.fanPct),
+        });
+      } else {
+        this.send("fan", "set_preset_mode", entityId, {
+          preset_mode: fanBtn.dataset.fanPreset,
+        });
       }
       return;
     }
