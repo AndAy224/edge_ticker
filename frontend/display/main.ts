@@ -17,6 +17,7 @@ import "./modules/hurricanes";
 import { setLaunchSun } from "./modules/launches";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
+import { CameraAlertOverlay } from "./camera-alert";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
@@ -34,6 +35,16 @@ const weatherEl = document.getElementById("weather")!;
 const blanker = document.getElementById("blanker")!;
 const dimmer = document.getElementById("dimmer")!;
 const connDot = document.getElementById("conn-dot")!;
+
+// Night dim is two independent facts: what the scheduler last commanded, and
+// whether a full-screen takeover is currently suppressing it. Keeping them
+// apart means a `night` message that lands DURING a takeover is recorded and
+// applied on restore, instead of being lost or fighting the overlay.
+let nightOpacity = "0";
+let dimSuppressed = false;
+function applyDim(): void {
+  dimmer.style.opacity = dimSuppressed ? "0" : nightOpacity;
+}
 
 const modules = new Map<string, ModulePayload>();
 const haStates = new Map<string, any>(); // alert entities (and mapped) by id
@@ -89,6 +100,27 @@ const weatherAlert = new WeatherAlertOverlay(
 );
 // Debug/test hook: fire an arbitrary severe-weather alert overlay.
 (window as any).__weatheralert = (alert: any) => weatherAlert.show(alert);
+const cameraAlert = new CameraAlertOverlay(
+  document.getElementById("camera-alert")!,
+  () => blanked,
+  () => wake(),
+  () => weatherAlert.isOpen(), // severe weather is life-safety; it outranks a door
+  (open) => {
+    dimSuppressed = open;
+    applyDim();
+    reportDisplayState();
+  },
+);
+// Debug/test hook: fire an arbitrary camera takeover.
+(window as any).__cameraalert = (event: any) => cameraAlert.show(event);
+
+/** Any full-screen takeover is up. Rotation, auto-feature and gestures all
+ *  defer to this — previously only the HA swipe-up overlay did, so the stage
+ *  quietly rotated and crossfaded behind every celebration. */
+function takeoverOpen(): boolean {
+  return cameraAlert.isOpen() || celebration.isOpen() || weatherAlert.isOpen();
+}
+
 const overlay = new HAOverlay(
   document.getElementById("overlay")!,
   (domain, service, entityId, data) =>
@@ -148,6 +180,7 @@ function reportDisplayState(): void {
       pinned: rotation.pinned,
       blanked,
       overlay: overlay.isOpen(),
+      takeover: cameraAlert.isOpen(),
     },
   });
 }
@@ -229,6 +262,12 @@ function handleMessage(msg: any): void {
     case "weather_alert":
       weatherAlert.show(msg.alert);
       break;
+    case "camera_alert":
+      // A takeover wins over a celebration (z-index 92 vs 80), so end that one
+      // rather than leaving its state machine ticking behind an opaque wall.
+      if (celebration.isOpen()) celebration.dismiss();
+      cameraAlert.show(msg.event);
+      break;
     case "ha_state": {
       overlay.updateState(msg.entity_id, { state: msg.state, attributes: msg.attributes });
       const previous = haStates.get(msg.entity_id)?.state;
@@ -248,8 +287,8 @@ function handleMessage(msg: any): void {
       break;
     case "night":
       // Software dim fallback when DDC/CI isn't available.
-      dimmer.style.opacity =
-        msg.mode === "dim" ? String(1 - (msg.level ?? 10) / 100) : "0";
+      nightOpacity = msg.mode === "dim" ? String(1 - (msg.level ?? 10) / 100) : "0";
+      applyDim();
       break;
   }
 }
@@ -271,7 +310,15 @@ const rotation = {
     clearInterval(this.timer);
     const seconds = config.rotation?.interval_seconds ?? 25;
     this.timer = window.setInterval(() => {
-      if (!this.pinned && !overlay.isOpen() && !blanked && !anyDetailOpen()) this.next();
+      if (
+        !this.pinned &&
+        !overlay.isOpen() &&
+        !blanked &&
+        !anyDetailOpen() &&
+        !takeoverOpen()
+      ) {
+        this.next();
+      }
     }, seconds * 1000);
   },
   next(): void {
@@ -555,6 +602,7 @@ function applyAutoFeature(id: string, enabled: boolean): void {
   if (
     enabled &&
     !blanked &&
+    !takeoverOpen() && // don't yank+pin the stage under a full-screen takeover
     !overlay.isOpen() &&
     !anyDetailOpen() &&
     !rotation.pinned
@@ -991,8 +1039,22 @@ function startStarshipPreview(): void {
 
 // ---- Gestures ----------------------------------------------------------------------
 
-attachGestures(document.getElementById("app")!, {
+const appEl = document.getElementById("app")!;
+
+// Each takeover dismisses itself on pointerdown, and its host div is a child of
+// #app — so its listener runs (bubble) before the gesture recognizer resolves,
+// and by then takeoverOpen() already reads false. Sample it in the capture
+// phase instead, so the touch that dismissed a takeover does nothing else.
+let pointerStartedOnTakeover = false;
+appEl.addEventListener(
+  "pointerdown",
+  () => (pointerStartedOnTakeover = takeoverOpen()),
+  true,
+);
+
+attachGestures(appEl, {
   onSwipe(direction) {
+    if (pointerStartedOnTakeover) return;
     if (blanked) {
       wake();
       return;
@@ -1021,6 +1083,7 @@ attachGestures(document.getElementById("app")!, {
     }
   },
   onTap(target) {
+    if (pointerStartedOnTakeover) return;
     if (blanked) {
       wake();
       return;
@@ -1029,6 +1092,7 @@ attachGestures(document.getElementById("app")!, {
     handleStageTap(target);
   },
   onLongPress() {
+    if (pointerStartedOnTakeover) return;
     if (blanked || overlay.isOpen()) return;
     rotation.togglePin();
   },

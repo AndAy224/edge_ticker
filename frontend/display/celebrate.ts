@@ -142,7 +142,7 @@ export class Celebration {
     this.later(() => this.dismiss(), CARD_MS);
   }
 
-  private dismiss(): void {
+  dismiss(): void {
     if (!this.active) return;
     for (const t of this.timers) clearTimeout(t);
     this.timers = [];

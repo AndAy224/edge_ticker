@@ -17,10 +17,59 @@ log = logging.getLogger(__name__)
 BRIGHTNESS_VCP_CODE = "10"
 
 
+def _in_night_window(night: dict, minute: str) -> bool:
+    """Is `minute` ("HH:MM") inside the configured dim window?
+
+    Derived rather than remembered on purpose: a `self._dimmed` flag would reset
+    to False on every backend restart, so a takeover during the night after a
+    restart would silently skip the brightness boost. "HH:MM" strings compare
+    lexicographically in clock order, so this is a plain comparison.
+    """
+    dim_at = night.get("dim_at")
+    wake_at = night.get("wake_at")
+    if not dim_at or not wake_at or dim_at == wake_at:
+        return False
+    if dim_at < wake_at:
+        return dim_at <= minute < wake_at
+    return minute >= dim_at or minute < wake_at  # window wraps midnight
+
+
 class NightScheduler:
     def __init__(self, bus, get_config: Callable[[], dict]) -> None:
         self.bus = bus
         self.get_config = get_config
+        self._boost: asyncio.Task | None = None
+
+    async def boost(self, seconds: float) -> None:
+        """Temporarily undo a hardware dim for a full-screen takeover.
+
+        Only the DDC path needs this: with method=software the display is told
+        about night directly and suppresses its own dim overlay while a takeover
+        is up. `_tick` is edge-triggered on exact minutes, so the restore has to
+        be explicit or the panel would stay bright until the next dim_at.
+        """
+        night = (self.get_config() or {}).get("night") or {}
+        if night.get("method", "ddc") != "ddc":
+            return
+        if not _in_night_window(night, datetime.now().strftime("%H:%M")):
+            return
+        if self._boost and not self._boost.done():
+            self._boost.cancel()
+        day = int(night.get("day_level", 100))
+        if not await self._ddcutil(day):
+            return  # no ddcutil here — the display's software dim handles it
+        log.info("camera takeover: brightness boosted to %d%% for %ss", day, seconds)
+
+        async def restore() -> None:
+            try:
+                await asyncio.sleep(seconds)
+                cfg = (self.get_config() or {}).get("night") or {}
+                if _in_night_window(cfg, datetime.now().strftime("%H:%M")):
+                    await self._ddcutil(int(cfg.get("dim_level", 10)))
+            except asyncio.CancelledError:
+                pass
+
+        self._boost = asyncio.create_task(restore(), name="night-boost-restore")
 
     async def run(self) -> None:
         last_minute = ""

@@ -36,6 +36,10 @@ export class WeatherAlertOverlay {
     el.addEventListener("pointerdown", () => this.dismiss());
   }
 
+  isOpen(): boolean {
+    return this.active;
+  }
+
   show(alert: any): void {
     if (!alert) return;
     if (this.isBlanked()) {
@@ -71,7 +75,7 @@ export class WeatherAlertOverlay {
     this.timer = window.setTimeout(() => this.dismiss(), CARD_MS);
   }
 
-  private dismiss(): void {
+  dismiss(): void {
     if (!this.active) return;
     clearTimeout(this.timer);
     this.active = false;

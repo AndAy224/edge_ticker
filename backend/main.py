@@ -33,12 +33,14 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from . import db  # noqa: E402
 from .api.adsb import router as adsb_router  # noqa: E402
+from .api.cameras import router as cameras_router  # noqa: E402
 from .api.config import router as config_router  # noqa: E402
 from .api.control import router as control_router  # noqa: E402
 from .api.fantasy import router as fantasy_router  # noqa: E402
 from .api.ha import router as ha_router  # noqa: E402
 from .api.markets import router as markets_router  # noqa: E402
 from .api.sports import router as sports_router  # noqa: E402
+from .camera_alert import CameraAlertHub  # noqa: E402
 from .collectors import discover_collectors  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
@@ -82,14 +84,26 @@ async def lifespan(app: FastAPI):
     bus = Bus()
     manager = CollectorManager()
     bridge = HABridge(bus, lambda: app.state.config)
+    scheduler = NightScheduler(bus, lambda: app.state.config)
+    camera_alerts = CameraAlertHub(
+        bus,
+        lambda: app.state.config,
+        friendly_name=lambda eid: (
+            (bridge.all_states.get(eid) or {}).get("attributes", {}).get("friendly_name")
+            or eid
+        ),
+        scheduler=scheduler,
+    )
+    bridge.camera_alerts = camera_alerts
 
     app.state.bus = bus
     app.state.config = config
     app.state.manager = manager
     app.state.ha = bridge
+    app.state.scheduler = scheduler
+    app.state.camera_alerts = camera_alerts
 
     await manager.start(bus, config)
-    scheduler = NightScheduler(bus, lambda: app.state.config)
     background = [
         asyncio.create_task(bridge.run(), name="ha-bridge"),
         asyncio.create_task(scheduler.run(), name="night-scheduler"),
@@ -104,6 +118,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="edge-ticker", lifespan=lifespan)
 app.include_router(adsb_router, prefix="/api")
+app.include_router(cameras_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
 app.include_router(control_router, prefix="/api")
 app.include_router(fantasy_router, prefix="/api")

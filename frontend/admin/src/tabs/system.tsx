@@ -1,4 +1,19 @@
+import { signal } from "@preact/signals";
 import { config, control, displayState, health, livePayloads } from "../state";
+
+// Result of the last camera-takeover test: it can legitimately refuse (no
+// cameras configured yet), and a button that silently does nothing reads broken.
+const cameraTestResult = signal<string>("");
+
+async function testCameraTakeover(): Promise<void> {
+  cameraTestResult.value = "firing…";
+  const res = await control("camera_alert_test");
+  cameraTestResult.value = res?.error
+    ? `✕ ${res.error}`
+    : `✓ showing ${res?.event?.cameras?.length ?? 0} camera(s) for ${
+        res?.event?.duration_seconds ?? 0
+      }s`;
+}
 
 function downloadConfig(): void {
   const blob = new Blob([JSON.stringify(config.value, null, 2)], {
@@ -55,11 +70,21 @@ export function SystemTab() {
           <button class="ghost celebrate" onClick={() => control("starship_test")}>
             🚀 Test Starship card
           </button>
+          <button class="ghost celebrate" onClick={() => control("weather_alert_test")}>
+            ⛈ Test weather alert
+          </button>
+          <button class="ghost celebrate" onClick={testCameraTakeover}>
+            📷 Test camera takeover
+          </button>
         </div>
+        {cameraTestResult.value && <p class="hint">{cameraTestResult.value}</p>}
         <p class="hint">
           Score alert replays the last touchdown from the latest Packers game of
           last season. Starship test shows the fabricated flight-day card for
           10s, then the T−0 countdown board for 10s, then restores the display.
+          Camera takeover replays the first door alert configured for one in the
+          Home Assistant tab; if none is, it shows whatever cameras are picked
+          there for 20s.
         </p>
       </section>
 

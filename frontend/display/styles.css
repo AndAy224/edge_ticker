@@ -7915,3 +7915,352 @@ body {
 [data-panes="3"] .launch-live-name {
   font-size: 22px;
 }
+
+/* ---- reusable alert takeover ------------------------------------------------
+   Two hooks: the class .alert-takeover (plus .alert-entering for the first
+   ~900ms) and a [data-severity] attribute. Any future full-screen overlay adds
+   those two and inherits this entrance for free. Severity only re-points three
+   custom properties, so a new one is three lines rather than a new animation.
+   Nothing lives in themes.ts: applyAppearance() writes theme vars as inline
+   custom properties on <html> and never clears the outgoing theme's, so a key
+   added there would leak into every theme chosen afterwards. */
+
+.alert-takeover {
+  --alert-edge: #ff3b1f;
+  --alert-wash: rgba(190, 26, 12, 0.62);
+  --alert-ink: #ffe3d6;
+}
+
+.alert-takeover[data-severity="info"] {
+  --alert-edge: var(--accent);
+  --alert-wash: rgba(0, 0, 0, 0.55);
+  --alert-ink: #ffffff;
+}
+
+.alert-takeover[data-severity="critical"] {
+  --alert-edge: #ff2a08;
+  --alert-wash: rgba(220, 20, 6, 0.74);
+}
+
+.alert-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(ellipse at 50% 40%, var(--alert-wash), transparent 78%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.alert-entering .alert-flash {
+  animation: alert-flash 900ms ease-out;
+}
+
+/* Two hard beats, then clear — a single fade reads as a crossfade, not an alarm. */
+@keyframes alert-flash {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  22% { opacity: 0.05; }
+  34% { opacity: 0.92; }
+  52% { opacity: 0.08; }
+  100% { opacity: 0; }
+}
+
+/* The wall irises open from the horizontal centre: reads as bay doors on a
+   2560x720 panel, and scaleY composites where a clip-path inset does not. */
+.alert-entering .calert-wall {
+  animation: alert-iris 620ms cubic-bezier(0.16, 0.9, 0.24, 1) both;
+}
+
+@keyframes alert-iris {
+  from { transform: scaleY(0.04); opacity: 0.2; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+.alert-entering .calert-banner {
+  animation: alert-banner-in 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes alert-banner-in {
+  from { transform: translateY(-100%); opacity: 0; }
+}
+
+.alert-takeover:not(.alert-entering) .calert-banner {
+  animation: alert-pulse 1.4s ease-in-out infinite;
+}
+
+.alert-takeover[data-severity="critical"]:not(.alert-entering) .calert-banner {
+  animation-duration: 0.9s;
+}
+
+.alert-takeover[data-severity="info"]:not(.alert-entering) .calert-banner {
+  animation: none;
+}
+
+@keyframes alert-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+  50% { opacity: 0.86; box-shadow: 0 14px 60px var(--alert-edge); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-entering .alert-flash,
+  .alert-entering .calert-wall,
+  .alert-entering .calert-banner,
+  .alert-takeover:not(.alert-entering) .calert-banner {
+    animation: none;
+  }
+}
+
+/* ---- camera takeover -------------------------------------------------------
+   #app is a grid, so this must be absolute or it becomes a layout item. It
+   deliberately covers the tape: camera pixels are the point, and 2560x624
+   tiles beat 2560x504. z-index sits above #dimmer (90) so a failed dim
+   suppression can't wash out the feeds, and below #blanker (100) — which is
+   why show() wakes a blanked panel rather than trying to paint over it. */
+
+#camera-alert {
+  position: absolute;
+  inset: 0;
+  z-index: 92;
+  display: grid;
+  grid-template-rows: var(--calert-banner, 96px) 1fr;
+  background: #05070a;
+  overflow: hidden;
+}
+
+.calert-banner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 32px;
+  background: var(--alert-edge);
+  color: #0b0505;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.calert-icon {
+  display: flex;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+}
+
+.calert-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.calert-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calert-sub {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: none;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calert-count {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.calert-wall {
+  display: grid;
+  grid-template-columns: repeat(var(--calert-cols, 3), 1fr);
+  gap: 6px;
+  min-height: 0;
+  background: #000;
+}
+
+.calert-tile {
+  position: relative;
+  overflow: hidden;
+  background: #0a0d12;
+}
+
+.calert-feed {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.calert-tile-label {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.calert-tile-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.calert-offline .calert-tile-state {
+  color: var(--alert-edge);
+}
+
+/* A dropped <img> keeps painting Chromium's broken-image glyph even after its
+   src is removed, so hide the element rather than leaving a stray icon. */
+.calert-offline .calert-feed {
+  display: none;
+}
+
+.calert-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 100%;
+  height: 6px;
+  background: var(--alert-edge);
+  transform-origin: left center;
+}
+
+/* ---- LCARS red alert -------------------------------------------------------
+   The takeover covers the whole Okudagram for its duration, so the reason
+   --lc-mars is the palette's only warm red (themes.ts: canonical Okuda Mars
+   reads too close to the orange chrome) does not apply — there is no orange on
+   screen. A hotter red is scoped to this overlay alone and evaporates with it;
+   --lc-mars stays the secondary everywhere else.
+   Frame pseudos follow the three LCARS rules: absolute (grid/flex parents turn
+   a static pseudo into a layout item), their own box-sizing (the global `*`
+   rule misses pseudos), and pointer-events:none (a frame that eats the
+   pointerdown would kill tap-to-dismiss). */
+
+[data-theme="lcars"] #camera-alert {
+  --lc-alert: #e04b3c;
+  --alert-edge: var(--lc-alert);
+  --alert-wash: rgba(224, 75, 60, 0.72);
+  --calert-banner: 68px;
+  grid-template-columns: var(--lc-col) 1fr;
+  grid-template-rows: var(--calert-banner) 1fr;
+  gap: var(--lc-gap);
+  padding: var(--lc-gap);
+  background: #000;
+}
+
+/* The elbow: left column cap, welded to the banner bar on its right. */
+[data-theme="lcars"] #camera-alert::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  left: var(--lc-gap);
+  top: var(--lc-gap);
+  width: var(--lc-col);
+  height: var(--calert-banner);
+  background: var(--lc-alert);
+  border-top-left-radius: var(--lc-cap);
+}
+
+/* Red alert: the whole frame pulses. This is the LCARS idiom for a condition,
+   and it's what makes the takeover louder here than the flat banner does. */
+[data-theme="lcars"] #camera-alert::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  inset: 0;
+  border: var(--lc-gap) solid var(--lc-alert);
+  animation: lc-red-alert 1.1s ease-in-out infinite;
+}
+
+[data-theme="lcars"] #camera-alert[data-severity="critical"]::after {
+  animation-duration: 0.7s;
+}
+
+[data-theme="lcars"] #camera-alert[data-severity="info"]::after {
+  animation: none;
+  opacity: 0.5;
+}
+
+@keyframes lc-red-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="lcars"] #camera-alert::after {
+    animation: none;
+  }
+}
+
+/* The banner IS the Okudagram bar: a solid block welded to the elbow cap on the
+   left, capped round on the right. */
+[data-theme="lcars"] .calert-banner {
+  grid-column: 2;
+  grid-row: 1;
+  gap: 20px;
+  padding: 0 24px;
+  background: var(--lc-alert);
+  color: #000;
+  font-family: var(--lc-font);
+  font-size: 46px;
+  letter-spacing: 6px;
+  border-radius: 0 var(--lc-cap) var(--lc-cap) 0;
+}
+
+[data-theme="lcars"] .calert-icon {
+  width: 44px;
+  height: 44px;
+}
+
+[data-theme="lcars"] .calert-sub {
+  font-size: 24px;
+  opacity: 0.72;
+}
+
+[data-theme="lcars"] .calert-wall {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: var(--lc-gap);
+}
+
+[data-theme="lcars"] .calert-tile {
+  outline: 3px solid var(--lc-plum);
+  outline-offset: -3px;
+}
+
+[data-theme="lcars"] .calert-tile-label {
+  font-family: var(--lc-font);
+  letter-spacing: 4px;
+}
+
+/* LCARS wipes, it does not dissolve — reuse the theme's own swap curve so the
+   takeover reads as the same machine. */
+[data-theme="lcars"] .alert-entering .calert-wall {
+  animation: lc-alert-wipe var(--lc-swap) var(--lc-swap-ease) both;
+}
+
+@keyframes lc-alert-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+[data-theme="lcars"] .alert-flash {
+  background: var(--alert-wash);
+}

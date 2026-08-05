@@ -164,6 +164,99 @@ function DoorAlertPicker({ ha }: { ha: any }) {
   );
 }
 
+/** Spread-patch an alert row: existing config DBs predate every takeover key. */
+function patchAlert(i: number, fields: Record<string, unknown>) {
+  patch((c) => {
+    const list: any[] = c.ha.alerts ?? (c.ha.alerts = []);
+    list[i] = { ...(list[i] ?? {}), ...fields };
+  });
+}
+
+function CameraTakeover({ ha }: { ha: any }) {
+  const alerts: any[] = ha.alerts ?? [];
+  return (
+    <section>
+      <h2>Camera takeover</h2>
+      <p class="hint">
+        When one of these alerts trips, the panel goes full screen with the
+        chosen cameras, then returns to the rotation. Only the opening edge
+        takes over — closing stays a banner. Removing an alert above also
+        removes its cameras.
+      </p>
+      {!alerts.length && <p class="hint">no alerts configured yet</p>}
+      {alerts.map((alert: any, i: number) => (
+        <div class="rows" key={alert?.entity || i}>
+          <label class="field">
+            <input
+              type="checkbox"
+              checked={!!alert?.takeover}
+              onChange={(e) => patchAlert(i, { takeover: e.currentTarget.checked })}
+            />
+            Full-screen cameras for <code>{alert?.entity || "—"}</code>
+          </label>
+          {alert?.takeover && (
+            <>
+              <MultiPicker
+                title="Cameras"
+                domain="camera"
+                max={4}
+                selected={alert.cameras ?? []}
+                onToggle={(entityId, add) => {
+                  const list: string[] = [...(alert.cameras ?? [])];
+                  if (add) list.push(entityId);
+                  else list.splice(list.indexOf(entityId), 1);
+                  patchAlert(i, { cameras: list });
+                }}
+              />
+              <p class="hint">
+                Pick a camera's substream entity when three feeds run at once —
+                three full-resolution streams is the heavy case.
+              </p>
+              <div class="row">
+                <label class="field">
+                  Seconds
+                  <input
+                    type="number"
+                    min={5}
+                    max={120}
+                    value={alert.duration_seconds ?? 30}
+                    onInput={(e) =>
+                      patchAlert(i, {
+                        duration_seconds: Number(e.currentTarget.value) || 30,
+                      })
+                    }
+                  />
+                </label>
+                <label class="field">
+                  Severity
+                  <select
+                    value={alert.severity ?? "alert"}
+                    onChange={(e) => patchAlert(i, { severity: e.currentTarget.value })}
+                  >
+                    <option value="info">info</option>
+                    <option value="alert">alert</option>
+                    <option value="critical">critical</option>
+                  </select>
+                </label>
+                <label class="field">
+                  Feed
+                  <select
+                    value={alert.transport ?? "stream"}
+                    onChange={(e) => patchAlert(i, { transport: e.currentTarget.value })}
+                  >
+                    <option value="stream">live stream</option>
+                    <option value="snapshot">stills (1/s, lighter)</option>
+                  </select>
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function HATab() {
   useEffect(() => {
     loadEntities();
@@ -186,7 +279,8 @@ export function HATab() {
     );
   }
 
-  const toggleIn = (key: "scenes" | "lights" | "fans") => (entityId: string, add: boolean) =>
+  const toggleIn =
+    (key: "scenes" | "lights" | "fans" | "cameras") => (entityId: string, add: boolean) =>
     patch((c) => {
       const list: string[] = c.ha[key] ?? (c.ha[key] = []);
       if (add) list.push(entityId);
@@ -238,6 +332,21 @@ export function HATab() {
       />
 
       <DoorAlertPicker ha={ha} />
+
+      <MultiPicker
+        title="Cameras"
+        domain="camera"
+        selected={ha.cameras ?? []}
+        max={4}
+        onToggle={toggleIn("cameras")}
+      />
+      <p class="hint">
+        Cameras the display is allowed to show. These are what the System tab's
+        “Test camera takeover” button uses when no door alert has its own
+        cameras picked yet.
+      </p>
+
+      <CameraTakeover ha={ha} />
 
       <section>
         <h2>Custom alerts (advanced)</h2>

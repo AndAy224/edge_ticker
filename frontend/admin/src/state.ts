@@ -64,12 +64,20 @@ export async function loadEntities(): Promise<void> {
   haStatus.value = data.status ?? "unknown";
 }
 
-export async function control(action: string): Promise<void> {
-  await fetch("/api/control", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
-  });
+/** Fire a control action. Returns the parsed reply so a caller can surface an
+ *  error — the test actions can legitimately refuse (e.g. no cameras
+ *  configured), and a silent no-op reads as a broken button. */
+export async function control(action: string): Promise<any> {
+  try {
+    const res = await fetch("/api/control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: String(err) };
+  }
 }
 
 export function connectWs(): void {

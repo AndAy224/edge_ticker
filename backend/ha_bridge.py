@@ -47,6 +47,7 @@ class HABridge:
         self.token = os.environ.get("HA_TOKEN", "")
         self.status = "disconnected" if self.url and self.token else "unconfigured"
         self.all_states: dict[str, dict] = {}
+        self.camera_alerts = None  # optional CameraAlertHub, set by the app factory
         self._ws = None
         self._next_id = 0
         self._pending: dict[int, asyncio.Future] = {}
@@ -188,6 +189,18 @@ class HABridge:
             return
         trimmed = self._trim(new_state)
         self.all_states[entity_id] = trimmed
+        if self.camera_alerts is not None:
+            # HA's own old_state is the authoritative edge — deliberately
+            # outside the mapped-ids gate, so a future producer's entity can
+            # trigger a takeover without also riding the display state stream.
+            try:
+                await self.camera_alerts.on_ha_state_change(
+                    entity_id,
+                    (data.get("old_state") or {}).get("state"),
+                    trimmed.get("state"),
+                )
+            except Exception as exc:  # a hook failure must never break the bridge
+                log.warning("camera alert hook: %s", exc)
         if entity_id in self._mapped_ids():
             await self.bus.broadcast(
                 {"type": "ha_state", "entity_id": entity_id, **trimmed}

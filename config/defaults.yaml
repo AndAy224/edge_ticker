@@ -118,4 +118,11 @@ ha:
   fans: []          # up to 8 fan entity_ids (toggle + speed tiles)
   climate: null     # one climate entity_id
   media: null       # one media_player entity_id
-  alerts: []        # [{entity, state, text?}] → alert-colored tape items while matched
+  cameras: []       # camera entity_ids the takeover may proxy (an alert implies its own)
+  alerts: []        # [{entity, state, text?,
+                    #   takeover?, cameras?: [camera entity_id], duration_seconds?: 30,
+                    #   severity?: info|alert|critical, transport?: stream|snapshot,
+                    #   cooldown_seconds?: 60, takeover_title?}]
+                    # → alert-colored tape items while matched; with `takeover` set, the
+                    #   ENTRY edge also takes the panel over with the chosen camera feeds
+                    #   (leaving the state stays a toast)
