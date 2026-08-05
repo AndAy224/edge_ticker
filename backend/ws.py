@@ -6,6 +6,8 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from .sysinfo import lan_ip
+
 log = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -24,6 +26,8 @@ async def _serve(websocket: WebSocket) -> None:
                 "config": app.state.config,
                 "ha": {"status": bridge.status, "states": bridge.mapped_states()},
                 "display_state": bus.display_state,
+                # Host facts, resolved per connect — not bus state.
+                "system": {"ip": lan_ip()},
             }
         )
 

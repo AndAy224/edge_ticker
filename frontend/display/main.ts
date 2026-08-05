@@ -162,6 +162,7 @@ function handleMessage(msg: any): void {
       config = msg.config ?? {};
       overlay.setMapping(config.ha);
       overlay.setStates(msg.ha?.states ?? {}, msg.ha?.status);
+      overlay.setSystem(msg.system?.ip ?? null);
       haStates.clear();
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
       setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);

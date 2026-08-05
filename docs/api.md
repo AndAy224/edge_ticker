@@ -68,7 +68,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `snapshot` | `modules` (name → payload), `config`, `ha.status`, `ha.states`, `display_state` | Full state on connect |
+| `snapshot` | `modules` (name → payload), `config`, `ha.status`, `ha.states`, `display_state`, `system.ip` | Full state on connect (`system.ip` = LAN address, `null` if unresolvable; refreshed per connect) |
 | `module` | `payload` | One module's latest payload |
 | `config` | `config` | Config changed (re-apply rotation, HA mapping) |
 | `control` | `action` | Remote control command |

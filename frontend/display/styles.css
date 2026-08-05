@@ -1780,6 +1780,17 @@ body {
   flex-direction: column;
 }
 
+/* LAN address chip: sits in #overlay's padding gutter (absolute, so no reflow)
+   — the panel telling you where to reach its admin GUI. */
+.ha-ip {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
 .ha-banner {
   text-align: center;
   font-size: 26px;

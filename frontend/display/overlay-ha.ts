@@ -25,6 +25,7 @@ export class HAOverlay {
   private mapping: HAMapping = { scenes: [], lights: [], fans: [], climate: null, media: null };
   private states: Record<string, HAEntityState> = {};
   private status = "unconfigured";
+  private ip: string | null = null;
   private idleTimer = 0;
 
   constructor(
@@ -77,6 +78,12 @@ export class HAOverlay {
     if (this.isOpen()) this.render();
   }
 
+  /** The appliance's LAN address, from the snapshot. Shown regardless of HA status. */
+  setSystem(ip: string | null): void {
+    this.ip = ip;
+    if (this.isOpen()) this.render();
+  }
+
   private resetIdle(): void {
     clearTimeout(this.idleTimer);
     this.idleTimer = window.setTimeout(() => this.close(), IDLE_DISMISS_MS);
@@ -91,6 +98,9 @@ export class HAOverlay {
   }
 
   private render(): void {
+    // Absolutely positioned in the overlay's padding gutter, so it adds no
+    // layout of its own and the columns render identically in every theme.
+    const ipChip = this.ip ? `<div class="ha-ip">${escapeHtml(this.ip)}</div>` : "";
     const offline = this.status !== "connected";
     const banner = offline
       ? `<div class="ha-banner">${
@@ -180,7 +190,7 @@ export class HAOverlay {
 
     // .ha-col-title / .ha-hint are display:none by default; the glance theme
     // (and any future theme) reveals them via CSS.
-    this.el.innerHTML = `${banner}
+    this.el.innerHTML = `${ipChip}${banner}
       <div class="ha-columns">
         <div class="ha-col scenes"><div class="ha-col-title">Scenes</div>${scenes || '<div class="ha-empty">No scenes mapped</div>'}</div>
         <div class="ha-col-wrap"><div class="ha-col-title">Lights</div><div class="ha-col lights-grid">${lights || '<div class="ha-empty">No lights mapped</div>'}</div></div>
