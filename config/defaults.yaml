@@ -101,7 +101,7 @@ modules:
     poll_seconds: 1800
 
 appearance:
-  theme: midnight     # midnight | daylight | amber | glance | frost | lcars
+  theme: midnight     # midnight | daylight | amber | glance | frost | lcars | sovereign
   layout: rail-left   # rail-left | rail-right | full-stage | banner | focus | split | mosaic | zen
 
 night:

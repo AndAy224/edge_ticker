@@ -119,6 +119,30 @@ export const THEMES: Record<string, Theme> = {
       "--overlay-bg": "rgba(0, 0, 0, 0.97)",
     },
   },
+  // The movie-era counterpart to lcars: Sovereign-class panels are cooler and
+  // darker than the TV Okudagram. Same twelve-key discipline as above — the
+  // slate/steel/khaki block colours live in the [data-theme="sovereign"] CSS.
+  sovereign: {
+    label: "Sovereign",
+    vars: {
+      // charcoal, not void black — film-era panels never sat on pure #000
+      "--bg": "#070a0e",
+      "--panel": "#070a0e",
+      "--panel-raised": "#101720",
+      "--text": "#dbe4f0",
+      "--text-dim": "#8fa3bd",
+      // desaturated to sit with the chrome, but kept far from every block
+      // colour: rust is a frame colour here, so a loss cannot read as rust
+      "--up": "#5fc79a",
+      "--down": "#e0596b",
+      "--alert": "#d9a441",
+      "--accent": "#7fa8d8",
+      // same reason as lcars: chart gridlines stroke with it
+      "--line": "#2c3a4d",
+      "--muted": "#4a5b73",
+      "--overlay-bg": "rgba(7, 10, 14, 0.97)",
+    },
+  },
 };
 
 export interface LayoutDef {

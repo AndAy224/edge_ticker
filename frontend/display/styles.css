@@ -4048,6 +4048,788 @@ body {
   }
 }
 
+/* ---- sovereign theme (Star Trek: First Contact / Sovereign-class) -----------
+   The movie-era counterpart to lcars above: same elbow-frame architecture, but
+   cooler, thinner and denser. Charcoal ground instead of black, slate/steel/
+   khaki blocks instead of orange/tan/lilac, 34px bars instead of 44, and the
+   long flat runs broken into segmented ladders.
+
+   Everything the lcars block's header says still applies here and is not
+   repeated: pseudos declare their own box-sizing (`*` does not match them),
+   frame pseudos are absolute because #app/#rail/#tape/#page-dots are grid or
+   flex, and every one of them is pointer-events:none or it swallows taps that
+   handleStageTap() resolves with closest(".stage-pane").
+
+   Two things that are specific to this block:
+     - It sits AFTER the lcars block, so every specificity tie it inherits is
+       even more load-bearing: [data-layout=…] #clock and [data-theme=…] #clock
+       are both (1,1,0), and this file wins ties on order, so zen's 190px and
+       banner's 64px clock have to be re-declared below.
+     - The ladder lives on .stage-pane::after and #rail::after. Both were free —
+       ::after on the pane is used by no theme, and #rail::after only by lcars
+       zen — but zen re-spends #rail::after on the bar continuation here too, so
+       the rail ladder is switched off in that layout rather than stacked. */
+
+[data-theme="sovereign"] {
+  /* Sovereign block palette — scoped here, never in themes.ts, so it evaporates
+     the moment data-theme changes (applyAppearance never clears inline vars). */
+  --sv-slate: #5c7fae;
+  --sv-steel: #93a9c4;
+  --sv-khaki: #b79a68;
+  --sv-deep: #34517d;
+  --sv-rust: #a35b3e;
+  --sv-gold: #d9a441;
+  --sv-ice: #a8c8e8;
+  --sv-shadow: #2a3a52;
+  --sv-font: "Antonio", "Inter", "Segoe UI", system-ui, sans-serif;
+
+  --sv-col: 112px; /* sidebar column = the elbow's vertical arm */
+  --sv-bar: 34px; /* horizontal bar height */
+  --sv-gap: 8px; /* the charcoal separator, everywhere */
+  --sv-cap: 17px; /* pill / bar-end radius (= bar / 2) */
+  --sv-rx: 150px; /* elbow outer radius, horizontal — must exceed --sv-col */
+  --sv-ry: 76px; /* elbow outer radius, vertical — must exceed --sv-bar */
+  --sv-elbow-h: 150px;
+  --sv-band: 50px; /* bar + gap + breathing room, reserved on .stage-layer */
+  /* ladder period. The segment run is drawn with a repeating gradient, so the
+     two together are the only numbers that set its rhythm. */
+  --sv-seg: 6px;
+  --sv-seg-gap: 11px;
+
+  /* module swap: the same hard wipe as lcars, led by a gold band instead of an
+     orange one. --stage-exit-ms must exceed --sv-swap or main.ts pulls the
+     outgoing layer mid-wipe and the uncovered strip flashes the ground. */
+  --sv-swap: 380ms;
+  --sv-swap-ease: cubic-bezier(0.3, 0, 0.1, 1);
+  --sv-sweep-w: 14px;
+  --stage-exit-ms: 420;
+  --stage-label-ms: 190;
+}
+
+/* ---- the elbow ----
+   Same one-element construction as lcars — thick left border, thin top border,
+   elliptical corner — at movie-era proportions. The width tracks --rail-width,
+   so split's 380px rail needs no override. */
+[data-theme="sovereign"] #app::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  left: 0;
+  top: 0;
+  width: calc(var(--rail-width) - var(--sv-gap));
+  height: var(--sv-elbow-h);
+  border-left: var(--sv-col) solid var(--sv-steel);
+  border-top: var(--sv-bar) solid var(--sv-steel);
+  border-top-left-radius: var(--sv-rx) var(--sv-ry);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ---- rail: block column as background, ladder as ::after ---- */
+[data-theme="sovereign"] #rail {
+  position: relative;
+  overflow: hidden; /* if the font 404s the clock clips here, not over the stage */
+  background-color: var(--bg);
+  background-repeat: no-repeat;
+  background-origin: border-box; /* or padding-left shifts the column inboard */
+  background-size: var(--sv-col) calc(100% - var(--sv-elbow-h) - var(--sv-gap));
+  background-position: left calc(var(--sv-elbow-h) + var(--sv-gap));
+  background-image: linear-gradient(
+    to bottom,
+    var(--sv-slate) 0 84px,
+    var(--bg) 84px 92px,
+    var(--sv-steel) 92px 210px,
+    var(--bg) 210px 218px,
+    var(--sv-khaki) 218px 262px,
+    var(--bg) 262px 270px,
+    var(--sv-deep) 270px 100%
+  );
+  padding: 40px 24px 40px calc(var(--sv-col) + 26px);
+}
+
+/* The rail ladder. Offset from the column's own start rather than from the top
+   of the rail, so it stays inside the deep block at every rail height; 108px of
+   run leaves the block reading as a block above and below it. */
+[data-theme="sovereign"] #rail::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  left: 0;
+  top: calc(var(--sv-elbow-h) + var(--sv-gap) + 300px);
+  width: var(--sv-col);
+  height: 108px;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--sv-steel) 0 7px,
+    var(--bg) 7px 18px
+  );
+}
+
+/* 62px, not lcars' 68: the column is 20px narrower, so the clock starts further
+   left, but "9:56 PM" in Antonio still has to clear the 24px right padding at
+   every locale that spells out AM/PM. */
+[data-theme="sovereign"] #clock {
+  font-family: var(--sv-font);
+  font-size: 62px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--sv-steel);
+}
+
+[data-theme="sovereign"] #date {
+  font-family: var(--sv-font);
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sv-khaki);
+}
+
+/* registry plus block code — movie panels group their numbers */
+[data-theme="sovereign"] #date::after {
+  content: "NCC-1701-E · LCARS 47-2311";
+  display: block;
+  margin-top: 4px;
+  font-size: 0.7em;
+  letter-spacing: 0.2em;
+  color: var(--sv-slate);
+}
+
+[data-theme="sovereign"] .weather-temp {
+  font-family: var(--sv-font);
+  font-weight: 600;
+  color: var(--sv-gold);
+}
+
+[data-theme="sovereign"] .weather-text,
+[data-theme="sovereign"] .weather-loc {
+  font-family: var(--sv-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sv-khaki);
+}
+
+[data-theme="sovereign"] .weather-meta {
+  font-family: var(--sv-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sv-slate);
+}
+
+/* ---- stage: pane bars, ladders, block labels, the reserved band ---- */
+
+[data-theme="sovereign"] .stage-pane + .stage-pane {
+  border-left: var(--sv-gap) solid var(--bg);
+}
+
+/* Right-anchored stops, same reasoning as lcars: the label pill is left-anchored
+   and its width varies with the module name, so the fixed run stays at the RIGHT
+   and the pill always lands on one uniform steel block.
+   The 280..572 window is deliberately left as ground — that is where ::after
+   paints the ladder, and the deep block outboard of it is what #page-dots sits
+   on (a 12-module rotation's plinth reaches ~254px, so it never touches the
+   segments). */
+[data-theme="sovereign"] .stage-pane::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--sv-bar);
+  border-radius: var(--sv-cap);
+  pointer-events: none;
+  z-index: 3; /* under .pane-header (4), dots/pin/chip (5), score-chip (6) */
+  background: linear-gradient(
+    to left,
+    var(--sv-deep) 0 280px,
+    var(--bg) 280px 572px,
+    var(--sv-gold) 572px 636px,
+    var(--bg) 636px 644px,
+    var(--sv-khaki) 644px 930px,
+    var(--bg) 930px 938px,
+    var(--sv-slate) 938px 1210px,
+    var(--bg) 1210px 1218px,
+    var(--sv-steel) 1218px 100%
+  );
+}
+
+/* the ladder run inside the bar. .stage-pane::after is used by no other theme */
+[data-theme="sovereign"] .stage-pane::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: 0;
+  right: 300px;
+  width: 260px;
+  height: var(--sv-bar);
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sv-steel) 0 var(--sv-seg),
+    transparent var(--sv-seg) var(--sv-seg-gap)
+  );
+}
+
+/* Narrow panes: a short run, and the ladder moves INBOARD of the gold block
+   rather than staying at the tail. #page-dots always sits over the last pane,
+   and its plinth is ~194px wide at nine modules — at the tail the segments would
+   run under it and read as a rendering fault, where sitting on the flat deep
+   block is the case lcars already designs for. A rotation past ten modules
+   starts eating the gold block here, which is the same tail budget lcars
+   documents at :3660. */
+[data-theme="sovereign"][data-panes="2"] .stage-pane::before,
+[data-theme="sovereign"][data-panes="3"] .stage-pane::before {
+  background: linear-gradient(
+    to left,
+    var(--sv-deep) 0 200px,
+    var(--bg) 200px 208px,
+    var(--sv-gold) 208px 258px,
+    var(--bg) 258px 400px,
+    var(--sv-steel) 400px 100%
+  );
+}
+
+/* 341px of steel left under the pill in a 741px pane — enough for the longest
+   label ("AIR QUALITY · 4471-C") to stay on one uniform block. */
+[data-theme="sovereign"][data-panes="2"] .stage-pane::after,
+[data-theme="sovereign"][data-panes="3"] .stage-pane::after {
+  right: 268px;
+  width: 124px;
+}
+
+/* the bar runs to the screen edge on the outside pane */
+[data-theme="sovereign"] .stage-pane:first-child::before {
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+}
+
+/* Khaki, not the primary block colour: the pill has to separate from a bar that
+   is cool all the way along, and black on khaki is 7.4:1. */
+[data-theme="sovereign"] .pane-header {
+  display: block;
+  top: 0;
+  left: 0;
+  height: var(--sv-bar);
+  line-height: var(--sv-bar);
+  padding: 0 24px;
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+  background: var(--sv-khaki);
+  color: var(--bg); /* dark on colour — the LCARS signature, cooled down */
+  font-family: var(--sv-font);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+  /* the gap to the next segment; box-shadow follows border-radius and costs no
+     layout, unlike an outline */
+  box-shadow: var(--sv-gap) 0 0 0 var(--bg);
+}
+
+[data-theme="sovereign"] .stage-pane:nth-child(1) .pane-header::after {
+  content: " · 4471-A";
+  opacity: 0.55;
+}
+
+[data-theme="sovereign"] .stage-pane:nth-child(2) .pane-header::after {
+  content: " · 4471-B";
+  opacity: 0.55;
+}
+
+[data-theme="sovereign"] .stage-pane:nth-child(3) .pane-header::after {
+  content: " · 4471-C";
+  opacity: 0.55;
+}
+
+/* one band reserved once, so no module has to dodge the bar individually.
+   Longhand on purpose: [data-panes] sets the padding shorthand at the same
+   specificity, and only padding-top should be taken from here. */
+[data-theme="sovereign"] .stage-layer {
+  padding-top: var(--sv-band);
+}
+
+/* ---- the module swap: the same wipe, a gold band ----
+   Structure and reasoning are identical to lcars (wipe on the INCOMING layer so
+   one clip animation covers the old module; the band rides the layer rather than
+   the pane so clip-path stays on one style pass). Only the colour changes. */
+[data-theme="sovereign"] .stage-layer.swap-in {
+  background: var(--bg);
+  animation: sv-wipe var(--sv-swap) var(--sv-swap-ease);
+}
+
+[data-theme="sovereign"] .stage-layer.swap-in.enter {
+  opacity: 1;
+}
+
+[data-theme="sovereign"] .stage-layer.swap-out {
+  opacity: 1;
+  transition: none;
+}
+
+[data-theme="sovereign"] .stage-layer.swap-in::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  top: var(--sv-bar);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  background: var(--sv-gold);
+  pointer-events: none;
+  clip-path: inset(0 100% 0 0);
+  animation: sv-sweep var(--sv-swap) var(--sv-swap-ease);
+}
+
+@keyframes sv-sweep {
+  from {
+    clip-path: inset(0 100% 0 calc(0% - var(--sv-sweep-w)));
+  }
+  to {
+    clip-path: inset(0 0 0 calc(100% - var(--sv-sweep-w)));
+  }
+}
+
+@keyframes sv-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* the pill retracts, swaps text at the midpoint, re-extends — translateX, not
+   clip-path, so the box-shadow separator travels with it */
+[data-theme="sovereign"] .stage-pane.swapping .pane-header {
+  animation: sv-pill var(--sv-swap) var(--sv-swap-ease);
+}
+
+@keyframes sv-pill {
+  0% {
+    transform: translateX(0);
+  }
+  45%,
+  55% {
+    transform: translateX(calc(-100% - var(--sv-gap)));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* panes aren't stacking contexts, so without this the pill slides across its
+   neighbour instead of out of view. `clip`, not `hidden`: no scroll container. */
+[data-theme="sovereign"] .stage-pane {
+  overflow: clip;
+}
+
+/* ---- dots, badges, chips ----
+   Same plinth trick as lcars and for the same reason: the row lands on the deep
+   block in most layouts and on the bare stage in banner, so give it one
+   background it always wins against. */
+[data-theme="sovereign"] #page-dots {
+  top: 6px;
+  right: 20px;
+  gap: 6px;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: var(--bg);
+}
+
+[data-theme="sovereign"] .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--sv-shadow);
+}
+
+[data-theme="sovereign"] .dot.active {
+  background: var(--sv-ice);
+}
+
+[data-theme="sovereign"] #pin-badge {
+  top: calc(var(--sv-bar) + var(--sv-gap) + 10px);
+  left: 28px;
+  border: none;
+  border-radius: var(--sv-cap);
+  background: var(--sv-gold);
+  color: var(--bg);
+  font-family: var(--sv-font);
+  letter-spacing: 0.14em;
+  padding: 5px 18px;
+}
+
+[data-theme="sovereign"] .stale-dot {
+  top: calc(var(--sv-bar) + var(--sv-gap) + 12px);
+  right: 28px;
+  border-radius: 3px;
+  background: var(--sv-rust);
+  opacity: 1;
+}
+
+[data-theme="sovereign"] #clock-chip {
+  font-family: var(--sv-font);
+  font-weight: 600;
+  color: var(--sv-steel);
+}
+
+[data-theme="sovereign"] #score-chip {
+  font-family: var(--sv-font);
+  border-radius: var(--sv-cap);
+}
+
+/* ---- tape: an in-flow cap block, same construction as lcars ---- */
+[data-theme="sovereign"] #tape {
+  border-top: none;
+}
+
+[data-theme="sovereign"] #tape-track {
+  flex: none; /* or width:max-content collapses and the marquee compresses */
+}
+
+[data-theme="sovereign"] #tape::before {
+  content: "SOVEREIGN · 47-2311";
+  flex: 0 0 236px;
+  /* positioned so it paints ABOVE #tape-track — items must vanish behind the
+     cap, not scroll over it */
+  position: relative;
+  z-index: 1;
+  height: 56px;
+  margin-right: var(--sv-gap);
+  background: var(--sv-rust);
+  color: var(--bg);
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
+  font-family: var(--sv-font);
+  font-size: 26px;
+  letter-spacing: 0.08em;
+}
+
+[data-theme="sovereign"] .tape-sep {
+  color: var(--sv-shadow);
+}
+
+/* ---- rail-right: mirror the elbow, the column and the ladder ---- */
+
+[data-theme="sovereign"][data-layout="rail-right"] #app::before {
+  left: auto;
+  right: 0;
+  border-left: 0;
+  border-right: var(--sv-col) solid var(--sv-steel);
+  border-top-left-radius: 0;
+  border-top-right-radius: var(--sv-rx) var(--sv-ry);
+}
+
+[data-theme="sovereign"][data-layout="rail-right"] #rail {
+  background-position: right calc(var(--sv-elbow-h) + var(--sv-gap));
+  padding: 40px calc(var(--sv-col) + 32px) 40px 40px;
+  text-align: right;
+}
+
+/* unlike the pane bars, the ladder is not symmetric — it has to follow the
+   column across */
+[data-theme="sovereign"][data-layout="rail-right"] #rail::after {
+  left: auto;
+  right: 0;
+}
+
+/* ---- split: 380px rail needs a narrower column ---- */
+
+[data-theme="sovereign"][data-layout="split"] {
+  --sv-col: 96px;
+  --sv-rx: 130px;
+}
+
+[data-theme="sovereign"][data-layout="split"] #clock {
+  font-size: 52px;
+}
+
+/* ---- rail-less layouts ----
+   full-stage has no clock chip, so a cap there would be an empty khaki block on
+   top of the pane label. Drop the elbow and let the label butt against the edge. */
+[data-theme="sovereign"][data-layout="full-stage"] #app::before {
+  display: none;
+}
+
+/* focus and mosaic DO show the chip, so the cap becomes the block that holds it */
+[data-theme="sovereign"][data-layout="focus"] #app::before,
+[data-theme="sovereign"][data-layout="mosaic"] #app::before {
+  width: 200px;
+  height: var(--sv-bar);
+  border: none;
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+  background: var(--sv-khaki);
+  z-index: 5; /* the chip that sits in it is z-index 5 */
+}
+
+[data-theme="sovereign"][data-layout="focus"] .stage-pane:first-child::before,
+[data-theme="sovereign"][data-layout="mosaic"] .stage-pane:first-child::before {
+  left: calc(200px + var(--sv-gap));
+  border-radius: var(--sv-cap);
+}
+
+[data-theme="sovereign"][data-layout="focus"] .stage-pane:first-child .pane-header,
+[data-theme="sovereign"][data-layout="mosaic"] .stage-pane:first-child .pane-header {
+  left: calc(200px + var(--sv-gap));
+}
+
+[data-theme="sovereign"][data-layout="focus"] #clock-chip,
+[data-theme="sovereign"][data-layout="mosaic"] #clock-chip {
+  top: 0;
+  left: 24px;
+  height: var(--sv-bar);
+  line-height: var(--sv-bar);
+  color: var(--bg);
+  font-size: 26px;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="sovereign"][data-layout="focus"] #pin-badge,
+[data-theme="sovereign"][data-layout="mosaic"] #pin-badge {
+  top: calc(var(--sv-bar) + var(--sv-gap) + 10px);
+}
+
+/* ---- banner: the rail IS the bar ---- */
+
+[data-theme="sovereign"][data-layout="banner"] #app::before,
+[data-theme="sovereign"][data-layout="banner"] .stage-pane::before,
+[data-theme="sovereign"][data-layout="banner"] .stage-pane::after {
+  display: none; /* two stacked bars would read as clutter */
+}
+
+/* the strip carries the ladder instead, running horizontally out of the block
+   sequence — same segment period, rotated */
+[data-theme="sovereign"][data-layout="banner"] #rail {
+  color: var(--bg);
+  border-bottom: var(--sv-gap) solid var(--bg);
+  padding: 0 48px 0 calc(var(--sv-col) + 32px);
+  background-size: 100% 100%;
+  background-position: left top;
+  background-image: linear-gradient(
+    to right,
+    var(--sv-slate) 0 var(--sv-col),
+    var(--bg) var(--sv-col) calc(var(--sv-col) + 8px),
+    var(--sv-steel) calc(var(--sv-col) + 8px) 1640px,
+    var(--bg) 1640px 1648px,
+    var(--sv-khaki) 1648px 2080px,
+    var(--bg) 2080px 2088px,
+    var(--sv-deep) 2088px 100%
+  );
+}
+
+/* A band, not the full 110px: at strip height the same segment period reads as
+   a barcode rather than as a run of blocks. Inset top and bottom so the khaki
+   it cuts into still reads as a block. */
+[data-theme="sovereign"][data-layout="banner"] #rail::after {
+  top: 30px;
+  left: 1700px;
+  width: 320px;
+  height: 50px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--bg) 0 var(--sv-seg),
+    transparent var(--sv-seg) var(--sv-seg-gap)
+  );
+}
+
+/* re-declare the size the layout rule would have set: [data-layout=banner]
+   #clock is (1,1,0), same as the base sovereign rule, which sits later */
+[data-theme="sovereign"][data-layout="banner"] #clock {
+  font-size: 64px;
+  color: var(--bg);
+}
+
+[data-theme="sovereign"][data-layout="banner"] .weather-temp {
+  color: var(--bg);
+}
+
+[data-theme="sovereign"][data-layout="banner"] #date,
+[data-theme="sovereign"][data-layout="banner"] .weather-text,
+[data-theme="sovereign"][data-layout="banner"] .weather-meta,
+[data-theme="sovereign"][data-layout="banner"] .weather-loc {
+  color: rgba(7, 10, 14, 0.66);
+}
+
+[data-theme="sovereign"][data-layout="banner"] #date::after {
+  display: none; /* no room in a 110px strip */
+}
+
+[data-theme="sovereign"][data-layout="banner"] .stage-layer {
+  padding-top: 46px;
+}
+
+[data-theme="sovereign"][data-layout="banner"] .pane-header {
+  top: 12px;
+  box-shadow: none; /* free-floating pill — there is no bar to sit on */
+}
+
+/* banner suppresses .stage-pane::before, so there is no bar for the sweep to
+   start under — inset from the top instead or it leaves an unswept strip */
+[data-theme="sovereign"][data-layout="banner"] .stage-layer.swap-in::before {
+  top: 0;
+}
+
+/* ---- zen: stage hidden, so this is the standby screen ---- */
+
+[data-theme="sovereign"][data-layout="zen"] {
+  --sv-col: 160px;
+  --sv-bar: 48px;
+  --sv-cap: 24px;
+  --sv-rx: 250px;
+  --sv-ry: 112px;
+  --sv-elbow-h: 220px;
+}
+
+[data-theme="sovereign"][data-layout="zen"] #app::before {
+  width: 680px; /* no rail-width to track — the rail is the whole screen */
+}
+
+/* same specificity tie as banner above — restore zen's giant readout */
+[data-theme="sovereign"][data-layout="zen"] #clock {
+  font-size: 190px;
+}
+
+[data-theme="sovereign"][data-layout="zen"] #rail {
+  align-items: center;
+  padding-left: calc(var(--sv-col) + 56px);
+  background-image: linear-gradient(
+    to bottom,
+    var(--sv-slate) 0 96px,
+    var(--bg) 96px 104px,
+    var(--sv-khaki) 104px 176px,
+    var(--bg) 176px 184px,
+    var(--sv-deep) 184px 100%
+  );
+}
+
+/* #rail::after is the ladder everywhere else; zen spends it on the bar
+   continuation to the right of the (much larger) elbow, so the segments are
+   replaced rather than stacked. */
+[data-theme="sovereign"][data-layout="zen"] #rail::after {
+  top: 0;
+  left: calc(680px + var(--sv-gap));
+  right: 48px;
+  width: auto;
+  height: var(--sv-bar);
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    var(--sv-gold) 0 300px,
+    var(--bg) 300px 308px,
+    var(--sv-khaki) 308px 620px,
+    var(--bg) 620px 628px,
+    var(--sv-slate) 628px 980px,
+    var(--bg) 980px 988px,
+    var(--sv-deep) 988px 100%
+  );
+}
+
+/* ---- module surfaces: flat cards with a colour rule, not bordered boxes ---- */
+
+[data-theme="sovereign"] .quote-hero,
+[data-theme="sovereign"] .sb-hero,
+[data-theme="sovereign"] .news-lead,
+[data-theme="sovereign"] .pve-card,
+[data-theme="sovereign"] .astro-moon,
+[data-theme="sovereign"] .astro-targets {
+  border-radius: 0 18px 18px 0;
+  border-left: 10px solid var(--sv-slate);
+}
+
+[data-theme="sovereign"] .watch-row,
+[data-theme="sovereign"] .game-row,
+[data-theme="sovereign"] .news-row,
+[data-theme="sovereign"] .sb-row,
+[data-theme="sovereign"] .adsb-row,
+[data-theme="sovereign"] .wx-day {
+  border-radius: 0 12px 12px 0;
+  border-left: 8px solid var(--sv-deep);
+}
+
+/* The blanket rule above would otherwise flatten the state colours those rows
+   carry — followed/live/fresh are (0,2,0) like it and sit earlier in the file,
+   so they have to be restated here or the board stops signalling. */
+[data-theme="sovereign"] .sb-row.followed,
+[data-theme="sovereign"] .game-row.followed {
+  border-left-color: var(--sv-ice);
+}
+
+[data-theme="sovereign"] .sb-row.live,
+[data-theme="sovereign"] .news-row.fresh {
+  border-left-color: var(--sv-gold);
+}
+
+[data-theme="sovereign"] .ha-tile {
+  border-radius: 0 12px 12px 0;
+  border-left: 8px solid var(--sv-deep);
+}
+
+/* --panel-raised is too close to the lit state to read, so "on" needs a literal */
+[data-theme="sovereign"] .ha-tile.light.on {
+  background: #21344f;
+  border-left-color: var(--sv-gold);
+}
+
+/* .adsb-radar is absolute inset:0 and replaces .stage-layer's padding with its
+   own, so the reserved band never reaches it and the first flight row would sit
+   under the bar. */
+[data-theme="sovereign"] .adsb-radar {
+  padding-top: var(--sv-band);
+}
+
+/* Same story for the quiet-season chip: .hurr-stage is absolute inset:0, so the
+   chip's top is measured from the pane, not from inside the layer padding, and
+   it lands under the bar. The [data-panes] variants have to be matched
+   attribute-for-attribute: their rule is (0,2,0) like a bare [data-theme] one
+   but lives with the hurricane CSS far below this block, so an unqualified
+   override would lose on order in split and mosaic. */
+[data-theme="sovereign"] .hurr-quiet,
+[data-theme="sovereign"][data-panes="2"] .hurr-quiet,
+[data-theme="sovereign"][data-panes="3"] .hurr-quiet {
+  top: calc(var(--sv-bar) + var(--sv-gap) + 10px);
+}
+
+[data-theme="sovereign"] .ha-col-title {
+  display: block;
+  font-family: var(--sv-font);
+  font-size: 20px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sv-khaki);
+}
+
+/* Fall all the way back to the generic crossfade rather than to a hard cut.
+   Resetting the two custom properties to their :root values is what tells
+   main.ts to stop deferring the label and to go back to the 320ms removal. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="sovereign"] {
+    --stage-exit-ms: 320;
+    --stage-label-ms: 0;
+  }
+  [data-theme="sovereign"] .stage-layer.swap-in,
+  [data-theme="sovereign"] .stage-layer.swap-in::before,
+  [data-theme="sovereign"] .stage-pane.swapping .pane-header {
+    animation: none;
+  }
+  [data-theme="sovereign"] .stage-layer.swap-in {
+    background: none;
+  }
+  [data-theme="sovereign"] .stage-layer.swap-in.enter,
+  [data-theme="sovereign"] .stage-layer.swap-out {
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+}
+
 /* ---- score celebration overlay ---- */
 
 #celebration {
