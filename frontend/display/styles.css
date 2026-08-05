@@ -8253,14 +8253,153 @@ body {
 /* LCARS wipes, it does not dissolve — reuse the theme's own swap curve so the
    takeover reads as the same machine. */
 [data-theme="lcars"] .alert-entering .calert-wall {
-  animation: lc-alert-wipe var(--lc-swap) var(--lc-swap-ease) both;
+  animation: alert-wipe var(--lc-swap) var(--lc-swap-ease) both;
 }
 
-@keyframes lc-alert-wipe {
+/* Shared by the two block themes; the default themes iris instead. */
+@keyframes alert-wipe {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 0 0 0); }
 }
 
 [data-theme="lcars"] .alert-flash {
   background: var(--alert-wash);
+}
+
+/* ---- Sovereign red alert ---------------------------------------------------
+   Same reasoning as lcars — the takeover owns the panel, so the palette note in
+   themes.ts (rust is a frame colour here, so a loss cannot read as rust) does
+   not bind: nothing else is on screen to confuse it with. But sovereign is the
+   film-era cut, deliberately desaturated, so the alert red is a signal red that
+   still sits in that stock rather than the hotter default. --sv-rust stays the
+   frame colour it always was.
+   The entrance is this theme's own move: a band leading a hard wipe (see
+   .stage-layer.swap-in), in alert red instead of gold, at the theme's own
+   curve. */
+
+[data-theme="sovereign"] #camera-alert {
+  --sv-alert: #c8452f;
+  --alert-edge: var(--sv-alert);
+  --alert-wash: rgba(200, 69, 47, 0.66);
+  --calert-banner: 60px;
+  --sv-alert-sweep: 520ms;
+  --sv-sweep-w: 150px; /* the stage band is 14px; a full panel wants a wider one */
+  grid-template-columns: var(--sv-col) 1fr;
+  grid-template-rows: var(--calert-banner) 1fr;
+  gap: var(--sv-gap);
+  padding: var(--sv-gap);
+  background: var(--bg); /* charcoal, not void — film-era panels never sat on #000 */
+}
+
+/* The elbow shoulder, at movie-era proportions. */
+[data-theme="sovereign"] #camera-alert::before {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  left: var(--sv-gap);
+  top: var(--sv-gap);
+  width: var(--sv-col);
+  height: var(--calert-banner);
+  background: var(--sv-alert);
+  border-top-left-radius: var(--sv-rx) var(--sv-ry);
+}
+
+/* Restrained where lcars is loud: a slower, shallower breath on the frame. */
+[data-theme="sovereign"] #camera-alert::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  inset: 0;
+  border: var(--sv-gap) solid var(--sv-alert);
+  animation: sv-red-alert 1.8s ease-in-out infinite;
+}
+
+[data-theme="sovereign"] #camera-alert[data-severity="critical"]::after {
+  animation-duration: 1.1s;
+}
+
+[data-theme="sovereign"] #camera-alert[data-severity="info"]::after {
+  animation: none;
+  opacity: 0.55;
+}
+
+@keyframes sv-red-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+[data-theme="sovereign"] .calert-banner {
+  grid-column: 2;
+  grid-row: 1;
+  gap: 18px;
+  padding: 0 22px;
+  background: var(--sv-alert);
+  color: var(--bg);
+  font-family: var(--sv-font);
+  font-size: 34px;
+  letter-spacing: 5px;
+  border-radius: 0 var(--sv-cap) var(--sv-cap) 0;
+}
+
+[data-theme="sovereign"] .calert-icon {
+  width: 32px;
+  height: 32px;
+}
+
+[data-theme="sovereign"] .calert-sub {
+  font-size: 22px;
+  opacity: 0.75;
+}
+
+[data-theme="sovereign"] .calert-wall {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: var(--sv-gap);
+  background: var(--bg);
+}
+
+[data-theme="sovereign"] .calert-tile {
+  outline: 2px solid var(--sv-shadow);
+  outline-offset: -2px;
+}
+
+[data-theme="sovereign"] .calert-tile-label {
+  font-family: var(--sv-font);
+  letter-spacing: 3px;
+}
+
+[data-theme="sovereign"] .alert-entering .calert-wall {
+  animation: alert-wipe var(--sv-alert-sweep) var(--sv-swap-ease) both;
+}
+
+/* The flash element becomes the leading band — same construction as the theme's
+   own stage sweep, so the two read as one machine. No fill-mode: when the
+   animation ends the band reverts to the base opacity:0 and clears itself. */
+[data-theme="sovereign"] .alert-flash {
+  background: var(--sv-alert);
+}
+
+[data-theme="sovereign"] .alert-entering .alert-flash {
+  animation: sv-alert-sweep var(--sv-alert-sweep) var(--sv-swap-ease);
+}
+
+@keyframes sv-alert-sweep {
+  from {
+    opacity: 1;
+    clip-path: inset(0 100% 0 calc(0% - var(--sv-sweep-w)));
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 calc(100% - var(--sv-sweep-w)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="sovereign"] #camera-alert::after,
+  [data-theme="sovereign"] .alert-entering .alert-flash,
+  [data-theme="sovereign"] .alert-entering .calert-wall {
+    animation: none;
+  }
 }
