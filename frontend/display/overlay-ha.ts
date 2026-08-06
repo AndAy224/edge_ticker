@@ -56,16 +56,31 @@ function fanSpeeds(attrs: Record<string, any> | undefined, on: boolean): FanSpee
         ? attrs.percentage_step
         : 100 / 3;
     const count = Math.min(Math.max(Math.round(100 / step), 1), 6);
+    // Home Assistant buckets a percentage back into a named speed by integer
+    // division — speed i covers everything up to `(i * 100) // count` — so speed
+    // i *is* that bound: a 3-speed fan is 33/66/100, not 33/67/100. Rounding
+    // i * step instead put Med at 67, one over the bound, and the fan quietly
+    // ran High. The same bound also un-breaks continuous fans (step 1), where
+    // i * step asked for 1%..6%.
+    const bound = (i: number) => Math.floor((i * 100) / count);
     const pct = typeof attrs.percentage === "number" ? attrs.percentage : 0;
     // A fan reported off keeps no active speed even if it remembers a percentage.
-    const current = on && pct > 0 ? Math.min(Math.max(Math.round(pct / step), 1), count) : 0;
+    let current = 0;
+    if (on && pct > 0) {
+      current = count;
+      for (let i = 1; i <= count; i++) {
+        if (pct <= bound(i)) {
+          current = i;
+          break;
+        }
+      }
+    }
     const labels = SPEED_LABELS[count];
     const buttons = [off(current === 0)];
     for (let i = 1; i <= count; i++) {
-      const value = Math.min(Math.round(i * step), 100);
       buttons.push({
-        label: labels ? labels[i - 1]! : `${value}%`,
-        attr: `data-fan-pct="${value}"`,
+        label: labels ? labels[i - 1]! : `${bound(i)}%`,
+        attr: `data-fan-pct="${bound(i)}"`,
         active: current === i,
       });
     }
