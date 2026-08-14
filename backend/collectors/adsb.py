@@ -1,9 +1,12 @@
 """ADS-B "overhead now" + flight-radar collector.
 
-Default source is a free, keyless hosted community ADS-B API (airplanes.live) —
+Default source is a free, keyless hosted community ADS-B API (adsb.lol) —
 no receiver hardware required. Switch with ``modules.adsb.provider``:
 
-  airplaneslive | adsblol | adsbfi | local
+  adsblol | adsbfi | airplaneslive | local
+
+airplanes.live closed its keyless API in Aug 2026 (403 + a "contact us" body on
+every request), so it is kept as an option but is no longer the default.
 
 The hosted providers all return an ADSBexchange-v2 shape (an ``ac`` array of
 dump1090-style aircraft) and take their radius in nautical miles. ``local``
@@ -65,7 +68,7 @@ class AdsbCollector(Collector):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.interval = float(self.module_config.get("poll_seconds", 15))
-        self.provider = (self.module_config.get("provider") or "airplaneslive").lower()
+        self.provider = (self.module_config.get("provider") or "adsblol").lower()
         weather = config.get("modules", {}).get("weather", {})
         self.latitude = self.module_config.get("latitude") or weather.get("latitude", 27.9659)
         self.longitude = self.module_config.get("longitude") or weather.get("longitude", -82.8001)

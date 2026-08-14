@@ -92,7 +92,7 @@ modules:
 
   adsb:
     enabled: false
-    provider: airplaneslive   # airplaneslive | adsblol | adsbfi | local (local needs ADSB_URL)
+    provider: adsblol   # adsblol | adsbfi | airplaneslive | local (local needs ADSB_URL)
     poll_seconds: 15
     radius_km: 40
 
