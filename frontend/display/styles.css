@@ -973,9 +973,22 @@ body {
   font-weight: 600;
 }
 
+/* sized in em so the crest tracks the row's font-size across pane widths */
+.sb-crest {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+  flex: none;
+  align-self: center;
+}
+
 .sb-side.lose .sb-abbr,
 .sb-side.lose .sb-pts {
   color: var(--muted);
+}
+
+.sb-side.lose .sb-crest {
+  opacity: 0.45;
 }
 
 .sb-pts {

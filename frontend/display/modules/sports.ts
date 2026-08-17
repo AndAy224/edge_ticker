@@ -102,6 +102,10 @@ function timelineRow(g: any, nextUpId: unknown, wide: boolean): string {
 
   const pts = (t: any) =>
     pre ? "" : `<span class="sb-pts">${escapeHtml(t?.score ?? "")}</span>`;
+  // Crests sit on the outer edges of the matchup; ESPN omits the logo for some
+  // minor-league and placeholder teams, so the row has to read without it.
+  const crest = (t: any) =>
+    t?.logo ? `<img class="sb-crest" src="${escapeHtml(t.logo)}" alt="">` : "";
   const status = pre
     ? kickoffTime(g.start)
     : live
@@ -120,13 +124,13 @@ function timelineRow(g: any, nextUpId: unknown, wide: boolean): string {
   }" data-detail="g:${escapeHtml(g.id)}">
     <span class="sb-when">${dayLabel(g.start, wide)}</span>
     <span class="sb-match">
-      <span class="sb-side away${sideClass(a, h)}">${tag("away")}<span class="sb-abbr">${escapeHtml(
-        g.away?.abbrev ?? "",
-      )}</span>${pts(g.away)}</span>
+      <span class="sb-side away${sideClass(a, h)}">${tag("away")}${crest(
+        g.away,
+      )}<span class="sb-abbr">${escapeHtml(g.away?.abbrev ?? "")}</span>${pts(g.away)}</span>
       <span class="sb-at">at</span>
       <span class="sb-side home${sideClass(h, a)}">${pts(g.home)}<span class="sb-abbr">${escapeHtml(
         g.home?.abbrev ?? "",
-      )}</span>${tag("home")}</span>
+      )}</span>${crest(g.home)}${tag("home")}</span>
     </span>
     <span class="sb-status">${live ? '<span class="live-dot"></span>' : ""}${status}</span>
   </div>`;
