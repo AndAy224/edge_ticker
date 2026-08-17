@@ -18,6 +18,11 @@ modules:
     live_mode: true       # sports page becomes a game tracker while a followed game is live
     poll_seconds_live: 30
     poll_seconds_idle: 600
+    poll_seconds_schedule: 1800  # dated-window refresh; ~2MB/league, so it gets its own slow lane
+    days_back: 4                 # how far back the board's results reach
+    days_ahead: 7                # how far ahead upcoming games reach
+    max_recent: 6                # results kept on the board (followed teams get a reserved seat)
+    max_upcoming: 6              # upcoming games kept on the board
     leagues:
       - { sport: baseball, league: mlb }
       - { sport: football, league: nfl }

@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 
@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard"
 SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/summary"
 SCHEDULE_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams/{team}/schedule"
-STATE_SORT = {"in": 0, "pre": 1, "post": 2}
 
 # Followed-team score celebrations: minimum gap between a team's celebrations.
 # The score-diff only fires on an *increase*, so for discrete-scoring sports (a
@@ -215,11 +214,25 @@ class SportsCollector(Collector):
         self.live_interval = float(self.module_config.get("poll_seconds_live", 30))
         self.idle_interval = float(self.module_config.get("poll_seconds_idle", 600))
         self.interval = self.live_interval
+        # Schedule window: ESPN's undated scoreboard only returns "the current
+        # slate" (for the NFL, the current *week* — which stays on last week's
+        # finals for days). A dated request is the only way to see what's next,
+        # but it costs ~2MB/league, so it rides its own slow lane.
+        self.schedule_interval = float(
+            self.module_config.get("poll_seconds_schedule", 1800)
+        )
+        self.days_back = int(self.module_config.get("days_back", 4))
+        self.days_ahead = int(self.module_config.get("days_ahead", 7))
+        self.max_recent = int(self.module_config.get("max_recent", 6))
+        self.max_upcoming = int(self.module_config.get("max_upcoming", 6))
         self.league_status: dict[str, dict] = {}  # per-league fetch state for /api/health
         self.celebrations = self.module_config.get("celebrations", True)
         self._bus: Bus | None = None
         self._side_scores: dict[str, tuple[int, int]] = {}  # game id -> (away, home)
         self._celebrated_at: dict[str, float] = {}
+        self._window: list[dict] = []  # cached dated-window games
+        self._window_at: float = 0.0  # monotonic stamp of the last window fetch
+        self._window_day: str = ""  # local date the window was built for
 
     async def start(self, bus: Bus) -> None:
         self._bus = bus  # kept for score-event broadcasts
@@ -231,6 +244,9 @@ class SportsCollector(Collector):
                 *(self._league(client, league) for league in self.leagues),
                 return_exceptions=True,
             )
+            # Slow lane, same client: refreshed on its own cadence, never
+            # allowed to fail the poll.
+            await self._refresh_window(client)
         games: list[dict] = []
         failures = 0
         now = datetime.now(timezone.utc).isoformat()
@@ -253,12 +269,17 @@ class SportsCollector(Collector):
         self.league_status = status
         if failures == len(self.leagues) and self.leagues:
             raise RuntimeError("all league scoreboards failed")
+        # Celebrations diff the *fast* lane only — the window is up to 30 min
+        # stale and would replay old scores as fresh ones.
         await self._maybe_celebrate(games)
-        return games
+        return self._merge_window(games)
 
-    async def _league(self, client: httpx.AsyncClient, league: dict) -> list[dict]:
+    async def _league(
+        self, client: httpx.AsyncClient, league: dict, params: dict | None = None
+    ) -> list[dict]:
         response = await client.get(
-            SCOREBOARD_URL.format(sport=league["sport"], league=league["league"])
+            SCOREBOARD_URL.format(sport=league["sport"], league=league["league"]),
+            params=params,
         )
         response.raise_for_status()
         data = response.json()
@@ -267,6 +288,57 @@ class SportsCollector(Collector):
             for event in data.get("events", [])
             if (game := self._parse_event(event, league)) is not None
         ]
+
+    # ---- dated schedule window ---------------------------------------------
+
+    async def _refresh_window(self, client: httpx.AsyncClient) -> None:
+        """Re-fetch the days_back..days_ahead window when it goes stale or the
+        local date rolls. Failures keep the previous window — a missing window
+        costs upcoming games, not the whole module."""
+        today = date.today()
+        fresh = (
+            self._window_at
+            and self._window_day == today.isoformat()
+            and time.monotonic() - self._window_at < self.schedule_interval
+        )
+        if fresh:
+            return
+        span = "{}-{}".format(
+            (today - timedelta(days=self.days_back)).strftime("%Y%m%d"),
+            (today + timedelta(days=self.days_ahead)).strftime("%Y%m%d"),
+        )
+        params = {"dates": span, "limit": "200"}
+        results = await asyncio.gather(
+            *(self._league(client, league, params) for league in self.leagues),
+            return_exceptions=True,
+        )
+        window: list[dict] = []
+        ok = False
+        for league, result in zip(self.leagues, results):
+            if isinstance(result, BaseException):
+                log.debug("window %s failed: %s", league.get("league"), result)
+                continue
+            ok = True
+            window.extend(result)
+        if not ok and self.leagues:
+            return  # keep whatever we had; try again next poll
+        self._window = window
+        self._window_at = time.monotonic()
+        self._window_day = today.isoformat()
+        log.debug("sports window %s: %d games", span, len(window))
+
+    def _merge_window(self, live_games: list[dict]) -> list[dict]:
+        """Window first, fast lane on top — same event id, fresher scores win."""
+        merged: dict[str, dict] = {}
+        for game in self._window:
+            if game.get("id"):
+                merged[str(game["id"])] = game
+        for game in live_games:
+            if game.get("id"):
+                merged[str(game["id"])] = game
+            else:  # no id to merge on; keep it rather than drop it
+                merged[f"_{len(merged)}"] = game
+        return list(merged.values())
 
     def _parse_event(self, event: dict, league: dict) -> dict | None:
         try:
@@ -418,30 +490,103 @@ class SportsCollector(Collector):
     def status(self) -> dict:
         return super().status() | {"leagues": list(self.league_status.values())}
 
+    def _pick(self, games: list[dict], limit: int) -> list[dict]:
+        """Reserve a seat for each followed team's nearest game, then fill the
+        rest in the order given. Without the reservation a busy slate buries the
+        one game the owner actually cares about."""
+        chosen: list[dict] = []
+        seen: set[int] = set()
+        claimed: set[str] = set()
+        for game in games:
+            side = game.get("followed_side")
+            if not side:
+                continue
+            name = (game.get(side) or {}).get("name", "")
+            if name in claimed:
+                continue  # that team already has its nearest game in
+            claimed.add(name)
+            seen.add(id(game))
+            chosen.append(game)
+        for game in games:
+            if len(chosen) >= limit:
+                break
+            if id(game) not in seen:
+                chosen.append(game)
+        return chosen[:limit]
+
     def shape(self, games: list[dict]) -> ModulePayload:
-        games.sort(
-            key=lambda g: (not g["followed"], STATE_SORT.get(g["state"], 3), g["start"] or "")
-        )
         self.interval = (
             self.live_interval
             if any(g["state"] == "in" for g in games)
             else self.idle_interval
         )
+        horizon = (
+            datetime.now(timezone.utc) + timedelta(days=self.days_ahead)
+        ).isoformat()
+
+        # Newest result first; the display reverses the past group so the
+        # freshest final ends up against the now line.
+        recent = sorted(
+            (g for g in games if g["state"] == "post"),
+            key=lambda g: g["start"] or "",
+            reverse=True,
+        )
+        live = sorted(
+            (g for g in games if g["state"] == "in"), key=lambda g: g["start"] or ""
+        )
+        upcoming = sorted(
+            (g for g in games if g["state"] == "pre" and (g["start"] or "") <= horizon),
+            key=lambda g: g["start"] or "",
+        )
+
+        recent = self._pick(recent, self.max_recent)
+        recent.sort(key=lambda g: g["start"] or "", reverse=True)
+        upcoming = self._pick(upcoming, self.max_upcoming)
+        upcoming.sort(key=lambda g: g["start"] or "")
+
+        for bucket, items in (
+            ("recent", recent),
+            ("live", live),
+            ("next", upcoming),
+        ):
+            for game in items:
+                game["bucket"] = bucket
+
+        next_up = next((g["id"] for g in upcoming if g["followed"]), None)
+
         tape = []
-        for g in games:
+        for g in [*live, *recent, *upcoming]:
             if g["state"] == "pre":
-                continue
-            live = g["state"] == "in"
-            suffix = g["detail"] if live else "F"
+                text = f"{g['away']['abbrev']} at {g['home']['abbrev']} · {self._tape_when(g['start'])}"
+            else:
+                live_now = g["state"] == "in"
+                suffix = g["detail"] if live_now else "F"
+                text = (
+                    f"{g['away']['abbrev']} {g['away']['score']} – "
+                    f"{g['home']['abbrev']} {g['home']['score']} ({suffix})"
+                )
             tape.append(
                 TapeItem(
-                    text=f"{g['away']['abbrev']} {g['away']['score']} – "
-                    f"{g['home']['abbrev']} {g['home']['score']} ({suffix})",
-                    accent="alert" if live else "neutral",
+                    text=text,
+                    accent="alert" if g["state"] == "in" else "neutral",
                     priority=1 if g["followed"] else 0,
                     icon=g.get("sport"),
                 )
             )
         return ModulePayload(
-            module=self.name, stage={"games": games[:12]}, tape=tape[:12]
+            module=self.name,
+            stage={"games": [*recent, *live, *upcoming], "next_up": next_up},
+            tape=tape[:12],
         )
+
+    @staticmethod
+    def _tape_when(start: str | None) -> str:
+        """Absolute local day + time — tape strings are static until the next
+        republish, so a relative countdown would rot on screen."""
+        if not start:
+            return "TBD"
+        try:
+            when = datetime.fromisoformat(start.replace("Z", "+00:00")).astimezone()
+        except ValueError:
+            return "TBD"
+        return when.strftime("%a %-I:%M %p")

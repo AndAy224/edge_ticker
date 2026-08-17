@@ -842,114 +842,77 @@ body {
 
 /* ---- sports ---- */
 
-/* Board: the followed game leads, everything else compacts into the rail.
-   Logos, records and team colours all ship in the payload — the old list
-   printed abbreviations and a kickoff time and nothing else. */
-.sports-board {
+/* The board is one timeline: results above the now line, what's next below it.
+   ESPN's undated scoreboard serves "the current slate", which for the NFL is a
+   whole week — so without the collector's dated window this pane sat on last
+   weekend's finals for days. Row counts are budgeted in TS (paneBudget) rather
+   than hidden in CSS, so a followed team's game is never the row that gets cut. */
+.sports-timeline {
   width: 100%;
   align-self: stretch;
   min-height: 0;
   display: flex;
-  gap: 24px;
-}
-
-.sb-hero {
-  flex: 1.1;
-  min-width: 0;
-  display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-  background: var(--panel-raised);
-  border-radius: 16px;
-  padding: 18px 26px;
 }
 
-.sb-hero.followed {
-  box-shadow: inset 0 0 0 2px var(--accent);
-}
-
-.sb-matchup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-}
-
-.sb-team {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.sb-logo {
-  width: 108px;
-  height: 108px;
-  object-fit: contain;
-}
-
-.sb-abbrev {
-  font-size: 42px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.sb-team.mine .sb-abbrev {
-  color: var(--accent);
-}
-
-.sb-record {
-  font-size: 20px;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.sb-at {
-  font-size: 24px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.sb-status {
-  font-size: 34px;
-  font-weight: 600;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.sb-status .live-dot {
-  margin-right: 10px;
-}
-
-.sb-context {
-  font-size: 20px;
-  color: var(--text-dim);
-  text-align: center;
-}
-
-.sb-list {
+/* Both groups share the pane height so the board fills it — rows are flex:1
+   and self-distribute, the way the old rail did. */
+.sbt-group {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
+}
+
+/* Newest-first in the DOM, reversed here: the freshest result ends up hard
+   against the now line, and time still reads top-to-bottom down the board. */
+.sbt-past {
+  flex-direction: column-reverse;
+}
+
+.sbt-next {
+  margin-top: 8px;
+}
+
+.sbt-now {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 0 6px;
+}
+
+.sbt-bar {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+
+.sbt-bar:first-child {
+  background: linear-gradient(270deg, var(--accent), transparent);
+}
+
+.sbt-stamp {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .sb-row {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 96px auto 96px 1fr;
+  grid-template-columns: 190px 1fr 150px;
   align-items: center;
-  gap: 14px;
+  gap: 22px;
   background: var(--panel-raised);
   border-radius: 12px;
-  padding: 0 18px;
+  padding: 0 20px;
   border-left: 4px solid transparent;
-  font-size: 26px;
+  font-size: 30px;
 }
 
 .sb-row.followed {
@@ -960,42 +923,101 @@ body {
   border-left-color: var(--alert);
 }
 
-.sb-side {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-weight: 600;
-  min-width: 0;
-}
-
-.sb-side:first-child {
-  justify-content: flex-end;
-}
-
-.sb-side b {
-  font-variant-numeric: tabular-nums;
-}
-
-.sb-vs {
-  font-size: 20px;
-  color: var(--text-dim);
-}
-
-.sb-when .live-dot {
-  margin-right: 8px;
+/* the soonest game involving a followed team — the reason the board exists */
+.sb-row.sbt-nextup {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 16%, var(--panel-raised)),
+    var(--panel-raised) 62%
+  );
 }
 
 .sb-when {
-  text-align: right;
-  font-size: 21px;
+  font-size: 22px;
   color: var(--text-dim);
+  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* seven rows is what fits beside the hero */
-.sb-row:nth-child(n + 8) {
-  display: none;
+.sb-when b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sb-match {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 20px;
+  min-width: 0;
+}
+
+.sb-side {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.sb-side.away {
+  justify-content: flex-end;
+}
+
+.sb-side.home {
+  justify-content: flex-start;
+}
+
+.sb-abbr {
+  font-weight: 600;
+}
+
+.sb-side.lose .sb-abbr,
+.sb-side.lose .sb-pts {
+  color: var(--muted);
+}
+
+.sb-pts {
+  font-weight: 700;
+  font-size: 1.15em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-at {
+  font-size: 0.65em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sbt-tag {
+  font-size: 0.46em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.sb-status {
+  text-align: right;
+  font-size: 21px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  /* live detail ("Mid 2nd", "End of 3rd") is open-ended — clip it inside the
+     card rather than letting it run off the pane edge */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sb-status .live-dot {
+  margin-right: 8px;
 }
 
 
@@ -1526,65 +1548,71 @@ body {
   padding: 48px 28px 36px;
 }
 
-[data-panes="2"] .sports-board,
-[data-panes="3"] .sports-board {
-  gap: 14px;
+/* sports timeline: row counts come from paneBudget() in sports.ts (4/3/2 a side),
+   so these only need to resize what the renderer already trimmed. */
+[data-panes="2"] .sbt-group,
+[data-panes="3"] .sbt-group {
+  gap: 6px;
 }
 
-[data-panes="2"] .sb-logo,
-[data-panes="3"] .sb-logo {
-  width: 60px;
-  height: 60px;
+[data-panes="2"] .sbt-next,
+[data-panes="3"] .sbt-next {
+  margin-top: 6px;
 }
 
-[data-panes="2"] .sb-abbrev,
-[data-panes="3"] .sb-abbrev {
-  font-size: 28px;
+[data-panes="2"] .sbt-now,
+[data-panes="3"] .sbt-now {
+  gap: 12px;
+  padding: 8px 0 4px;
 }
 
-[data-panes="2"] .sb-matchup,
-[data-panes="3"] .sb-matchup {
-  gap: 22px;
-}
-
-[data-panes="2"] .sb-status,
-[data-panes="3"] .sb-status {
-  font-size: 26px;
+[data-panes="2"] .sbt-stamp,
+[data-panes="3"] .sbt-stamp {
+  font-size: 16px;
+  letter-spacing: 0.18em;
 }
 
 [data-panes="2"] .sb-row,
 [data-panes="3"] .sb-row {
-  font-size: 22px;
-  grid-template-columns: 78px auto 78px 1fr;
-  gap: 10px;
+  font-size: 24px;
+  grid-template-columns: 108px 1fr 78px;
+  gap: 12px;
   padding: 0 12px;
+}
+
+[data-panes="2"] .sb-match,
+[data-panes="3"] .sb-match {
+  gap: 10px;
+}
+
+[data-panes="2"] .sb-side,
+[data-panes="3"] .sb-side {
+  gap: 8px;
 }
 
 [data-panes="2"] .sb-when,
 [data-panes="3"] .sb-when {
-  font-size: 18px;
+  font-size: 17px;
 }
 
-[data-panes="2"] .sb-row:nth-child(n + 6) {
-  display: none;
+[data-panes="2"] .sb-status,
+[data-panes="3"] .sb-status {
+  font-size: 17px;
 }
 
-/* mosaic: hero on top, three games under it */
-[data-panes="3"] .sports-board {
-  flex-direction: column;
-}
-
-[data-panes="3"] .sb-hero {
-  flex: none;
-  padding: 12px 18px;
+/* mosaic is the tightest pane — the amber edge already says "this one's mine" */
+[data-panes="3"] .sb-row {
+  font-size: 22px;
+  grid-template-columns: 84px 1fr 96px;
   gap: 8px;
 }
 
-[data-panes="3"] .sb-context {
-  display: none;
+[data-panes="3"] .sb-status {
+  font-size: 15px;
+  letter-spacing: 0.04em;
 }
 
-[data-panes="3"] .sb-row:nth-child(n + 4) {
+[data-panes="3"] .sbt-tag {
   display: none;
 }
 
@@ -3275,7 +3303,6 @@ body {
 [data-theme="glance"] .game-row,
 [data-theme="glance"] .news-lead,
 [data-theme="glance"] .news-row,
-[data-theme="glance"] .sb-hero,
 [data-theme="glance"] .sb-row,
 [data-theme="glance"] .pve-card,
 [data-theme="glance"] .adsb-row,
@@ -3997,7 +4024,6 @@ body {
 /* ---- module surfaces: flat cards with a colour rule, not bordered boxes ---- */
 
 [data-theme="lcars"] .quote-hero,
-[data-theme="lcars"] .sb-hero,
 [data-theme="lcars"] .news-lead,
 [data-theme="lcars"] .pve-card,
 [data-theme="lcars"] .astro-moon,
@@ -4014,6 +4040,20 @@ body {
 [data-theme="lcars"] .wx-day {
   border-radius: 0 12px 12px 0;
   border-left: 8px solid var(--lc-peri);
+}
+
+/* Same trap sovereign documents below: the blanket rule above is (0,2,0) like
+   .sb-row.followed and sits later in the file, so it wins and the board stops
+   signalling. The timeline has no hero any more — the left rule is the only
+   "this one's mine", so lcars has to restate it too. */
+[data-theme="lcars"] .sb-row.followed,
+[data-theme="lcars"] .game-row.followed {
+  border-left-color: var(--lc-sun);
+}
+
+[data-theme="lcars"] .sb-row.live,
+[data-theme="lcars"] .game-row.live {
+  border-left-color: var(--lc-orange);
 }
 
 /* glance hardcodes #2a2410 here for the same reason: --panel-raised is too
@@ -4769,7 +4809,6 @@ body {
 /* ---- module surfaces: flat cards with a colour rule, not bordered boxes ---- */
 
 [data-theme="sovereign"] .quote-hero,
-[data-theme="sovereign"] .sb-hero,
 [data-theme="sovereign"] .news-lead,
 [data-theme="sovereign"] .pve-card,
 [data-theme="sovereign"] .astro-moon,

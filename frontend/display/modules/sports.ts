@@ -18,11 +18,11 @@ function gameTime(start: string | null): string {
   return `${day} ${d.getMonth() + 1}/${d.getDate()} · ${time}`;
 }
 
-function gameRow(game: any, index: number): string {
+function gameRow(game: any): string {
   const live = game.state === "in";
   const pre = game.state === "pre";
   const status = pre ? gameTime(game.start) : escapeHtml(game.detail);
-  return `<div class="game-row ${live ? "live" : ""} ${game.followed ? "followed" : ""}" data-detail="${index}">
+  return `<div class="game-row ${live ? "live" : ""} ${game.followed ? "followed" : ""}" data-detail="g:${escapeHtml(game.id)}">
     <span class="game-league">${sportIcon(game.sport, game.league)}<span>${escapeHtml(game.league)}</span></span>
     <span class="game-teams">
       <span class="team">${escapeHtml(game.away?.abbrev)} <strong>${pre ? "" : escapeHtml(game.away?.score ?? "")}</strong></span>
@@ -47,75 +47,130 @@ function listHtml(games: any[]): string {
     : `<div class="empty">No games today</div>`;
 }
 
-/** "tonight 8:40 PM" for today, "Wed 8/6 · 8:00 PM" otherwise. */
-function whenLine(start: string | null): string {
+/** How many rows fit each side of the now line. Stage layers are bottom-aligned
+ *  and clip out the top, so these are budgets, not suggestions. */
+function paneBudget(): number {
+  const panes = Number(document.documentElement.dataset.panes ?? 1);
+  return panes >= 3 ? 2 : panes === 2 ? 3 : 4;
+}
+
+/** Trim to the pane budget, but never at the cost of a followed team's game —
+ *  the collector reserves the same seats, and the narrow panes would otherwise
+ *  cull exactly the rows the board exists to show. */
+function pickRows(games: any[], limit: number): any[] {
+  const mine = games.filter((g) => g.followed).slice(0, limit);
+  const rest = games.filter((g) => !g.followed);
+  const filled = [...mine];
+  for (const g of rest) {
+    if (filled.length >= limit) break;
+    filled.push(g);
+  }
+  // back into the order the caller handed us
+  return games.filter((g) => filled.includes(g));
+}
+
+/** "<b>SUN</b> 16 AUG", shortened to "<b>SUN</b> 16" in narrow panes. */
+function dayLabel(start: string | null, wide: boolean): string {
   if (!start) return "";
   const d = new Date(start);
-  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (d.toDateString() !== new Date().toDateString()) {
-    return `${d.toLocaleDateString([], { weekday: "short" })} ${d.getMonth() + 1}/${d.getDate()} · ${time}`;
-  }
-  return `${d.getHours() >= 17 ? "tonight" : "today"} ${time}`;
+  if (d.toDateString() === new Date().toDateString()) return "<b>TODAY</b>";
+  const day = d.toLocaleDateString([], { weekday: "short" }).toUpperCase();
+  const month = d.toLocaleDateString([], { month: "short" }).toUpperCase();
+  return `<b>${escapeHtml(day)}</b> ${d.getDate()}${wide ? ` ${escapeHtml(month)}` : ""}`;
 }
 
-function heroTeam(team: any, mine: boolean): string {
-  return `<div class="sb-team${mine ? " mine" : ""}">
-    ${team?.logo ? `<img class="sb-logo" src="${escapeHtml(team.logo)}" alt="">` : ""}
-    <div class="sb-abbrev">${escapeHtml(team?.abbrev ?? "")}</div>
-    ${team?.record ? `<div class="sb-record">${escapeHtml(team.record)}</div>` : ""}
-  </div>`;
+/** Clock only — the day already has its own column on the row. */
+function kickoffTime(start: string | null): string {
+  if (!start) return "TBD";
+  return new Date(start).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
-function heroHtml(g: any, index: number): string {
+function timelineRow(g: any, nextUpId: unknown, wide: boolean): string {
   const pre = g.state === "pre";
   const live = g.state === "in";
-  const side = g.followed_side;
-  // an away night for my team reads "at <them>", a home night "vs <them>"
-  const opponent = side === "away" ? g.home : g.away;
-  const context = side
-    ? `${escapeHtml(g.league)} · ${side === "away" ? "at" : "vs"} ${escapeHtml(opponent?.name ?? "")}`
-    : escapeHtml(g.league);
+  const nextUp = pre && g.followed && String(g.id) === String(nextUpId);
+
+  // Only a finished game has a winner to grey the loser against.
+  const a = Number(g.away?.score);
+  const h = Number(g.home?.score);
+  const decided = g.state === "post" && Number.isFinite(a) && Number.isFinite(h) && a !== h;
+  const sideClass = (mine: number, theirs: number) =>
+    decided ? (mine > theirs ? " win" : " lose") : "";
+
+  const pts = (t: any) =>
+    pre ? "" : `<span class="sb-pts">${escapeHtml(t?.score ?? "")}</span>`;
   const status = pre
-    ? whenLine(g.start)
-    : `${escapeHtml(g.away?.score ?? "")} — ${escapeHtml(g.home?.score ?? "")}`;
-  return `<div class="sb-hero${g.followed ? " followed" : ""}" data-detail="${index}">
-    <div class="sb-matchup">
-      ${heroTeam(g.away, side === "away")}
-      <span class="sb-at">${side === "home" ? "vs" : "@"}</span>
-      ${heroTeam(g.home, side === "home")}
-    </div>
-    <div class="sb-status${live ? " live" : ""}">
-      ${live ? '<span class="live-dot"></span>' : ""}${status}
-    </div>
-    <div class="sb-context">${pre ? context : `${escapeHtml(g.detail ?? "")} · ${context}`}</div>
+    ? kickoffTime(g.start)
+    : live
+      ? escapeHtml(g.detail ?? "")
+      : wide
+        ? escapeHtml(g.detail ?? "Final")
+        : "F";
+  // the badge rides my team's side of the matchup, home or away
+  const tag = (side: string) =>
+    nextUp && wide && g.followed_side === side
+      ? '<span class="sbt-tag">NEXT UP</span>'
+      : "";
+
+  return `<div class="sb-row${live ? " live" : ""}${g.followed ? " followed" : ""}${
+    nextUp ? " sbt-nextup" : ""
+  }" data-detail="g:${escapeHtml(g.id)}">
+    <span class="sb-when">${dayLabel(g.start, wide)}</span>
+    <span class="sb-match">
+      <span class="sb-side away${sideClass(a, h)}">${tag("away")}<span class="sb-abbr">${escapeHtml(
+        g.away?.abbrev ?? "",
+      )}</span>${pts(g.away)}</span>
+      <span class="sb-at">at</span>
+      <span class="sb-side home${sideClass(h, a)}">${pts(g.home)}<span class="sb-abbr">${escapeHtml(
+        g.home?.abbrev ?? "",
+      )}</span>${tag("home")}</span>
+    </span>
+    <span class="sb-status">${live ? '<span class="live-dot"></span>' : ""}${status}</span>
   </div>`;
 }
 
-function boardRow(g: any, index: number): string {
-  const pre = g.state === "pre";
-  const live = g.state === "in";
-  const right = pre ? gameTime(g.start) : escapeHtml(g.detail ?? "");
-  const score = (t: any) => (pre ? "" : `<b>${escapeHtml(t?.score ?? "")}</b>`);
-  return `<div class="sb-row${live ? " live" : ""}${g.followed ? " followed" : ""}" data-detail="${index}">
-    <span class="sb-side">${escapeHtml(g.away?.abbrev ?? "")}${score(g.away)}</span>
-    <span class="sb-vs">@</span>
-    <span class="sb-side">${escapeHtml(g.home?.abbrev ?? "")}${score(g.home)}</span>
-    <span class="sb-when">${live ? '<span class="live-dot"></span>' : ""}${right}</span>
-  </div>`;
-}
+/** One board ordered by time: results above the now line, what's next below it. */
+function timelineHtml(games: any[], nextUpId: unknown): string {
+  if (!games.length) return `<div class="empty">No games in the next week</div>`;
+  const limit = paneBudget();
+  const wide = Number(document.documentElement.dataset.panes ?? 1) < 3;
 
-/** Lead with the followed game (the collector sorts it first), everything else
- *  compacts into the rail beside it. */
-function boardHtml(games: any[]): string {
-  if (!games.length) return `<div class="empty">No games today</div>`;
-  let heroIndex = games.findIndex((g) => g.followed);
-  if (heroIndex < 0) heroIndex = 0;
-  const rest = games
-    .map((game, i) => ({ game, i }))
-    .filter(({ i }) => i !== heroIndex);
-  return `<div class="sports-board">
-    ${heroHtml(games[heroIndex], heroIndex)}
-    <div class="sb-list">${rest.map(({ game, i }) => boardRow(game, i)).join("")}</div>
+  // The past group is newest-first in the DOM and reversed by CSS, so the
+  // freshest result ends up hard against the now line.
+  const past = pickRows(
+    games.filter((g) => g.bucket === "recent" || g.state === "post"),
+    limit,
+  );
+  const live = games.filter((g) => g.state === "in");
+  const next = pickRows(
+    games.filter((g) => g.bucket === "next" || g.state === "pre"),
+    Math.max(0, limit - live.length),
+  );
+
+  const stamp = wide
+    ? `NOW · ${new Date()
+        .toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })
+        .toUpperCase()}`
+    : "NOW";
+
+  const group = (cls: string, rows: any[]) =>
+    rows.length
+      ? `<div class="sbt-group ${cls}">${rows
+          .map((g) => timelineRow(g, nextUpId, wide))
+          .join("")}</div>`
+      : "";
+
+  return `<div class="sports-timeline">
+    ${group("sbt-past", past)}
+    <div class="sbt-now">
+      <span class="sbt-bar"></span>
+      <span class="sbt-stamp">${escapeHtml(stamp)}</span>
+      <span class="sbt-bar"></span>
+    </div>
+    ${group("sbt-next", [...live, ...next])}
   </div>`;
 }
 
@@ -186,11 +241,14 @@ register({
       for (const g of tracked) enrichTracker(el, g);
       return;
     }
-    el.innerHTML = boardHtml(games);
+    el.innerHTML = timelineHtml(games, data?.next_up);
   },
   getDetailItem(stage, key) {
     if (key === "__list") return { __list: true, games: stage?.games ?? [] };
-    return stage?.games?.[Number(key)];
+    // id-keyed, not index-keyed: the timeline reorders games, so an index would
+    // open the wrong one.
+    const id = key.startsWith("g:") ? key.slice(2) : key;
+    return stage?.games?.find((g: any) => String(g.id) === id);
   },
   renderDetail(el, item: any) {
     if (!item) return;
