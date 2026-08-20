@@ -42,15 +42,122 @@ def _probability(summary: dict) -> dict | None:
 
 
 def _odds(summary: dict) -> dict | None:
+    """The book's full line. Every field here is already in pickcenter[0]."""
     for key in ("pickcenter", "odds"):
         entries = summary.get(key) or []
-        if entries:
-            entry = entries[0]
-            details = entry.get("details")
-            over_under = entry.get("overUnder")
-            if details or over_under:
-                return {"details": details, "over_under": over_under}
+        if not entries:
+            continue
+        entry = entries[0]
+        home, away = entry.get("homeTeamOdds") or {}, entry.get("awayTeamOdds") or {}
+        favorite = "home" if home.get("favorite") else "away" if away.get("favorite") else None
+        odds = {
+            "details": entry.get("details"),
+            "over_under": entry.get("overUnder"),
+            "spread": entry.get("spread"),
+            "favorite_side": favorite,
+            "moneyline": {"home": home.get("moneyLine"), "away": away.get("moneyLine")},
+            "provider": (entry.get("provider") or {}).get("name"),
+        }
+        if any((odds["details"], odds["over_under"], odds["spread"])):
+            return odds
     return None
+
+
+def _prob_curve(summary: dict, points: int = 40) -> list[float] | None:
+    """Home win% over the course of the game, downsampled for a sparkline.
+
+    The full array is one entry per play (75+ for a ball game); we already pay
+    to download and parse it for the single last value, so the shape is free.
+    """
+    raw = summary.get("winprobability") or []
+    if len(raw) < 4:
+        return None
+    step = max(1, len(raw) // points)
+    sampled = [raw[i] for i in range(0, len(raw), step)]
+    if sampled[-1] is not raw[-1]:
+        sampled.append(raw[-1])
+    out = []
+    for entry in sampled:
+        value = entry.get("homeWinPercentage")
+        if value is None:
+            continue
+        try:
+            out.append(round(float(value) * 100, 1))
+        except (TypeError, ValueError):
+            continue
+    return out or None
+
+
+def _ats(summary: dict) -> list[dict]:
+    """Against-the-spread records, one row per team."""
+    rows = []
+    for block in summary.get("againstTheSpread") or []:
+        team = block.get("team") or {}
+        records = block.get("records") or []
+        summary_text = None
+        for record in records:
+            if record.get("summary"):
+                summary_text = record["summary"]
+                break
+        if summary_text:
+            rows.append({"abbrev": team.get("abbreviation"), "record": summary_text})
+    return rows
+
+
+def _headline(summary: dict) -> str | None:
+    """The AP recap headline for a finished game.
+
+    Deliberately no fallback to summary["news"] — that is general league news
+    ("Nick Jonas finds the perfect song"), and showing it under a scoreline
+    reads as though it were about this game.
+    """
+    return (summary.get("article") or {}).get("headline") or None
+
+
+def _game_extras(summary: dict) -> dict:
+    """Weather and attendance — already inside the gameInfo we parse for venue."""
+    info = summary.get("gameInfo") or {}
+    weather = info.get("weather") or {}
+    out: dict = {"attendance": info.get("attendance")}
+    if weather:
+        temp = weather.get("temperature") or weather.get("highTemperature")
+        bits = []
+        if temp is not None:
+            bits.append(f"{temp}°")
+        if weather.get("displayValue"):
+            bits.append(weather["displayValue"])
+        if weather.get("precipitation") is not None:
+            bits.append(f"{weather['precipitation']}% precip")
+        out["weather"] = " · ".join(bits) or None
+    return out
+
+
+def _leaders(summary: dict) -> list[dict]:
+    """Per-team statistical leaders (football) — headline stat line only."""
+    out = []
+    for block in summary.get("leaders") or []:
+        team = block.get("team") or {}
+        entries = []
+        for category in (block.get("leaders") or [])[:3]:
+            leader = (category.get("leaders") or [{}])[0]
+            athlete = leader.get("athlete") or {}
+            name = athlete.get("shortName") or athlete.get("displayName")
+            if not name:
+                continue
+            entries.append(
+                {
+                    "label": (
+                        category.get("shortDisplayName")
+                        or category.get("abbreviation")
+                        or category.get("displayName")
+                    ),
+                    "name": name,
+                    "stat": leader.get("displayValue"),
+                }
+            )
+        if entries:
+            out.append({"abbrev": team.get("abbreviation"), "entries": entries})
+    return out
 
 
 def _last_meeting(summary: dict) -> dict | None:
@@ -92,8 +199,10 @@ def _standings(summary: dict) -> list[dict]:
     for group in (summary.get("standings") or {}).get("groups") or []:
         rows = []
         for entry in ((group.get("standings") or {}).get("entries") or [])[:6]:
+            # ESPN lowercases `type` ("gamesbehind", "winpercent") while `name`
+            # is camelCase — key off type and match it in lower case.
             stats = {
-                (s.get("type") or s.get("name")): s.get("displayValue")
+                str(s.get("type") or s.get("name") or "").lower(): s.get("displayValue")
                 for s in entry.get("stats", [])
             }
             rows.append(
@@ -102,6 +211,9 @@ def _standings(summary: dict) -> list[dict]:
                     "wins": stats.get("wins"),
                     "losses": stats.get("losses"),
                     "ties": stats.get("ties"),
+                    "games_behind": stats.get("gamesbehind"),
+                    "streak": stats.get("streak"),
+                    "pct": stats.get("winpercent"),
                 }
             )
         if rows:
@@ -140,11 +252,16 @@ async def game_detail(sport: str, league: str, event: str):
         "venue": (game_info.get("venue") or {}).get("fullName"),
         "broadcast": ((broadcasts[0].get("media") or {}).get("shortName") if broadcasts else None),
         "probability": _probability(summary),
+        "prob_curve": _prob_curve(summary),
         "odds": _odds(summary),
+        "ats": _ats(summary),
+        "headline": _headline(summary),
+        "leaders": _leaders(summary),
         "last_meeting": _last_meeting(summary),
         "last_games": _last_games(summary),
         "last_play": _last_play(summary),
         "standings": _standings(summary),
+        **_game_extras(summary),
     }
     if len(_cache) >= CACHE_MAX_ENTRIES:
         _cache.pop(min(_cache, key=lambda k: _cache[k][0]))

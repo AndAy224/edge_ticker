@@ -905,7 +905,7 @@ body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 190px 1fr 150px;
+  grid-template-columns: 190px 1fr 190px 150px;
   align-items: center;
   gap: 22px;
   background: var(--panel-raised);
@@ -914,6 +914,73 @@ body {
   border-left: 4px solid transparent;
   font-size: 30px;
 }
+
+/* the betting line + win-probability gauge, in their own column so they can
+   never shove the matchup around */
+.sb-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-odds {
+  font-size: 20px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sb-wp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.sb-wp-bar {
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  overflow: hidden;
+  flex: none;
+}
+
+.sb-wp-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.sb-wp-pct {
+  font-size: 18px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* season record, riding the outer edge beside the crest */
+.sb-rec {
+  font-size: 0.62em;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  flex: none;
+}
+
+.sb-side.lose .sb-rec {
+  opacity: 0.6;
+}
+
+
 
 .sb-row.followed {
   border-left-color: var(--accent);
@@ -1588,9 +1655,21 @@ body {
 [data-panes="2"] .sb-row,
 [data-panes="3"] .sb-row {
   font-size: 24px;
-  grid-template-columns: 108px 1fr 78px;
+  grid-template-columns: 100px 1fr 88px 96px;
   gap: 12px;
   padding: 0 12px;
+}
+
+[data-panes="2"] .sb-odds {
+  font-size: 16px;
+}
+
+[data-panes="2"] .sb-wp-pct {
+  font-size: 14px;
+}
+
+[data-panes="2"] .sb-wp-bar {
+  width: 40px;
 }
 
 [data-panes="2"] .sb-match,
@@ -1616,8 +1695,23 @@ body {
 /* mosaic is the tightest pane — the amber edge already says "this one's mine" */
 [data-panes="3"] .sb-row {
   font-size: 22px;
-  grid-template-columns: 84px 1fr 96px;
+  grid-template-columns: 84px 1fr 74px 84px;
   gap: 8px;
+}
+
+/* Mosaic keeps the win-probability gauge but drops the betting line and the
+   records (both shed upstream in sports.ts) — with only two rows a side there
+   is vertical room here, it is width that is scarce. */
+[data-panes="3"] .sb-wp-bar {
+  width: 30px;
+}
+
+[data-panes="3"] .sb-wp-pct {
+  font-size: 13px;
+}
+
+[data-panes="3"] .sb-wp {
+  gap: 5px;
 }
 
 [data-panes="3"] .sb-status {
@@ -5298,7 +5392,88 @@ body {
   align-items: center;
   gap: 8px;
   width: 100%;
-  max-width: 1000px;
+  /* Wide enough that the two-column split leaves the text column room to set
+     its lines flat — squeezed to ~350px every line wraps and the card grows
+     taller than the single column it was meant to shorten. */
+  max-width: 1400px;
+}
+
+/* Two columns once standings are in play. Fully enriched, a single column
+   overflows the card and clips off the top; standings are the tallest block
+   and use barely half the available width, so they move sideways. */
+.gd-extra-cols {
+  display: flex;
+  gap: 44px;
+  width: 100%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.gd-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gd-col-side {
+  flex: none;
+}
+
+.gd-extra-cols .gd-standings {
+  margin-top: 0;
+}
+
+/* where a probability came from — a book's line is not a model */
+.gd-prob-src {
+  font-size: 15px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+
+/* home win% across the game, drawn inline (no charting library on the panel) */
+.gd-sparkline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.gd-sparkline svg {
+  flex: 1;
+  height: 46px;
+  min-width: 0;
+}
+
+.gd-spark-mid {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.35;
+  stroke-dasharray: 4 4;
+}
+
+.gd-spark-cap {
+  font-size: 15px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.gd-split {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.gd-headline {
+  font-size: 20px;
+  color: var(--text);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .gd-prob {
@@ -6146,6 +6321,14 @@ body {
 .gd-standing-row.mine {
   color: var(--text);
   font-weight: 700;
+}
+
+/* games-behind, else the streak — whichever ESPN gave us */
+.gd-standing-trail {
+  min-width: 40px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 [data-panes="2"] .gd-standings,

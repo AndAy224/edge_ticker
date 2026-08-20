@@ -183,6 +183,54 @@ export function SourcesTab() {
           />
           Full-screen game tracker while a followed team is live
         </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.win_probability !== false}
+            onChange={(e) =>
+              patch(
+                (c) =>
+                  (c.modules.sports = {
+                    ...(c.modules.sports ?? {}),
+                    win_probability: e.currentTarget.checked,
+                  }),
+              )
+            }
+          />
+          Win probability — who's favoured, and the live odds once playing
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.show_odds !== false}
+            onChange={(e) =>
+              patch(
+                (c) =>
+                  (c.modules.sports = {
+                    ...(c.modules.sports ?? {}),
+                    show_odds: e.currentTarget.checked,
+                  }),
+              )
+            }
+          />
+          Betting line — spread and over/under on upcoming games
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={sports.show_records !== false}
+            onChange={(e) =>
+              patch(
+                (c) =>
+                  (c.modules.sports = {
+                    ...(c.modules.sports ?? {}),
+                    show_records: e.currentTarget.checked,
+                  }),
+              )
+            }
+          />
+          Season records beside each team
+        </label>
         <h2>Sports — leagues</h2>
         <div class="rows">
           {(sports.leagues ?? []).map((league: any, i: number) => (

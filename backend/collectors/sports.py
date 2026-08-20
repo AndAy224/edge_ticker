@@ -21,6 +21,13 @@ log = logging.getLogger(__name__)
 SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard"
 SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/summary"
 SCHEDULE_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams/{team}/schedule"
+# ESPN's "core" API. The site summary endpoint carries the same win-probability
+# numbers, but a finished MLB summary is ~1MB (every play, every at-bat) — far
+# too heavy to poll. These resources are 1-4KB.
+CORE_URL = (
+    "https://sports.core.api.espn.com/v2/sports/{sport}/leagues/{league}"
+    "/events/{event}/competitions/{event}/{resource}"
+)
 
 # Followed-team score celebrations: minimum gap between a team's celebrations.
 # The score-diff only fires on an *increase*, so for discrete-scoring sports (a
@@ -201,6 +208,158 @@ async def build_test_event() -> dict:
     }
 
 
+def _american_to_implied(odds: str | int | float | None) -> float | None:
+    """American moneyline -> implied win probability (0..1), vig included."""
+    if odds in (None, "", "EVEN", "even"):
+        return None
+    try:
+        value = float(str(odds).replace("+", "").strip())
+    except (TypeError, ValueError):
+        return None
+    if value == 0:
+        return None
+    if value < 0:
+        return -value / (-value + 100.0)
+    return 100.0 / (value + 100.0)
+
+
+def _moneyline(side: dict | None) -> str | None:
+    """Pull a price off ESPN's moneyline block, freshest variant first."""
+    if not isinstance(side, dict):
+        return None
+    for key in ("current", "close", "open"):
+        entry = side.get(key)
+        if isinstance(entry, dict) and entry.get("odds") not in (None, ""):
+            return entry["odds"]
+    # Some payloads inline the price instead of nesting it under open/close.
+    return side.get("odds")
+
+
+def _parse_odds(competition: dict) -> dict | None:
+    """Spread / over-under / moneylines from the scoreboard's own odds block.
+
+    Free — the scoreboard response already carries it. ESPN populates it for
+    NFL/CFB well ahead of kickoff and for MLB roughly a day out; absent
+    entirely for some leagues, so every consumer must tolerate None.
+    """
+    entries = competition.get("odds") or []
+    if not entries:
+        return None
+    entry = entries[0] or {}
+    money = entry.get("moneyline") or {}
+    home_ml = _moneyline(money.get("home"))
+    away_ml = _moneyline(money.get("away"))
+    favorite = None
+    for side in ("home", "away"):
+        if ((entry.get(f"{side}TeamOdds") or {}).get("favorite")) is True:
+            favorite = side
+    odds = {
+        "details": entry.get("details"),
+        "over_under": entry.get("overUnder"),
+        "spread": entry.get("spread"),
+        "favorite_side": favorite,
+        "moneyline": {"home": home_ml, "away": away_ml},
+        "provider": (entry.get("provider") or {}).get("name"),
+    }
+    if not any(
+        (odds["details"], odds["over_under"], home_ml, away_ml)
+    ):
+        return None
+    return odds
+
+
+def _prob_from_moneyline(odds: dict | None) -> dict | None:
+    """De-vigged win probability from the two moneylines.
+
+    The book's two implied probabilities sum to >100% (that overround is the
+    vig); normalising to 100 gives the honest split without a second request.
+    """
+    if not odds:
+        return None
+    money = odds.get("moneyline") or {}
+    home = _american_to_implied(money.get("home"))
+    away = _american_to_implied(money.get("away"))
+    if home is None or away is None:
+        return None
+    total = home + away
+    if total <= 0:
+        return None
+    return {
+        "home": round(home / total * 100, 1),
+        "away": round(away / total * 100, 1),
+        "source": "moneyline",
+    }
+
+
+def _parse_situation(competition: dict, state: str) -> dict | None:
+    """Live game state — bases/count for baseball, down & distance for football.
+
+    Only meaningful while a game is in progress; ESPN leaves the key off
+    entirely otherwise.
+    """
+    if state != "in":
+        return None
+    situation = competition.get("situation") or {}
+    if not situation:
+        return None
+    out = {
+        "last_play": ((situation.get("lastPlay") or {}).get("text")
+                      if isinstance(situation.get("lastPlay"), dict)
+                      else situation.get("lastPlay")),
+        "balls": situation.get("balls"),
+        "strikes": situation.get("strikes"),
+        "outs": situation.get("outs"),
+        "on_first": situation.get("onFirst"),
+        "on_second": situation.get("onSecond"),
+        "on_third": situation.get("onThird"),
+        "down_distance": situation.get("downDistanceText"),
+        "possession": situation.get("possession"),
+        "red_zone": situation.get("isRedZone"),
+    }
+    return out if any(v is not None for v in out.values()) else None
+
+
+def _parse_records(competitor: dict) -> dict:
+    """All three record splits, keyed by ESPN's `type` (total/home/road)."""
+    out: dict[str, str] = {}
+    for record in competitor.get("records") or []:
+        kind = record.get("type") or record.get("name")
+        summary = record.get("summary")
+        if not summary:
+            continue
+        if kind in ("total", "overall"):
+            out["overall"] = summary
+        elif kind == "home":
+            out["home"] = summary
+        elif kind in ("road", "away"):
+            out["road"] = summary
+    return out
+
+
+def _parse_probable(competitor: dict) -> dict | None:
+    """Probable starting pitcher (MLB) with a headline stat, for pre games."""
+    probables = competitor.get("probables") or []
+    if not probables:
+        return None
+    entry = probables[0] or {}
+    athlete = entry.get("athlete") or {}
+    name = athlete.get("shortName") or athlete.get("displayName")
+    if not name:
+        return None
+    stats = {
+        s.get("abbreviation") or s.get("name"): s.get("displayValue")
+        for s in entry.get("statistics") or []
+    }
+    era = stats.get("ERA")
+    wins, losses = stats.get("W"), stats.get("L")
+    bits = []
+    if wins is not None and losses is not None:
+        bits.append(f"{wins}-{losses}")
+    if era is not None:
+        bits.append(f"{era} ERA")
+    return {"name": name, "stat": " · ".join(bits) or None}
+
+
 class SportsCollector(Collector):
     name = "sports"
 
@@ -227,10 +386,17 @@ class SportsCollector(Collector):
         self.max_upcoming = int(self.module_config.get("max_upcoming", 6))
         self.league_status: dict[str, dict] = {}  # per-league fetch state for /api/health
         self.celebrations = self.module_config.get("celebrations", True)
+        # Existing config DBs never gain new default keys, so every one of
+        # these has to default here as well as in defaults.yaml.
+        self.show_odds = self.module_config.get("show_odds", True)
+        self.show_records = self.module_config.get("show_records", True)
+        self.win_probability = self.module_config.get("win_probability", True)
+        self.max_prob_games = int(self.module_config.get("max_prob_games", 4))
         self._bus: Bus | None = None
         self._side_scores: dict[str, tuple[int, int]] = {}  # game id -> (away, home)
         self._celebrated_at: dict[str, float] = {}
         self._window: list[dict] = []  # cached dated-window games
+        self._predictor: dict[str, tuple[float, dict | None]] = {}  # event id -> (stamp, prob)
         self._window_at: float = 0.0  # monotonic stamp of the last window fetch
         self._window_day: str = ""  # local date the window was built for
 
@@ -272,7 +438,9 @@ class SportsCollector(Collector):
         # Celebrations diff the *fast* lane only — the window is up to 30 min
         # stale and would replay old scores as fresh ones.
         await self._maybe_celebrate(games)
-        return self._merge_window(games)
+        merged = self._merge_window(games)
+        await self._refresh_probabilities(merged)
+        return merged
 
     async def _league(
         self, client: httpx.AsyncClient, league: dict, params: dict | None = None
@@ -327,6 +495,13 @@ class SportsCollector(Collector):
         self._window_day = today.isoformat()
         log.debug("sports window %s: %d games", span, len(window))
 
+    # Fields the undated scoreboard sometimes omits while the dated window has
+    # them (verified: the undated MLB scoreboard returns odds: null, the window
+    # carries odds for near-term games). A whole-object overwrite would throw
+    # them away every fast poll, so these carry over when the fresh game lacks
+    # them.
+    _CARRY_OVER = ("odds", "win_prob", "broadcast", "venue", "note")
+
     def _merge_window(self, live_games: list[dict]) -> list[dict]:
         """Window first, fast lane on top — same event id, fresher scores win."""
         merged: dict[str, dict] = {}
@@ -334,10 +509,22 @@ class SportsCollector(Collector):
             if game.get("id"):
                 merged[str(game["id"])] = game
         for game in live_games:
-            if game.get("id"):
-                merged[str(game["id"])] = game
-            else:  # no id to merge on; keep it rather than drop it
+            key = str(game["id"]) if game.get("id") else None
+            if key is None:  # no id to merge on; keep it rather than drop it
                 merged[f"_{len(merged)}"] = game
+                continue
+            previous = merged.get(key)
+            if previous:
+                for field in self._CARRY_OVER:
+                    if game.get(field) is None and previous.get(field) is not None:
+                        game[field] = previous[field]
+                for side in ("home", "away"):
+                    old_side, new_side = previous.get(side) or {}, game.get(side) or {}
+                    if new_side.get("probable") is None and old_side.get("probable"):
+                        new_side["probable"] = old_side["probable"]
+                    if not new_side.get("records") and old_side.get("records"):
+                        new_side["records"] = old_side["records"]
+            merged[key] = game
         return list(merged.values())
 
     def _parse_event(self, event: dict, league: dict) -> dict | None:
@@ -356,6 +543,11 @@ class SportsCollector(Collector):
                     "logo": team.get("logo"),
                     "color": team.get("color"),
                     "record": records[0].get("summary") if records else None,
+                    # home/road splits ride along free; `record` stays as-is so
+                    # an older display bundle keeps working.
+                    "records": _parse_records(competitor) if self.show_records else {},
+                    "winner": competitor.get("winner"),
+                    "probable": _parse_probable(competitor),
                     # per-period scores; ESPN populates these once the game is live
                     "linescores": [
                         v.get("value") for v in competitor.get("linescores") or []
@@ -363,16 +555,42 @@ class SportsCollector(Collector):
                 }
             if "home" not in teams or "away" not in teams:
                 return None
+            state = status_type.get("state", "pre")  # pre | in | post
+            venue = competition.get("venue") or {}
+            notes = competition.get("notes") or []
+            odds = _parse_odds(competition) if self.show_odds else None
             game = {
                 "id": event.get("id"),
                 "sport": league.get("sport"),
                 "league": str(league["league"]).upper(),
-                "state": status_type.get("state", "pre"),  # pre | in | post
+                "state": state,
                 "detail": status_type.get("shortDetail", ""),
                 "start": event.get("date"),
                 "home": teams["home"],
                 "away": teams["away"],
                 "followed": self._is_followed(teams),
+                "odds": odds,
+                # A book's line is itself a win forecast — free, and available
+                # earlier than any of ESPN's model endpoints. The dedicated
+                # probability lane overwrites this for live games.
+                "win_prob": _prob_from_moneyline(odds) if self.win_probability else None,
+                "situation": _parse_situation(competition, state),
+                "broadcast": competition.get("broadcast")
+                or next(
+                    (
+                        ", ".join(b.get("names") or [])
+                        for b in competition.get("broadcasts") or []
+                        if b.get("names")
+                    ),
+                    None,
+                ),
+                "venue": {
+                    "name": venue.get("fullName"),
+                    "city": (venue.get("address") or {}).get("city"),
+                }
+                if venue.get("fullName")
+                else None,
+                "note": (notes[0] or {}).get("headline") if notes else None,
             }
             # Which side is mine — the display leads with the followed game and
             # needs to know whether it's a home or away night.
@@ -392,6 +610,121 @@ class SportsCollector(Collector):
             if any(team in name for team in self.followed):
                 return side
         return None
+
+    # ---- win probability ---------------------------------------------------
+
+    async def _refresh_probabilities(self, games: list[dict]) -> None:
+        """Fill win_prob for followed games from ESPN's core API.
+
+        Bounded on purpose: followed games only, capped at max_prob_games, and
+        never allowed to fail the poll. Games that already got a probability
+        from the moneyline only come here if they are *live* — a book's line is
+        a pre-game forecast and goes stale the moment the game starts.
+        """
+        if not self.win_probability:
+            return
+        live = [g for g in games if g.get("followed") and g.get("state") == "in"]
+        pre = [
+            g
+            for g in games
+            if g.get("followed")
+            and g.get("state") == "pre"
+            and not g.get("win_prob")  # moneyline already answered this one
+        ]
+        targets = (live + pre)[: self.max_prob_games]
+        if not targets:
+            return
+        async with httpx.AsyncClient(timeout=10) as client:
+            results = await asyncio.gather(
+                *(
+                    self._live_probability(client, g)
+                    if g.get("state") == "in"
+                    else self._predictor_probability(client, g)
+                    for g in targets
+                ),
+                return_exceptions=True,
+            )
+        for game, result in zip(targets, results):
+            if isinstance(result, BaseException):
+                log.debug("win prob %s failed: %s", game.get("id"), result)
+                continue
+            if result:
+                game["win_prob"] = result
+
+    def _core_url(self, game: dict, resource: str) -> str:
+        return CORE_URL.format(
+            sport=game.get("sport"),
+            league=str(game.get("league", "")).lower(),
+            event=game.get("id"),
+            resource=resource,
+        )
+
+    async def _live_probability(
+        self, client: httpx.AsyncClient, game: dict
+    ) -> dict | None:
+        """Current in-game win probability: the last entry of the per-play feed.
+
+        Paged rather than fetched whole — the full array is one entry per play,
+        and only the newest one matters. Two ~1KB requests instead of the ~1MB
+        the site summary endpoint would cost.
+        """
+        url = self._core_url(game, "probabilities")
+        head = await client.get(url, params={"limit": 1})
+        if head.status_code != 200:
+            return None
+        pages = (head.json() or {}).get("pageCount") or 0
+        if not pages:
+            return None
+        last = await client.get(url, params={"limit": 1, "page": pages})
+        if last.status_code != 200:
+            return None
+        items = (last.json() or {}).get("items") or []
+        if not items:
+            return None
+        home = items[0].get("homeWinPercentage")
+        away = items[0].get("awayWinPercentage")
+        if home is None or away is None:
+            return None
+        return {
+            "home": round(float(home) * 100, 1),
+            "away": round(float(away) * 100, 1),
+            "source": "live",
+        }
+
+    async def _predictor_probability(
+        self, client: httpx.AsyncClient, game: dict
+    ) -> dict | None:
+        """ESPN's pre-game matchup projection.
+
+        Only reached when there is no betting line to derive from. Not every
+        league/season has it — NFL preseason 400s — so a miss is cached too,
+        to stop us re-asking every poll for something that will never arrive.
+        """
+        key = str(game.get("id"))
+        cached = self._predictor.get(key)
+        now = time.monotonic()
+        if cached and now - cached[0] < self.schedule_interval:
+            return cached[1]
+        prob = None
+        response = await client.get(self._core_url(game, "predictor"))
+        if response.status_code == 200:
+            data = response.json() or {}
+            sides = {}
+            for side, field in (("home", "homeTeam"), ("away", "awayTeam")):
+                stats = {
+                    stat.get("name"): stat.get("displayValue")
+                    for stat in (data.get(field) or {}).get("statistics") or []
+                }
+                value = stats.get("gameProjection")
+                if value is not None:
+                    try:
+                        sides[side] = round(float(value), 1)
+                    except (TypeError, ValueError):
+                        pass
+            if len(sides) == 2:
+                prob = {**sides, "source": "predictor"}
+        self._predictor[key] = (now, prob)
+        return prob
 
     # ---- score celebrations ------------------------------------------------
 
@@ -558,6 +891,9 @@ class SportsCollector(Collector):
         for g in [*live, *recent, *upcoming]:
             if g["state"] == "pre":
                 text = f"{g['away']['abbrev']} at {g['home']['abbrev']} · {self._tape_when(g['start'])}"
+                line = (g.get("odds") or {}).get("details")
+                if line and self.show_odds:
+                    text = f"{text} · {line}"
             else:
                 live_now = g["state"] == "in"
                 suffix = g["detail"] if live_now else "F"

@@ -23,6 +23,10 @@ modules:
     days_ahead: 7                # how far ahead upcoming games reach
     max_recent: 6                # results kept on the board (followed teams get a reserved seat)
     max_upcoming: 6              # upcoming games kept on the board
+    show_odds: true              # spread / over-under from the scoreboard's own odds block
+    show_records: true           # win-loss records beside each team
+    win_probability: true        # who's favoured — moneyline-implied, live model while playing
+    max_prob_games: 4            # cap on per-poll win-probability lookups (followed games only)
     leagues:
       - { sport: baseball, league: mlb }
       - { sport: football, league: nfl }
