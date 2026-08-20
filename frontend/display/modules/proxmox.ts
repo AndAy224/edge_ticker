@@ -61,7 +61,49 @@ function guestRow(g: any, scale: number): string {
   </div>`;
 }
 
-function nodeCard(n: any): string {
+/** One PSU feed. Bars are scaled to the busiest feed in the group rather than
+ *  to any absolute wattage: on a dual-PSU host the interesting signal is the
+ *  *balance* between the two, and an absolute scale would pin both near zero. */
+function feedRow(f: any, scale: number): string {
+  const w = f.watts ?? 0;
+  return `<div class="pve-feed${f.live ? "" : " dead"}">
+    <span class="pve-feed-label">${escapeHtml(f.label)}</span>
+    <span class="pve-mini"><span style="width:${Math.min(100, (w / scale) * 100).toFixed(1)}%"></span></span>
+    <span class="pve-feed-w">${f.relay_on ? `${w.toFixed(0)} W` : "OFF"}</span>
+  </div>`;
+}
+
+/** PDU-metered draw for the node's PSU feeds. Absent whenever the PDU isn't
+ *  configured, so every caller has to tolerate an empty string. */
+function powerBlock(p: any): string {
+  if (!p) return "";
+  const feeds: any[] = p.feeds ?? [];
+  const scale = Math.max(1, ...feeds.map((f) => f.watts ?? 0));
+  const state =
+    p.state === "degraded"
+      ? "no redundancy"
+      : p.state === "off"
+        ? "no draw"
+        : feeds.length > 1
+          ? "redundant"
+          : "live";
+  return `<div class="pve-power ${escapeHtml(p.state)}${p.stale ? " stale" : ""}">
+    <div class="pve-power-head">
+      <span class="pve-power-total">${(p.total_w ?? 0).toFixed(0)}<span class="pve-power-unit">W</span></span>
+      <span class="pve-power-state">${state}</span>
+    </div>
+    <div class="pve-feeds">${feeds.map((f) => feedRow(f, scale)).join("")}</div>
+  </div>`;
+}
+
+/** The power block belongs to exactly one node. An unset `node` means the
+ *  collector saw a single host and didn't need telling which. */
+function powerFor(power: any, node: any): any {
+  if (!power) return null;
+  return !power.node || power.node === node.name ? power : null;
+}
+
+function nodeCard(n: any, power: any): string {
   return `<div class="pve-card ${n.online ? "" : "offline"}">
     <div class="pve-card-head">
       <span class="pve-name">${escapeHtml(n.name)}</span>
@@ -70,6 +112,7 @@ function nodeCard(n: any): string {
     ${bar(n.cpu, "CPU")}
     ${bar(n.mem_pct, "MEM")}
     <div class="pve-meta">${n.mem_used_gb} / ${n.mem_total_gb} GiB</div>
+    ${powerBlock(power)}
   </div>`;
 }
 
@@ -82,6 +125,7 @@ register({
     const guests = data?.guests ?? { running: 0, total: 0 };
     const busiest: any[] = guests.busiest ?? [];
     const storage: any[] = data?.storage ?? [];
+    const power = data?.power ?? null;
 
     // A single node leaves most of its card empty, so it grows a guest table.
     // With a cluster the node cards fill the row on their own.
@@ -101,6 +145,7 @@ register({
           ${bar(node.cpu, "CPU")}
           ${bar(node.mem_pct, "MEM")}
           <div class="pve-meta">${node.mem_used_gb} / ${node.mem_total_gb} GiB</div>
+          ${powerBlock(powerFor(power, node))}
           <div class="pve-guests">
             <div class="pve-guest pve-guests-head">
               <span>VMID</span><span>GUEST</span><span>CPU</span><span>MEM</span>
@@ -118,7 +163,7 @@ register({
     }
 
     el.innerHTML = `<div class="pve-layout">
-      <div class="pve-nodes">${nodes.map(nodeCard).join("")}</div>
+      <div class="pve-nodes">${nodes.map((n) => nodeCard(n, powerFor(power, n))).join("")}</div>
       <div class="pve-side">
         <div class="pve-card">
           <div class="pve-name">Guests</div>

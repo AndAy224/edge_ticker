@@ -98,6 +98,19 @@ modules:
   proxmox:
     enabled: false
     poll_seconds: 60
+    # Optional: meter the node's PSU feeds off a UniFi smart PDU. Needs
+    # UNIFI_URL + UNIFI_API_KEY in .env; silently inert without them.
+    # node: "" picks the only node — name it explicitly on a cluster.
+    pdu:
+      enabled: true
+      site: default
+      device_mac: "1c:6a:1b:50:a1:b7"
+      node: ""
+      feeds:
+        - outlet: 10
+          label: PSU 1
+        - outlet: 16
+          label: PSU 2
 
   adsb:
     enabled: false

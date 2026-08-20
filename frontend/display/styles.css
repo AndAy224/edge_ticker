@@ -2355,6 +2355,94 @@ body {
   color: var(--text-dim);
 }
 
+/* PSU feeds off the smart PDU. Lives inside the node card rather than the
+   side column so it survives the narrow-pane layouts, which drop .pve-side —
+   on a 2/3-pane stage the draw is the most useful line on the card. */
+.pve-power {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.pve-power-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pve-power-total {
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pve-power-unit {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.pve-power-state {
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--up);
+}
+
+.pve-power.degraded .pve-power-state {
+  color: var(--alert);
+}
+
+.pve-power.off .pve-power-state,
+.pve-power.stale .pve-power-state {
+  color: var(--text-dim);
+}
+
+/* a lost feed is the one thing here worth a border */
+.pve-power.degraded {
+  border-top-color: var(--alert);
+}
+
+/* last good reading, controller unreachable */
+.pve-power.stale {
+  opacity: 0.55;
+}
+
+.pve-feeds {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pve-feed {
+  display: grid;
+  grid-template-columns: 76px 1fr 72px;
+  align-items: center;
+  gap: 12px;
+  font-size: 19px;
+}
+
+.pve-feed-label {
+  color: var(--text-dim);
+}
+
+.pve-feed-w {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pve-feed.dead .pve-feed-label,
+.pve-feed.dead .pve-feed-w {
+  color: var(--alert);
+}
+
+.pve-feed.dead .pve-mini span {
+  background: var(--alert);
+}
+
 /* narrow panes: node health is the point — drop the guests/storage side
    column, compact the node cards, and cap at 3 so the single-column stack
    fits the ~432px budget (3 × ~125px + gaps ≈ 405px) */
@@ -2396,6 +2484,24 @@ body {
 [data-panes="2"] .pve-nodes .pve-meta,
 [data-panes="3"] .pve-nodes .pve-meta {
   display: none;
+}
+
+[data-panes="2"] .pve-power,
+[data-panes="3"] .pve-power {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+[data-panes="2"] .pve-power-total,
+[data-panes="3"] .pve-power-total {
+  font-size: 26px;
+}
+
+[data-panes="2"] .pve-feed,
+[data-panes="3"] .pve-feed {
+  font-size: 17px;
+  grid-template-columns: 64px 1fr 62px;
+  gap: 10px;
 }
 
 [data-panes="2"] .pve-nodes .pve-card:nth-child(n + 4),
