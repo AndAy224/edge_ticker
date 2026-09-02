@@ -4,9 +4,17 @@
 // integer level and the map container is CSS-scaled about its center
 // (which the modules position over the view center) for the remainder.
 
-export const TILE_PX = 512; // on-screen px per slippy tile; RainViewer /512/ and Carto @2x render 1:1
+export const TILE_PX = 512; // on-screen px per slippy tile; RainViewer /512/ renders 1:1
 
-export const CARTO_ATTRIB = "&copy; OpenStreetMap &copy; CARTO";
+// Esri World Dark Gray Base: keyless 256px tiles, requested one level deeper
+// than the slippy level so four of them fill a 512px tile at the same
+// resolution Carto's @2x tiles gave. (Carto began watermarking keyless tiles
+// with "API KEY REQUIRED" in 2026.) Esri's path order is {z}/{y}/{x}.
+const ESRI_DARK_URL =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile";
+const ESRI_MAX_Z = 16;
+
+export const BASEMAP_ATTRIB = "&copy; Esri, HERE, Garmin, OpenStreetMap";
 
 export interface MapView {
   lat: number; // view center
@@ -113,14 +121,11 @@ export function layerImgs(
   return imgs;
 }
 
-/** Carto dark basemap mosaic (shared look for all map modules). */
+/** Esri dark basemap mosaic (shared look for all map modules). */
 export function basemapImgs(view: MapView): string {
   const { z } = tileZoom(view);
-  return layerImgs(
-    view,
-    z,
-    (x, y) => `https://basemaps.cartocdn.com/dark_nolabels/${z}/${x}/${y}@2x.png`,
-  );
+  const lz = Math.min(z + 1, ESRI_MAX_Z);
+  return layerImgs(view, lz, (x, y) => `${ESRI_DARK_URL}/${lz}/${y}/${x}`);
 }
 
 /** Inline style applying the fractional-zoom residual to the map container. */

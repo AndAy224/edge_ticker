@@ -7504,7 +7504,7 @@ body {
   height: 24px;
 }
 
-/* ---- weather radar (animated RainViewer loop over a Carto dark basemap) ---- */
+/* ---- weather radar (animated RainViewer loop over an Esri dark basemap) ---- */
 
 /* Full-bleed map: escape the stage-layer padding entirely. */
 .radar-stage {
@@ -7516,7 +7516,7 @@ body {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #0b0e13; /* ≈ Carto dark ocean, shown while tiles load */
+  background: #222327; /* ≈ Esri dark-gray ocean, shown while tiles load */
 }
 
 .radar-viewport img {
@@ -7537,14 +7537,16 @@ body {
   inset: 0;
 }
 
-/* Dim the basemap so radar colors pop and it sits back with the dark themes.
+/* Dim the basemap so radar colors pop and it sits back with the dark themes
+   (Esri's dark gray is lighter than Carto's was — 0.45 lands its land/ocean
+   near the old ~#262626/#0e0e0e).
    Oversized: it lives inside the scaled map layer, and at fractional zooms the
    scale drops to 0.707 — inset:0 would leave undimmed edges. */
 .radar-basemap::after {
   content: "";
   position: absolute;
   inset: -50%;
-  background: rgba(4, 7, 12, 0.3);
+  background: rgba(4, 7, 12, 0.45);
 }
 
 /* Frames stack over the basemap; the generated per-layer keyframes cycle

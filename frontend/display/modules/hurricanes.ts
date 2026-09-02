@@ -1,11 +1,11 @@
 // NHC tropical tracker: storm positions, forecast track and cone drawn over
-// the shared Carto dark slippy map, auto-fitted to home + every active storm.
+// the shared Esri dark slippy map, auto-fitted to home + every active storm.
 // Off-season it renders a calm basin map with a "tropics quiet" chip.
 // Reuses the radar module's map plumbing classes (.radar-viewport/.radar-map/
 // .radar-basemap/.radar-home) — those are effectively the shared slippy-map
 // styles; module-specific bits are .hurr-*.
 import {
-  CARTO_ATTRIB,
+  BASEMAP_ATTRIB,
   MapView,
   basemapImgs,
   fitView,
@@ -170,7 +170,7 @@ register({
     el.innerHTML = `<div class="hurr-stage">
       <div class="radar-viewport"></div>
       <div class="hurr-cards">${storms.map(stormCard).join("")}</div>
-      <div class="radar-attrib">${CARTO_ATTRIB} &middot; NOAA/NHC</div>
+      <div class="radar-attrib">${BASEMAP_ATTRIB} &middot; NOAA/NHC</div>
     </div>`;
     const stage = el.querySelector<HTMLElement>(".hurr-stage")!;
     requestAnimationFrame(() => {

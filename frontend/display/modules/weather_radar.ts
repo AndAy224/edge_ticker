@@ -1,9 +1,9 @@
-// Animated precipitation radar: RainViewer frame tiles looping over a Carto
+// Animated precipitation radar: RainViewer frame tiles looping over an Esri
 // dark basemap, centered on the home location. The loop is pure CSS (generated
 // keyframes, negative delays) so nothing needs teardown when the layer is
 // removed — same reasoning as the ADS-B sweep animation.
 import {
-  CARTO_ATTRIB,
+  BASEMAP_ATTRIB,
   MapView,
   basemapImgs,
   layerImgs,
@@ -134,7 +134,7 @@ register({
     el.innerHTML = `<div class="radar-stage">
       <div class="radar-viewport"></div>
       <div class="radar-loc">${escapeHtml(data.location_name ?? "")}</div>
-      <div class="radar-attrib">${CARTO_ATTRIB} &middot; RainViewer</div>
+      <div class="radar-attrib">${BASEMAP_ATTRIB} &middot; RainViewer</div>
     </div>`;
     // The layer is detached until crossfade() appends it — measure after attach.
     const stage = el.querySelector<HTMLElement>(".radar-stage")!;
