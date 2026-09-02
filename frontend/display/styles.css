@@ -7674,9 +7674,14 @@ body {
   inset: 0;
 }
 
+/* Sized to the viewport in pre-scale px but the map container is scaled
+   down (to 0.707) for fractional zooms, so on-screen points can sit outside
+   the SVG's own box — the UA default overflow:hidden clipped storms that
+   fitView placed near the edge. The viewport still clips the map. */
 .hurr-overlay {
   position: absolute;
   inset: 0;
+  overflow: visible;
 }
 
 .hurr-cone {
