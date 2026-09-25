@@ -57,6 +57,8 @@ async def _serve(websocket: WebSocket) -> None:
         finally:
             send_task.cancel()
             await asyncio.gather(send_task, return_exceptions=True)
+            # Camera video sessions this client opened end with it.
+            await app.state.webrtc.close_owner(queue)
     except WebSocketDisconnect:
         pass
     finally:
@@ -76,6 +78,15 @@ async def _handle(app, queue: asyncio.Queue, message: dict) -> None:
         state = message.get("state") or {}
         app.state.bus.display_state = state
         await app.state.bus.broadcast({"type": "display_state", "state": state})
+    elif kind == "webrtc_offer":
+        await app.state.webrtc.offer(
+            queue, message.get("request"), message.get("camera"), message.get("offer"),
+            queue.put_nowait, wall=message.get("wall") is True,
+        )
+    elif kind == "webrtc_candidate":
+        await app.state.webrtc.candidate(queue, message.get("request"), message.get("candidate"))
+    elif kind == "webrtc_close":
+        await app.state.webrtc.close(queue, message.get("request"))
     elif kind == "ha_action":
         try:
             await app.state.ha.call_service(

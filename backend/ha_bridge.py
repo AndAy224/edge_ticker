@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Callable
+from typing import Awaitable, Callable
 
 import websockets
 
@@ -80,6 +80,9 @@ class HABridge:
         self._ws = None
         self._next_id = 0
         self._pending: dict[int, asyncio.Future] = {}
+        # Subscription id -> callback for its events (e.g. a WebRTC offer's
+        # answer and ICE candidates). Unclaimed events are state_changed.
+        self._subscriptions: dict[int, Callable[[dict], Awaitable[None]]] = {}
 
     # -- public surface -----------------------------------------------------
 
@@ -206,6 +209,13 @@ class HABridge:
                     if not fut.done():
                         fut.set_exception(RuntimeError("HA connection closed"))
                 self._pending.clear()
+                # Subscriptions die with the connection; tell their owners.
+                subscriptions, self._subscriptions = self._subscriptions, {}
+                for callback in subscriptions.values():
+                    try:
+                        await callback({"type": "error", "message": "HA connection closed"})
+                    except Exception:
+                        pass
 
     async def _reader(self, ws) -> None:
         async for raw in ws:
@@ -219,18 +229,61 @@ class HABridge:
                     else:
                         fut.set_exception(RuntimeError(str(message.get("error"))))
             elif kind == "event":
-                await self._on_event(message.get("event", {}))
+                callback = self._subscriptions.get(message.get("id"))
+                if callback is not None:
+                    # Awaited in order: a WebRTC answer must reach the display
+                    # before the ICE candidates that follow it.
+                    try:
+                        await callback(message.get("event") or {})
+                    except Exception as exc:
+                        log.warning("HA subscription callback: %s", exc)
+                else:
+                    await self._on_event(message.get("event", {}))
 
-    async def _command(self, payload: dict):
+    async def _command(self, payload: dict, cmd_id: int | None = None):
         ws = self._ws
         if ws is None:
             raise RuntimeError("Home Assistant is not connected")
-        self._next_id += 1
-        cmd_id = self._next_id
+        if cmd_id is None:
+            self._next_id += 1
+            cmd_id = self._next_id
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._pending[cmd_id] = fut
-        await ws.send(json.dumps({**payload, "id": cmd_id}))
-        return await asyncio.wait_for(fut, timeout=10)
+        try:
+            await ws.send(json.dumps({**payload, "id": cmd_id}))
+            return await asyncio.wait_for(fut, timeout=10)
+        finally:
+            self._pending.pop(cmd_id, None)  # a timed-out command must not linger
+
+    async def subscribe(self, payload: dict, on_event: Callable[[dict], Awaitable[None]]) -> int:
+        """Send a subscribing command; its events go to `on_event` in order
+        until unsubscribe(). Returns the subscription id. The callback is
+        registered before the command is sent — HA may emit the first event
+        right behind the result."""
+        if self._ws is None:
+            raise RuntimeError("Home Assistant is not connected")
+        self._next_id += 1
+        sub_id = self._next_id
+        self._subscriptions[sub_id] = on_event
+        try:
+            await self._command(payload, cmd_id=sub_id)
+        except Exception:
+            self._subscriptions.pop(sub_id, None)
+            raise
+        return sub_id
+
+    async def unsubscribe(self, sub_id: int) -> None:
+        """End a subscription (for a WebRTC offer, HA closes the session)."""
+        if self._subscriptions.pop(sub_id, None) is None or self._ws is None:
+            return
+        try:
+            await self._command({"type": "unsubscribe_events", "subscription": sub_id})
+        except Exception as exc:
+            log.info("HA unsubscribe %s: %s", sub_id, exc)
+
+    async def send_command(self, payload: dict):
+        """A one-shot command (public wrapper for relays such as WebRTC)."""
+        return await self._command(payload)
 
     # -- events ---------------------------------------------------------------
 

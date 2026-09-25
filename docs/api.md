@@ -113,8 +113,9 @@ by the display.
 ```
 
 The proxyable set is derived from live config (`ha.cameras` plus any
-`ha.alerts[].cameras`) — nothing else can be fetched. `active_streams` is the
-teardown assertion: it must return to `0` shortly after a takeover ends.
+`ha.alerts[].cameras`) — nothing else can be fetched. `active_streams` (MJPEG)
+and `active_webrtc` (relayed WebRTC sessions) are the teardown assertions: both
+must return to `0` shortly after a takeover ends.
 
 ### `GET /api/cameras/{id}/stream`
 
@@ -172,6 +173,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 | `fantasy_event` | `event` | A fantasy scoring play → celebration overlay |
 | `weather_alert` | `alert` | Severe weather → full-screen takeover |
 | `camera_alert` | `event` | Camera takeover (see below) |
+| `webrtc` | `request`, `event` | A relayed HA WebRTC event for one of this client's sessions: `session`, `answer`, `candidate` or `error` (see below) |
 | `pong` | — | Heartbeat reply |
 | `error` | `error` | A client-initiated action failed |
 
@@ -183,6 +185,9 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 | `control` | `action` | Gesture-originated control |
 | `ha_action` | `domain`, `service`, `entity_id`, `data` | Tile tap service call |
 | `display_state` | `state` (`module`, `pinned`, `blanked`, `overlay`, `takeover`) | Display state report |
+| `webrtc_offer` | `request`, `camera` (opaque proxy id), `offer` (SDP, complete), `wall` | Start a camera video session |
+| `webrtc_candidate` | `request`, `candidate` | A local ICE candidate (unused by the display, which sends complete offers) |
+| `webrtc_close` | `request` | End a session (sessions also end when the socket closes) |
 
 ### Deploys: `build`
 
@@ -247,3 +252,13 @@ bridge is the first consumer, firing on the **entry** edge of an alert that has
 
 Like `sport_event` and `weather_alert`, this is **not replayed** in the connect
 snapshot: a display that reconnects a second later misses it.
+
+**Tile video.** Each tile shows one `/snapshot` still, then WebRTC from HA's
+built-in go2rtc: the display sends `webrtc_offer` over its WebSocket, the
+backend (`backend/webrtc.py`) relays it as HA's `camera/webrtc/offer`
+subscription and streams the answer/candidates back as `webrtc` messages; media
+flows HA → Chromium directly. Only allowlisted cameras resolve; with `wall:
+true` (several tiles) a camera's `…_medium_resolution_channel` is used when HA
+has it enabled. A tile with no WebRTC frame within 12 s falls back to the MJPEG
+`/stream` (for UniFi Protect, HA builds that from a snapshot every 0.5 s — 2
+fps), then snapshot polling.

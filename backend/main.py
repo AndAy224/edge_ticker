@@ -50,6 +50,7 @@ from .manager import CollectorManager  # noqa: E402
 from .origin import UNSAFE_METHODS, cross_site  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
+from .webrtc import WebRTCRelay  # noqa: E402
 from . import ws as ws_channels  # noqa: E402
 from .ws import router as ws_router  # noqa: E402
 
@@ -96,6 +97,7 @@ async def lifespan(app: FastAPI):
         scheduler=scheduler,
     )
     bridge.camera_alerts = camera_alerts
+    webrtc = WebRTCRelay(bridge, lambda: app.state.config)
 
     app.state.bus = bus
     app.state.config = config
@@ -103,6 +105,7 @@ async def lifespan(app: FastAPI):
     app.state.ha = bridge
     app.state.scheduler = scheduler
     app.state.camera_alerts = camera_alerts
+    app.state.webrtc = webrtc
 
     await manager.apply(bus, config)
     background = [] if FIXTURE else [

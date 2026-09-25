@@ -74,6 +74,9 @@ async def cameras_index(request: Request):
         ],
         "active_streams": _active_streams,
         "max_streams": MAX_CONCURRENT_STREAMS,
+        # WebRTC sessions being relayed (backend/webrtc.py); the same teardown
+        # assertion applies — back to 0 after a takeover.
+        "active_webrtc": request.app.state.webrtc.active,
         "ha": getattr(request.app.state.ha, "status", "unknown"),
         "test_source": TEST_SOURCE,
     }

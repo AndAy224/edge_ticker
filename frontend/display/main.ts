@@ -127,9 +127,12 @@ const cameraAlert = new CameraAlertOverlay(
     suppressDim("camera", open);
     reportDisplayState();
   },
+  (message) => sendWs(message), // WebRTC signalling, relayed to HA by the backend
 );
 // Debug/test hook: fire an arbitrary camera takeover.
 (window as any).__cameraalert = (event: any) => cameraAlert.show(event);
+// Debug/test hook: WebRTC session state of the takeover's tiles.
+(window as any).__camrtc = () => cameraAlert.rtcState();
 
 /** Any full-screen takeover is up. Rotation, auto-feature and gestures all
  *  defer to this — previously only the HA swipe-up overlay did, so the stage
@@ -323,6 +326,9 @@ function handleMessage(msg: any): void {
       break;
     case "weather_alert":
       weatherAlert.show(msg.alert);
+      break;
+    case "webrtc":
+      cameraAlert.onWebrtc(msg);
       break;
     case "camera_alert":
       // A takeover wins over a celebration (z-index 92 vs 80), so end that one

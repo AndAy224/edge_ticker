@@ -8813,6 +8813,18 @@ html[data-idle] *::after {
   object-fit: cover;
 }
 
+/* the WebRTC video sits over the <img> that the MJPEG/snapshot fallbacks use,
+   transparent until its first frame renders (camera-alert.ts reveal) */
+.calert-video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.calert-video.calert-video-live {
+  opacity: 1;
+}
+
 .calert-tile-label {
   position: absolute;
   left: 18px;
