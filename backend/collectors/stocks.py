@@ -215,6 +215,10 @@ class MarketsCollector(Collector):
             self._warmed_up = False
         return self._client
 
+    def _finnhub_auth(self) -> dict[str, str]:
+        # Header, not a `token` query param: request URLs end up in logs.
+        return {"X-Finnhub-Token": self.finnhub_key}
+
     def _quote_fn(self, symbol: str):
         if not self.finnhub_key:
             return self._yahoo_quote  # Yahoo handles crypto natively
@@ -263,7 +267,8 @@ class MarketsCollector(Collector):
             today = str(date.today())
             response = await client.get(
                 EARNINGS_FETCH_URL,
-                params={"from": today, "to": today, "token": self.finnhub_key},
+                params={"from": today, "to": today},
+                headers=self._finnhub_auth(),
             )
             response.raise_for_status()
             calendar = response.json().get("earningsCalendar") or []
@@ -342,7 +347,7 @@ class MarketsCollector(Collector):
 
     async def _finnhub_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:
         response = await client.get(
-            FINNHUB_QUOTE_URL, params={"symbol": symbol, "token": self.finnhub_key}
+            FINNHUB_QUOTE_URL, params={"symbol": symbol}, headers=self._finnhub_auth()
         )
         response.raise_for_status()
         data = response.json()

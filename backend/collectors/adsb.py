@@ -61,6 +61,7 @@ def compass_octant(deg: float) -> str:
 
 class AdsbCollector(Collector):
     name = "adsb"
+    uses_location = True
     enabled_by_default = False
     # Hosted providers need no env; the `local` provider reads ADSB_URL itself.
     required_env = ()
@@ -144,7 +145,9 @@ class AdsbCollector(Collector):
                     "operator": plane.get("ownOp"),
                 }
             )
-        aircraft.sort(key=lambda a: a["distance_km"])
+        # Airborne first, then nearest: within 40 km of an airport the nearest
+        # contacts are otherwise a list of parked and taxiing jets.
+        aircraft.sort(key=lambda a: (a["on_ground"], a["distance_km"]))
 
         tape = [
             TapeItem(
@@ -152,6 +155,7 @@ class AdsbCollector(Collector):
                 f"{a['distance_km']:.0f} km {a['direction']}"
             )
             for a in aircraft[:3]
+            if not a["on_ground"]
         ]
         total = raw.get("total")
         if total is None:
@@ -161,6 +165,7 @@ class AdsbCollector(Collector):
             stage={
                 "aircraft": aircraft[:30],
                 "count_in_radius": len(aircraft),
+                "count_airborne": sum(1 for a in aircraft if not a["on_ground"]),
                 "count_total": total,
                 "radius_km": self.radius_km,
                 # receiver position so the display can project a basemap onto the scope

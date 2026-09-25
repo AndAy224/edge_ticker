@@ -42,7 +42,9 @@ export async function saveConfig(): Promise<void> {
     saveStatus.value = "applied ✓";
     setTimeout(() => (saveStatus.value = ""), 3000);
   } else {
-    saveStatus.value = `save failed (${response.status})`;
+    // Validation failures name the offending keys; nothing was saved.
+    const reply = await response.json().catch(() => null);
+    saveStatus.value = `not saved: ${reply?.error ?? `HTTP ${response.status}`}`;
   }
 }
 
@@ -98,6 +100,11 @@ export function connectWs(): void {
           [msg.payload.module]: msg.payload,
         };
         break;
+      case "module_removed": {
+        const { [msg.module]: _gone, ...rest } = livePayloads.value;
+        livePayloads.value = rest;
+        break;
+      }
       case "display_state":
         displayState.value = msg.state ?? {};
         break;

@@ -58,6 +58,7 @@ def aqi_band(value: float | int | None) -> tuple[str, str]:
 
 class AirQualityCollector(Collector):
     name = "airquality"
+    uses_location = True
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

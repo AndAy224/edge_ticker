@@ -2135,25 +2135,34 @@ body {
   background: var(--line);
 }
 
+/* Rows that don't fit whole wrap into a second column off to the right, where
+   overflow hides them — so the table shows as many complete rows as the card
+   has room for, never a half row. A fixed nth-child cap went stale the moment
+   the PSU block took some of that room (the fifth row sat half under the
+   card's bottom edge). */
 .pve-guests {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 6px;
+  column-gap: 40px;
   margin-top: 8px;
   border-top: 1px solid var(--line);
   padding-top: 10px;
 }
 
-/* the collector sends up to 10; the head is child 1, so this leaves 5 rows —
-   what the card actually holds beside the node bars */
+/* the collector sends up to 10; the head is child 1 — past 5 rows the table
+   stops reading as "what's busy" */
 .pve-guest:nth-child(n + 7) {
   display: none;
 }
 
 .pve-guest {
+  width: 100%;
   display: grid;
   grid-template-columns: 70px 1fr 190px 130px;
   align-items: center;

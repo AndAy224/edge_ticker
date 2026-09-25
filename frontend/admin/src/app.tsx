@@ -31,7 +31,11 @@ export function App() {
         <span class="health-summary">
           {h
             ? `HA: ${h.ha} · ${h.ws_clients} client(s)` +
-              (h.collectors?.some((c: any) => c.stale) ? " · ⚠ stale data" : "")
+              ((h.problems ?? []).length
+                ? ` · ⚠ ${h.problems.length} problem(s) — see System`
+                : h.collectors?.some((c: any) => c.stale)
+                  ? " · ⚠ stale data"
+                  : "")
             : "backend unreachable"}
         </span>
         <div class="save-bar">

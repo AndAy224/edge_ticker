@@ -25,6 +25,9 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+# httpx logs every request URL at INFO: ~1k journal lines an hour that bury the
+# real warnings, and any credential carried in a query string along with them.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("ticker")
 
 from fastapi import FastAPI, Request  # noqa: E402
@@ -41,8 +44,9 @@ from .api.ha import router as ha_router  # noqa: E402
 from .api.markets import router as markets_router  # noqa: E402
 from .api.sports import router as sports_router  # noqa: E402
 from .camera_alert import CameraAlertHub  # noqa: E402
-from .collectors import discover_collectors  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
+from .manager import CollectorManager  # noqa: E402
+from .origin import UNSAFE_METHODS, cross_site  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
 from . import ws as ws_channels  # noqa: E402
@@ -50,31 +54,24 @@ from .ws import router as ws_router  # noqa: E402
 
 DIST = ROOT / "frontend" / "dist"
 
+# Fixture mode, for display work and layout audits: serve module payloads
+# recorded in a snapshot file (the `modules` map of a WS snapshot) instead of
+# polling upstream. Runs no collectors — dev and prod share Launch Library's
+# per-IP budget and Finnhub's one-socket-per-key — no night scheduler (it drives
+# the real panel's brightness over DDC) and no HA bridge.
+FIXTURE = os.environ.get("TICKER_FIXTURE", "").strip()
 
-class CollectorManager:
-    """Owns collector tasks so a config change can restart them cleanly."""
 
-    def __init__(self) -> None:
-        self.collectors: list = []
-        self._tasks: list[asyncio.Task] = []
+def _load_fixture(bus: Bus, path: str) -> None:
+    import json
 
-    async def start(self, bus: Bus, config: dict) -> None:
-        self.collectors = discover_collectors(config)
-        self._tasks = [
-            asyncio.create_task(c.start(bus), name=f"collector:{c.name}")
-            for c in self.collectors
-        ]
-        log.info("collectors running: %s", [c.name for c in self.collectors])
+    from .state import ModulePayload
 
-    async def stop(self) -> None:
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-        self._tasks = []
-
-    async def restart(self, bus: Bus, config: dict) -> None:
-        await self.stop()
-        await self.start(bus, config)
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    for name, payload in (data.get("modules") or data).items():
+        bus.payloads[name] = ModulePayload.model_validate(payload)
+    log.info("fixture mode: %d module payloads from %s", len(bus.payloads), path)
 
 
 @asynccontextmanager
@@ -82,7 +79,9 @@ async def lifespan(app: FastAPI):
     await db.init()
     config = await db.get_config()
     bus = Bus()
-    manager = CollectorManager()
+    manager = CollectorManager(enabled=not FIXTURE)
+    if FIXTURE:
+        _load_fixture(bus, FIXTURE)
     bridge = HABridge(bus, lambda: app.state.config)
     scheduler = NightScheduler(bus, lambda: app.state.config)
     camera_alerts = CameraAlertHub(
@@ -103,8 +102,8 @@ async def lifespan(app: FastAPI):
     app.state.scheduler = scheduler
     app.state.camera_alerts = camera_alerts
 
-    await manager.start(bus, config)
-    background = [
+    await manager.apply(bus, config)
+    background = [] if FIXTURE else [
         asyncio.create_task(bridge.run(), name="ha-bridge"),
         asyncio.create_task(scheduler.run(), name="night-scheduler"),
     ]
@@ -117,6 +116,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="edge-ticker", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def refuse_cross_site_writes(request: Request, call_next):
+    if request.method in UNSAFE_METHODS and cross_site(
+        request.headers.get("origin"), request.headers.get("host")
+    ):
+        return JSONResponse({"error": "cross-site request refused"}, status_code=403)
+    return await call_next(request)
+
 app.include_router(adsb_router, prefix="/api")
 app.include_router(cameras_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
@@ -133,13 +142,40 @@ app.include_router(ws_router)
 def health(request: Request) -> dict:
     bus: Bus = request.app.state.bus
     bridge: HABridge = request.app.state.ha
+    collectors = request.app.state.manager.status()
+    scheduler: NightScheduler = request.app.state.scheduler
     return {
+        # `ok` means the backend itself is alive — an upstream outage is not a
+        # reason for the watchdog to restart it. What a restart *does* fix is
+        # listed in `stuck`; everything else worth a look is in `problems`.
         "ok": True,
-        "collectors": [c.status() for c in request.app.state.manager.collectors],
+        "stuck": [c["name"] for c in collectors if c.get("stuck")],
+        "problems": _problems(collectors),
+        "collectors": collectors,
         "ha": bridge.status,
+        "night": scheduler.state() | {"method_used": scheduler.method_used},
         "ws_clients": bus.subscriber_count,
         "display_clients": ws_channels.display_clients,
+        "dropped_messages": bus.dropped,
+        "fixture": bool(FIXTURE),
     }
+
+
+def _problems(collectors: list[dict]) -> list[str]:
+    out = []
+    for c in collectors:
+        name = c["name"]
+        if c.get("state") == "error":
+            out.append(f"{name}: config rejected — {c.get('detail')}")
+        elif c.get("state") == "dead":
+            out.append(f"{name}: collector loop has exited")
+        elif c.get("stuck"):
+            out.append(f"{name}: no poll attempt completing")
+        elif c.get("overdue"):
+            out.append(f"{name}: no fresh data since {c.get('last_success') or 'startup'}")
+        elif c.get("degraded"):
+            out.append(f"{name}: {c['degraded']}")
+    return out
 
 
 @app.get("/", include_in_schema=False)

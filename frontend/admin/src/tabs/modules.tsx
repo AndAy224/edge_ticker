@@ -29,9 +29,11 @@ export function ModulesTab() {
             type="number"
             min={5}
             value={cfg.rotation?.interval_seconds ?? 25}
-            onInput={(e) =>
-              patch((c) => (c.rotation.interval_seconds = Number(e.currentTarget.value)))
-            }
+            onInput={(e) => {
+              const n = Number(e.currentTarget.value);
+              if (e.currentTarget.value.trim() === "" || !Number.isFinite(n)) return;
+              patch((c) => (c.rotation.interval_seconds = n));
+            }}
           />
         </label>
         <div class="order-list">

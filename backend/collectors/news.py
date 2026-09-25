@@ -4,6 +4,12 @@ Feeds are merged round-robin (newest of each feed, then second-newest, …) so
 low-frequency sources aren't starved off the screen by high-frequency ones.
 Polls use ETag/Last-Modified conditional GETs; a 304 reuses the cached items.
 Per-feed fetch status is exposed through status() for the admin Sources tab.
+
+Feeds are downloaded with httpx and only *parsed* by feedparser. Handing
+feedparser the URL meant urllib with no timeout, in a worker thread: one
+stalled feed hung the module for good and parked a thread in the default
+executor — the same pool asyncio uses for every DNS lookup — on each poll.
+It also meant a configured "feed" could be a local file path.
 """
 from __future__ import annotations
 
@@ -14,6 +20,7 @@ import re
 from datetime import datetime, timezone
 
 import feedparser
+import httpx
 
 from ..state import ModulePayload, TapeItem
 from .base import Collector
@@ -27,6 +34,11 @@ DEFAULT_FEEDS = [
 
 SUMMARY_MAX_CHARS = 360
 BREAKING_MINUTES = 15
+FEED_TIMEOUT_SECONDS = 15.0
+FEED_HEADERS = {
+    "User-Agent": feedparser.USER_AGENT,
+    "Accept": feedparser.http.ACCEPT_HEADER,
+}
 
 
 def _teaser(raw: str) -> str:
@@ -52,10 +64,13 @@ class NewsCollector(Collector):
         self.feed_status: dict[str, dict] = {}
 
     async def fetch(self) -> list[dict]:
-        results = await asyncio.gather(
-            *(asyncio.to_thread(self._parse_feed, feed) for feed in self.feeds),
-            return_exceptions=True,
-        )
+        async with httpx.AsyncClient(
+            timeout=FEED_TIMEOUT_SECONDS, follow_redirects=True, headers=FEED_HEADERS
+        ) as client:
+            results = await asyncio.gather(
+                *(self._fetch_feed(client, feed) for feed in self.feeds),
+                return_exceptions=True,
+            )
         per_feed: list[list[dict]] = []
         failures = 0
         now = datetime.now(timezone.utc).isoformat()
@@ -76,6 +91,7 @@ class NewsCollector(Collector):
         self.feed_status = {u: s for u, s in self.feed_status.items() if u in urls}
         if failures == len(self.feeds) and self.feeds:
             raise RuntimeError("all feeds failed")
+        self.degraded = f"{failures}/{len(self.feeds)} feeds failing" if failures else None
 
         # Round-robin merge: newest of each feed, then second-newest, … so
         # every source gets visible slots regardless of publish frequency.
@@ -90,13 +106,37 @@ class NewsCollector(Collector):
                     merged.append(items[rank])
         return merged[: self.keep]
 
-    def _parse_feed(self, feed: dict) -> tuple[list[dict], bool]:
-        """Returns (items, served_from_cache). Runs in a thread."""
+    async def _fetch_feed(
+        self, client: httpx.AsyncClient, feed: dict
+    ) -> tuple[list[dict], bool]:
+        """Returns (items, served_from_cache)."""
         url = feed["url"]
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"not an http(s) feed URL: {url}")
         etag, modified = self._http_cache.get(url, (None, None))
-        parsed = feedparser.parse(url, etag=etag, modified=modified)
-        if getattr(parsed, "status", None) == 304:
-            return self._feed_items.get(url, []), True
+        headers = {}
+        if etag:
+            headers["If-None-Match"] = etag
+        if modified:
+            headers["If-Modified-Since"] = modified
+        response = await client.get(url, headers=headers)
+        if response.status_code == 304 and url in self._feed_items:
+            return self._feed_items[url], True
+        response.raise_for_status()
+        # Parsing is CPU-only now (no network), so a thread can't hang on it.
+        items = await asyncio.to_thread(
+            self._parse_feed, feed, response.content, dict(response.headers)
+        )
+        self._http_cache[url] = (
+            response.headers.get("etag"),
+            response.headers.get("last-modified"),
+        )
+        self._feed_items[url] = items
+        return items, False
+
+    def _parse_feed(self, feed: dict, content: bytes, headers: dict) -> list[dict]:
+        url = feed["url"]
+        parsed = feedparser.parse(content, response_headers=headers)
         if parsed.bozo and not parsed.entries:
             raise RuntimeError(f"unreadable feed: {url}")
         items = []
@@ -122,12 +162,7 @@ class NewsCollector(Collector):
                     ),
                 }
             )
-        self._http_cache[url] = (
-            getattr(parsed, "etag", None),
-            getattr(parsed, "modified", None),
-        )
-        self._feed_items[url] = items
-        return items, False
+        return items
 
     def status(self) -> dict:
         return super().status() | {"feeds": list(self.feed_status.values())}

@@ -6,6 +6,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from .origin import cross_site
 from .sysinfo import lan_ip
 
 log = logging.getLogger(__name__)
@@ -13,6 +14,12 @@ router = APIRouter()
 
 
 async def _serve(websocket: WebSocket) -> None:
+    if cross_site(websocket.headers.get("origin"), websocket.headers.get("host")):
+        # Any page a LAN user visits could otherwise read the stream and send
+        # ha_action / control messages.
+        log.warning("refused cross-site websocket from %s", websocket.headers.get("origin"))
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     app = websocket.app
     bus = app.state.bus
@@ -26,6 +33,10 @@ async def _serve(websocket: WebSocket) -> None:
                 "config": app.state.config,
                 "ha": {"status": bridge.status, "states": bridge.mapped_states()},
                 "display_state": bus.display_state,
+                # Current night state, so a display that (re)connects inside the
+                # dim window — the 04:00 nightly reload lands in it — dims
+                # without waiting for the next dim_at edge.
+                "night": app.state.scheduler.state(),
                 # Host facts, resolved per connect — not bus state.
                 "system": {"ip": lan_ip()},
             }

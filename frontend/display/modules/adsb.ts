@@ -251,6 +251,17 @@ function enrichListRoutes(el: HTMLElement): void {
   }
 }
 
+function countLine(data: any): string {
+  const within = data?.count_in_radius ?? 0;
+  const airborne = data?.count_airborne;
+  // Older payloads have no airborne count; fall back to the plain total.
+  const head =
+    airborne != null && airborne !== within
+      ? `${airborne} airborne · ${within - airborne} on ground`
+      : `${within}`;
+  return `${head} within ${data?.radius_km ?? "?"} km · ${data?.count_total ?? 0} tracked`;
+}
+
 function listHtml(aircraft: any[], data: any): string {
   const rows = aircraft.length
     ? aircraft
@@ -272,7 +283,7 @@ function listHtml(aircraft: any[], data: any): string {
   return `<div class="adsb-list">
       <div class="adsb-header">
         <span class="adsb-title">${AIRCRAFT_ICON}<span>overhead now</span></span>
-        <span class="adsb-count">${data?.count_in_radius ?? 0} within ${data?.radius_km ?? "?"} km · ${data?.count_total ?? 0} tracked</span>
+        <span class="adsb-count">${countLine(data)}</span>
       </div>
       ${rows}
     </div>`;

@@ -41,18 +41,23 @@ class Bus:
         # kept so late-joining admin clients get it in their snapshot.
         self.display_state: dict = {}
         self._subscribers: set[asyncio.Queue] = set()
+        self._internal: set[asyncio.Queue] = set()  # in-process listeners, not clients
+        self.dropped = 0  # messages dropped for slow subscribers (for /api/health)
 
     @property
     def subscriber_count(self) -> int:
-        return len(self._subscribers)
+        return len(self._subscribers - self._internal)
 
-    def subscribe(self) -> asyncio.Queue:
+    def subscribe(self, internal: bool = False) -> asyncio.Queue:
         queue: asyncio.Queue = asyncio.Queue(maxsize=512)
         self._subscribers.add(queue)
+        if internal:
+            self._internal.add(queue)
         return queue
 
     def unsubscribe(self, queue: asyncio.Queue) -> None:
         self._subscribers.discard(queue)
+        self._internal.discard(queue)
 
     async def publish(self, payload: ModulePayload) -> None:
         self.payloads[payload.module] = payload
@@ -63,7 +68,13 @@ class Bus:
             try:
                 queue.put_nowait(message)
             except asyncio.QueueFull:
+                self.dropped += 1
                 log.warning("dropping %s message for slow client", message.get("type"))
+
+    async def remove(self, module: str) -> None:
+        """Forget a module that stopped running and tell clients to drop it."""
+        if self.payloads.pop(module, None) is not None:
+            await self.broadcast({"type": "module_removed", "module": module})
 
     def snapshot(self) -> dict[str, dict]:
         return {name: p.model_dump(mode="json") for name, p in self.payloads.items()}

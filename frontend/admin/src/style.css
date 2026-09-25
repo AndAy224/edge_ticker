@@ -64,6 +64,7 @@ header h1 {
 .save-status {
   color: var(--dim);
   font-size: 13px;
+  max-width: 60ch;
 }
 
 nav {
@@ -334,6 +335,17 @@ td {
 
 tr.stale td {
   color: var(--error);
+}
+
+tr.idle td {
+  color: var(--dim);
+}
+
+.problems {
+  color: var(--error);
+  font-size: 13px;
+  margin: 0 0 12px;
+  padding-left: 18px;
 }
 
 code {

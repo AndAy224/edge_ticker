@@ -99,6 +99,7 @@ def moon_phase(now: datetime) -> tuple[str, int]:
 
 class AstroCollector(Collector):
     name = "astro"
+    uses_location = True
     enabled_by_default = False
 
     def __init__(self, config: dict) -> None:

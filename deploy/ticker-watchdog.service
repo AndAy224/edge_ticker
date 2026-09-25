@@ -3,4 +3,7 @@ Description=Edge ticker health watchdog
 
 [Service]
 Type=oneshot
-ExecStart=/opt/edge-ticker/deploy/watchdog.sh
+# Through bash, not the script directly: a commit from a checkout with
+# core.fileMode=false once dropped the exec bit and the watchdog failed
+# silently with 203/EXEC every minute for three months.
+ExecStart=/bin/bash /opt/edge-ticker/deploy/watchdog.sh

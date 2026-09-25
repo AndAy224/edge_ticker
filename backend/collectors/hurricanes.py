@@ -152,6 +152,7 @@ def parse_cone_kmz(content: bytes) -> list[list[float]]:
 
 class HurricanesCollector(Collector):
     name = "hurricanes"
+    uses_location = True
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

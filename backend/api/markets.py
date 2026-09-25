@@ -54,18 +54,17 @@ def _shape_news(items: list[dict]) -> list[dict]:
     return news
 
 
-async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:
+async def _equity_detail(client: httpx.AsyncClient, symbol: str) -> dict:
     today = date.today()
     profile_r, metric_r, news_r, earnings_r, rec_r = await asyncio.gather(
-        client.get(f"{FINNHUB}/stock/profile2", params={"symbol": symbol, "token": key}),
-        client.get(f"{FINNHUB}/stock/metric", params={"symbol": symbol, "metric": "all", "token": key}),
+        client.get(f"{FINNHUB}/stock/profile2", params={"symbol": symbol}),
+        client.get(f"{FINNHUB}/stock/metric", params={"symbol": symbol, "metric": "all"}),
         client.get(
             f"{FINNHUB}/company-news",
             params={
                 "symbol": symbol,
                 "from": str(today - timedelta(days=7)),
                 "to": str(today),
-                "token": key,
             },
         ),
         client.get(
@@ -74,11 +73,10 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
                 "symbol": symbol,
                 "from": str(today),
                 "to": str(today + timedelta(days=90)),
-                "token": key,
             },
         ),
         client.get(
-            f"{FINNHUB}/stock/recommendation", params={"symbol": symbol, "token": key}
+            f"{FINNHUB}/stock/recommendation", params={"symbol": symbol}
         ),
         return_exceptions=True,
     )
@@ -159,13 +157,13 @@ async def _equity_detail(client: httpx.AsyncClient, symbol: str, key: str) -> di
     }
 
 
-async def _crypto_detail(client: httpx.AsyncClient, symbol: str, key: str) -> dict:
+async def _crypto_detail(client: httpx.AsyncClient, symbol: str) -> dict:
     base = symbol[:-4]  # strip -USD
     name = CRYPTO_NAMES.get(base, base.lower())
     detail: dict = {"profile": {"name": name.title()}, "metrics": None, "news": []}
     try:
         response = await client.get(
-            f"{FINNHUB}/news", params={"category": "crypto", "token": key}
+            f"{FINNHUB}/news", params={"category": "crypto"}
         )
         if response.status_code == 200 and isinstance(response.json(), list):
             matched = [
@@ -190,11 +188,12 @@ async def market_detail(symbol: str):
     key = os.environ.get("FINNHUB_KEY", "").strip()
     if not key:
         return {"profile": None, "metrics": None, "news": []}
-    async with httpx.AsyncClient(timeout=15) as client:
+    # Key in a header, not a `token` query param: request URLs end up in logs.
+    async with httpx.AsyncClient(timeout=15, headers={"X-Finnhub-Token": key}) as client:
         if symbol.endswith("-USD"):
-            detail = await _crypto_detail(client, symbol, key)
+            detail = await _crypto_detail(client, symbol)
         else:
-            detail = await _equity_detail(client, symbol, key)
+            detail = await _equity_detail(client, symbol)
     if len(_cache) >= CACHE_MAX_ENTRIES:
         _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
     _cache[symbol] = (now, detail)

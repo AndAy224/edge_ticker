@@ -72,6 +72,7 @@ def _short_time(iso: str | None) -> str | None:
 
 class WeatherAlertsCollector(Collector):
     name = "weather_alerts"
+    uses_location = True
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

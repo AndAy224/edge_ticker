@@ -71,11 +71,13 @@ function NumberField({
   value,
   onChange,
   step = 1,
+  min,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
   step?: number;
+  min?: number;
 }) {
   return (
     <label class="field">
@@ -83,8 +85,18 @@ function NumberField({
       <input
         type="number"
         step={step}
+        min={min}
         value={value}
-        onInput={(e) => onChange(Number(e.currentTarget.value))}
+        onInput={(e) => {
+          // A cleared field is "still typing", not 0: Number("") is 0, and a
+          // saved poll_seconds of 0 once spun a collector flat out. The
+          // backend rejects values under the floor; this keeps them out of
+          // the draft in the first place.
+          const raw = e.currentTarget.value;
+          const n = Number(raw);
+          if (raw.trim() === "" || !Number.isFinite(n)) return;
+          onChange(n);
+        }}
       />
     </label>
   );
@@ -139,6 +151,7 @@ export function SourcesTab() {
         />
         <NumberField
           label="Poll interval (s)"
+          min={5}
           value={markets.poll_seconds ?? 60}
           onChange={(v) => patch((c) => (c.modules.markets.poll_seconds = v))}
         />
@@ -322,11 +335,13 @@ export function SourcesTab() {
         </label>
         <NumberField
           label="Live poll interval (s)"
+          min={5}
           value={fantasy.poll_seconds_live ?? 30}
           onChange={(v) => patchFantasy("poll_seconds_live", v)}
         />
         <NumberField
           label="Idle poll interval (s)"
+          min={5}
           value={fantasy.poll_seconds_idle ?? 1800}
           onChange={(v) => patchFantasy("poll_seconds_idle", v)}
         />

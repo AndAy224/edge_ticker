@@ -23,6 +23,7 @@ MAX_PAST_FRAMES = 10
 
 class WeatherRadarCollector(Collector):
     name = "weather_radar"
+    uses_location = True
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

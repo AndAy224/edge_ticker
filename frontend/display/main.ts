@@ -41,9 +41,22 @@ const connDot = document.getElementById("conn-dot")!;
 // apart means a `night` message that lands DURING a takeover is recorded and
 // applied on restore, instead of being lost or fighting the overlay.
 let nightOpacity = "0";
-let dimSuppressed = false;
+// One flag per takeover kind: a weather card closing must not re-dim while a
+// camera takeover it queued behind is still up.
+const dimSuppressedBy = new Set<string>();
 function applyDim(): void {
-  dimmer.style.opacity = dimSuppressed ? "0" : nightOpacity;
+  dimmer.style.opacity = dimSuppressedBy.size ? "0" : nightOpacity;
+}
+function suppressDim(kind: string, open: boolean): void {
+  if (open) dimSuppressedBy.add(kind);
+  else dimSuppressedBy.delete(kind);
+  applyDim();
+}
+function applyNight(night: any): void {
+  // Only the software path dims here; with working DDC the panel itself dims.
+  const dim = night?.mode === "dim" && night?.software !== false;
+  nightOpacity = dim ? String(1 - (night.level ?? 10) / 100) : "0";
+  applyDim();
 }
 
 const modules = new Map<string, ModulePayload>();
@@ -97,6 +110,9 @@ const weatherAlert = new WeatherAlertOverlay(
   document.getElementById("weather-alert")!,
   () => blanked,
   () => wake(),
+  // A severe-weather card at 3am must be readable: lift the software dim
+  // (the backend boosts a DDC dim for it too).
+  (open) => suppressDim("weather", open),
 );
 // Debug/test hook: fire an arbitrary severe-weather alert overlay.
 (window as any).__weatheralert = (alert: any) => weatherAlert.show(alert);
@@ -106,8 +122,7 @@ const cameraAlert = new CameraAlertOverlay(
   () => wake(),
   () => weatherAlert.isOpen(), // severe weather is life-safety; it outranks a door
   (open) => {
-    dimSuppressed = open;
-    applyDim();
+    suppressDim("camera", open);
     reportDisplayState();
   },
 );
@@ -168,9 +183,26 @@ setInterval(() => {
     ws.close();
   }
   if (disconnectedSince && Date.now() - disconnectedSince > 600_000) {
-    location.reload();
+    selfHealReload();
   }
 }, 15_000);
+
+/** Reload only once the backend answers: reloading into a dead server leaves
+ *  Chromium on its own error page with no script left to retry, and the panel
+ *  stays there until the watchdog restarts the kiosk. */
+let selfHealing = false;
+async function selfHealReload(): Promise<void> {
+  if (selfHealing) return;
+  selfHealing = true;
+  try {
+    const r = await fetch("/api/health", { cache: "no-store" });
+    if (r.ok) location.reload();
+  } catch {
+    // still down — the next watchdog tick tries again
+  } finally {
+    selfHealing = false;
+  }
+}
 
 function reportDisplayState(): void {
   sendWs({
@@ -200,6 +232,7 @@ function handleMessage(msg: any): void {
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
       setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);
       setLaunchSun((modules.get("weather")?.stage as any)?.sun ?? null);
+      if (msg.night) applyNight(msg.night);
       applyConfig();
       renderWeather();
       // Re-evaluate auto-feature from the snapshot so a mid-game reload
@@ -245,6 +278,15 @@ function handleMessage(msg: any): void {
       }
       break;
     }
+    case "module_removed":
+      // The collector stopped (module disabled): drop its data rather than
+      // leave e.g. an expired warning on the tape until the next reload.
+      modules.delete(msg.module);
+      if (msg.module === "weather_alerts") setWeatherAlerts([]);
+      renderWeather();
+      rebuildTape();
+      renderStage();
+      break;
     case "config":
       config = msg.config ?? {};
       overlay.setMapping(config.ha);
@@ -287,8 +329,7 @@ function handleMessage(msg: any): void {
       break;
     case "night":
       // Software dim fallback when DDC/CI isn't available.
-      nightOpacity = msg.mode === "dim" ? String(1 - (msg.level ?? 10) / 100) : "0";
-      applyDim();
+      applyNight({ ...msg, software: true });
       break;
   }
 }
@@ -308,7 +349,8 @@ const rotation = {
   },
   schedule(): void {
     clearInterval(this.timer);
-    const seconds = config.rotation?.interval_seconds ?? 25;
+    // Floored: a 0 here (a cleared admin field) rotated as fast as setInterval allows.
+    const seconds = Math.max(5, Number(config.rotation?.interval_seconds) || 25);
     this.timer = window.setInterval(() => {
       if (
         !this.pinned &&
@@ -446,9 +488,16 @@ function renderPane(i: number): void {
     const payload = modules.get(id);
     const renderer = getRenderer(id);
     if (!payload || !renderer) {
-      layer.innerHTML = `<div class="empty">Waiting for ${id} data…</div>`;
+      layer.innerHTML = `<div class="empty">Waiting for ${paneLabel(id).toLowerCase()} data…</div>`;
     } else {
-      renderer.renderStage(layer, payload.stage);
+      try {
+        renderer.renderStage(layer, payload.stage);
+      } catch (err) {
+        // Contained per pane: an unexpected payload shape in one module must
+        // not take the other panes, the score chip and the state report with it.
+        console.error(`renderStage(${id}) failed`, err);
+        layer.innerHTML = `<div class="empty">${paneLabel(id)} couldn't be drawn</div>`;
+      }
       if (payload.stale) {
         const dot = document.createElement("span");
         dot.className = "stale-dot";

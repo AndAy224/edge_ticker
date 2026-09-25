@@ -37,6 +37,9 @@ CORE_URL = (
 CELEBRATION_COOLDOWN_SECONDS = 20.0
 SPORT_COOLDOWN_SECONDS = {"basketball": 180.0, "football": 90.0}
 
+# Per-day window fetches in flight at once (per poll, across all leagues).
+WINDOW_CONCURRENCY = 4
+
 FOOTBALL_DELTA_LABELS = {6: "TOUCHDOWN", 3: "FIELD GOAL", 2: "TWO-POINT", 1: "EXTRA POINT"}
 
 
@@ -396,6 +399,9 @@ class SportsCollector(Collector):
         self._side_scores: dict[str, tuple[int, int]] = {}  # game id -> (away, home)
         self._celebrated_at: dict[str, float] = {}
         self._window: list[dict] = []  # cached dated-window games
+        # (league key, day) -> that day's games; settled days are reused
+        self._window_days: dict[tuple[str, date], list[dict]] = {}
+        self.window_status: dict | None = None  # last window refresh, for /api/health
         self._predictor: dict[str, tuple[float, dict | None]] = {}  # event id -> (stamp, prob)
         self._window_at: float = 0.0  # monotonic stamp of the last window fetch
         self._window_day: str = ""  # local date the window was built for
@@ -418,7 +424,7 @@ class SportsCollector(Collector):
         now = datetime.now(timezone.utc).isoformat()
         status: dict[str, dict] = {}
         for league, result in zip(self.leagues, results):
-            key = f"{league.get('sport')}/{league.get('league')}"
+            key = self._league_key(league)
             entry = {
                 "sport": league.get("sport"),
                 "league": league.get("league"),
@@ -435,6 +441,14 @@ class SportsCollector(Collector):
         self.league_status = status
         if failures == len(self.leagues) and self.leagues:
             raise RuntimeError("all league scoreboards failed")
+        window = self.window_status or {}
+        self.degraded = (
+            f"{failures}/{len(self.leagues)} league scoreboards failing"
+            if failures
+            else f"schedule window: {window['failed']}/{window['failed'] + window['fetched']} days failing"
+            if window.get("failed")
+            else None
+        )
         # Celebrations diff the *fast* lane only — the window is up to 30 min
         # stale and would replay old scores as fresh ones.
         await self._maybe_celebrate(games)
@@ -462,7 +476,12 @@ class SportsCollector(Collector):
     async def _refresh_window(self, client: httpx.AsyncClient) -> None:
         """Re-fetch the days_back..days_ahead window when it goes stale or the
         local date rolls. Failures keep the previous window — a missing window
-        costs upcoming games, not the whole module."""
+        costs upcoming games, not the whole module.
+
+        One request per league per *day*: ESPN began rejecting
+        `dates=YYYYMMDD-YYYYMMDD` ranges with a 400 (Sep 2026), while single
+        days still work. A day that ended before yesterday is settled, so it is
+        cached until it scrolls out of the window rather than re-fetched."""
         today = date.today()
         fresh = (
             self._window_at
@@ -471,29 +490,69 @@ class SportsCollector(Collector):
         )
         if fresh:
             return
-        span = "{}-{}".format(
-            (today - timedelta(days=self.days_back)).strftime("%Y%m%d"),
-            (today + timedelta(days=self.days_ahead)).strftime("%Y%m%d"),
-        )
-        params = {"dates": span, "limit": "200"}
-        results = await asyncio.gather(
-            *(self._league(client, league, params) for league in self.leagues),
-            return_exceptions=True,
-        )
-        window: list[dict] = []
-        ok = False
-        for league, result in zip(self.leagues, results):
+        days = [
+            today + timedelta(days=offset)
+            for offset in range(-self.days_back, self.days_ahead + 1)
+        ]
+        settled_before = today - timedelta(days=1)
+        wanted = {
+            (self._league_key(league), day): league
+            for league in self.leagues
+            for day in days
+        }
+        # Anything no longer in the window (date rolled, league removed) goes.
+        for key in list(self._window_days):
+            if key not in wanted:
+                del self._window_days[key]
+        to_fetch = [
+            key
+            for key in wanted
+            if not (key[1] < settled_before and key in self._window_days)
+        ]
+        gate = asyncio.Semaphore(WINDOW_CONCURRENCY)
+
+        async def one(key: tuple[str, date]) -> list[dict]:
+            async with gate:
+                return await self._league(
+                    client, wanted[key], {"dates": key[1].strftime("%Y%m%d")}
+                )
+
+        results = await asyncio.gather(*(one(k) for k in to_fetch), return_exceptions=True)
+        failed = 0
+        last_error = None
+        for key, result in zip(to_fetch, results):
             if isinstance(result, BaseException):
-                log.debug("window %s failed: %s", league.get("league"), result)
-                continue
-            ok = True
-            window.extend(result)
-        if not ok and self.leagues:
-            return  # keep whatever we had; try again next poll
-        self._window = window
+                failed += 1
+                last_error = f"{key[0]} {key[1]}: {type(result).__name__}: {result}"
+                continue  # a cached copy of that day, if any, stays in use
+            self._window_days[key] = result
+        if to_fetch and failed == len(to_fetch):
+            # Loud on purpose: this path failed silently for ten days when
+            # ESPN changed its date syntax, while /health still said ok.
+            log.warning("sports window: all %d day fetches failed (%s)", failed, last_error)
+        elif failed:
+            log.info("sports window: %d/%d day fetches failed (%s)", failed, len(to_fetch), last_error)
+        self.window_status = {
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "days": len(days),
+            "fetched": len(to_fetch) - failed,
+            "failed": failed,
+            "error": last_error,
+        }
+        if to_fetch and failed == len(to_fetch) and not self._window_days:
+            return  # nothing at all yet; retry on the next poll, not in 30 min
+        self._window = [
+            game
+            for key in wanted
+            for game in self._window_days.get(key, [])
+        ]
         self._window_at = time.monotonic()
         self._window_day = today.isoformat()
-        log.debug("sports window %s: %d games", span, len(window))
+        log.debug("sports window: %d games over %d days", len(self._window), len(days))
+
+    @staticmethod
+    def _league_key(league: dict) -> str:
+        return f"{league.get('sport')}/{league.get('league')}"
 
     # Fields the undated scoreboard sometimes omits while the dated window has
     # them (verified: the undated MLB scoreboard returns odds: null, the window
@@ -821,7 +880,10 @@ class SportsCollector(Collector):
         }
 
     def status(self) -> dict:
-        return super().status() | {"leagues": list(self.league_status.values())}
+        return super().status() | {
+            "leagues": list(self.league_status.values()),
+            "window": self.window_status,
+        }
 
     def _pick(self, games: list[dict], limit: int) -> list[dict]:
         """Reserve a seat for each followed team's nearest game, then fill the

@@ -29,6 +29,8 @@ async def action(request: Request):
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+    except PermissionError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=403)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=502)
     return {"ok": True}

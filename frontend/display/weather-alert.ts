@@ -32,6 +32,7 @@ export class WeatherAlertOverlay {
     private el: HTMLElement,
     private isBlanked: () => boolean,
     private wakeDisplay: () => void,
+    private onOpenChange: (open: boolean) => void = () => {},
   ) {
     el.addEventListener("pointerdown", () => this.dismiss());
   }
@@ -58,6 +59,7 @@ export class WeatherAlertOverlay {
 
   private play(alert: any): void {
     this.active = true;
+    this.onOpenChange(true);
     const until = untilTime(alert.ends);
     this.el.classList.remove("hidden");
     this.el.innerHTML = `<div class="wxalert-card">
@@ -82,6 +84,14 @@ export class WeatherAlertOverlay {
     this.el.classList.add("hidden");
     this.el.innerHTML = "";
     const next = this.queue.shift();
-    if (next) this.timer = window.setTimeout(() => this.show(next), 500);
+    // Stay suppressed across the half-second gap to a queued card.
+    if (next) {
+      this.timer = window.setTimeout(() => {
+        this.show(next);
+        if (!this.active) this.onOpenChange(false); // it was suppressed after all
+      }, 500);
+    } else {
+      this.onOpenChange(false);
+    }
   }
 }

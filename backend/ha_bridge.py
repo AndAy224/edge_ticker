@@ -38,6 +38,35 @@ ATTRIBUTE_WHITELIST = {
     "supported_features",
 }
 
+# Services the overlay's tiles may call, per mapped control group (alert
+# entities are mapped for their state only, never for control).
+CONTROL_SERVICES: dict[str, dict[str, set[str]]] = {
+    "scenes": {"scene": {"turn_on"}},
+    "lights": {
+        "light": {"toggle", "turn_on", "turn_off"},
+        "switch": {"toggle", "turn_on", "turn_off"},
+    },
+    "fans": {
+        "fan": {
+            "toggle", "turn_on", "turn_off", "set_percentage",
+            "set_preset_mode", "oscillate", "set_direction",
+        },
+    },
+    "climate": {
+        "climate": {
+            "set_temperature", "set_hvac_mode", "set_fan_mode",
+            "set_preset_mode", "turn_on", "turn_off",
+        },
+    },
+    "media": {
+        "media_player": {
+            "media_play_pause", "media_play", "media_pause", "media_next_track",
+            "media_previous_track", "volume_up", "volume_down", "volume_set",
+            "volume_mute", "turn_on", "turn_off", "toggle",
+        },
+    },
+}
+TARGET_KEYS = {"entity_id", "device_id", "area_id", "floor_id", "label_id"}
 
 class HABridge:
     def __init__(self, bus, get_config: Callable[[], dict]) -> None:
@@ -80,17 +109,43 @@ class HABridge:
         entity_id: str | None = None,
         data: dict | None = None,
     ):
+        """Run a service call on behalf of the display/admin.
+
+        Only what the swipe-up overlay can do is allowed: a service from
+        CONTROL_SERVICES, on an entity mapped into that control group. The
+        channels that reach this are unauthenticated LAN endpoints, and the
+        bridge holds a full-access HA token — without the check any web page
+        on the LAN could unlock a door or disarm an alarm."""
         if not domain or not service:
             raise ValueError("domain and service are required")
+        if not entity_id:
+            raise PermissionError("an entity_id is required")
+        group = self._control_group(entity_id)
+        if group is None:
+            raise PermissionError(f"{entity_id} is not a mapped control")
+        if service not in CONTROL_SERVICES[group].get(domain, ()):
+            raise PermissionError(f"{domain}.{service} is not allowed for {group}")
+        service_data = {
+            k: v for k, v in (data or {}).items() if k not in TARGET_KEYS
+        }  # no retargeting through service_data
         payload: dict = {
             "type": "call_service",
             "domain": domain,
             "service": service,
-            "service_data": dict(data or {}),
+            "service_data": service_data,
+            "target": {"entity_id": entity_id},
         }
-        if entity_id:
-            payload["target"] = {"entity_id": entity_id}
         return await self._command(payload)
+
+    def _control_group(self, entity_id: str) -> str | None:
+        ha = (self.get_config() or {}).get("ha") or {}
+        for group in ("scenes", "lights", "fans"):
+            if entity_id in (ha.get(group) or []):
+                return group
+        for key, group in (("climate", "climate"), ("media", "media")):
+            if ha.get(key) == entity_id:
+                return group
+        return None
 
     # -- connection loop ----------------------------------------------------
 
