@@ -326,6 +326,20 @@ body {
   opacity: 0;
 }
 
+/* a refreshed layer waiting on image decode (main.ts quietRefresh): laid out,
+   not shown, and no transition when it is revealed */
+.stage-layer.pending {
+  visibility: hidden;
+  transition: none;
+}
+
+/* screen blanked: nothing animates behind the blanker */
+html[data-idle] *,
+html[data-idle] *::before,
+html[data-idle] *::after {
+  animation-play-state: paused !important;
+}
+
 #page-dots {
   position: absolute;
   top: 20px;
@@ -2151,8 +2165,17 @@ body {
   gap: 6px;
   column-gap: 40px;
   margin-top: 8px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
+  /* size container: its height comes from the card, never its rows */
+  container: pve-guests / size;
+}
+
+/* no room for the head and one whole row (glance/banner): no table at all,
+   rather than column titles over nothing */
+@container pve-guests (max-height: 61px) {
+  /* two classes: must outrank the plain .pve-guest display:grid further down */
+  .pve-guests .pve-guest {
+    display: none;
+  }
 }
 
 /* the collector sends up to 10; the head is child 1 — past 5 rows the table
@@ -2170,11 +2193,14 @@ body {
   font-size: 22px;
 }
 
+/* the rule above the table sits on the head row, so it hides with it */
 .pve-guests-head {
   font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
 }
 
 .pve-vmid {
@@ -5844,13 +5870,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* no overflow:hidden — the "now" marker overhangs the track by 3px each side
+   by design (the fill rounds its own ends); clipping it left a flat sliver */
 .wx-dl-track {
   position: relative;
   flex: 1;
   height: 10px;
   border-radius: 5px;
   background: var(--muted);
-  overflow: hidden;
 }
 
 .wx-dl-fill {

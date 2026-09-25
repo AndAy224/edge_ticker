@@ -23,6 +23,7 @@ import { Tape } from "./tape";
 import type { Config, ModulePayload } from "./types";
 import { WEATHER_ICONS, weatherIcon } from "./icons";
 import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
+import { isOutdated, reloadOnto } from "../shared/build";
 
 const stageEl = document.getElementById("stage-content")!;
 const dotsEl = document.getElementById("page-dots")!;
@@ -220,6 +221,9 @@ function reportDisplayState(): void {
 function handleMessage(msg: any): void {
   switch (msg.type) {
     case "snapshot":
+      // Every (re)connect after a deploy lands here: move onto the new bundle
+      // rather than run old JS against the new backend.
+      if (isOutdated(msg.build?.display) && reloadOnto(msg.build.display)) return;
       modules.clear();
       for (const [name, payload] of Object.entries(msg.modules ?? {})) {
         modules.set(name, payload as ModulePayload);
@@ -270,6 +274,11 @@ function handleMessage(msg: any): void {
       }
       if (payload.module === "fantasy") autoFeatureFantasy(payload);
       if (payload.module === "launches") autoFeatureLaunches(payload);
+      if (blanked) {
+        // Nobody can see it: keep the data, skip the DOM work until wake().
+        renderDeferred = true;
+        break;
+      }
       rebuildTape();
       for (let i = 0; i < paneEls.length; i++) {
         if (paneModule(i) === payload.module && !paneDetailTimers.has(i)) {
@@ -328,8 +337,9 @@ function handleMessage(msg: any): void {
       overlay.setStatus(msg.status);
       break;
     case "night":
-      // Software dim fallback when DDC/CI isn't available.
-      applyNight({ ...msg, software: true });
+      // `software` says whether the dim is ours to draw (DDC unavailable) —
+      // false clears an overlay left from an earlier DDC failure.
+      applyNight({ ...msg, software: msg.software !== false });
       break;
   }
 }
@@ -529,6 +539,20 @@ function crossfade(
   const swap = previous.length > 0 && paneView[pane] !== view;
   paneView[pane] = view;
 
+  // A routine data refresh of the view already on screen: swap in one frame,
+  // no crossfade. Crossfading every refresh (markets streams every ~2s) put a
+  // translucent ghost of the old digits over the new ones for 300ms.
+  const current = previous.filter((el) => !el.classList.contains("exit"));
+  const midSwap = current.some((el) => el.classList.contains("swap-in"));
+  if (!swap && current.length && !midSwap) {
+    quietRefresh(pane, container, layer, current);
+    const header = container.querySelector<HTMLElement>(".pane-header");
+    if (header && !paneLabelTimers.has(pane)) header.textContent = label;
+    return;
+  }
+  pendingRefresh.get(pane)?.remove(); // a view change supersedes a queued refresh
+  pendingRefresh.delete(pane);
+
   // swap-in/swap-out are additive markers on top of the existing enter/exit, so
   // a theme that ignores them behaves exactly as it did before.
   layer.classList.add("enter");
@@ -569,6 +593,38 @@ function crossfade(
       header.textContent = label;
     }, swapLabelMs),
   );
+}
+
+// Per pane: a refreshed layer waiting for its images to decode.
+const pendingRefresh = new Map<number, HTMLElement>();
+
+/** Replace `current` with `layer` once the new layer's images are decoded, so
+ *  the swap can't flash an empty tile mosaic or logo slot. The new layer sits
+ *  hidden (but laid out — map renderers measure themselves after attach) until
+ *  then; a newer refresh for the same pane supersedes it. */
+function quietRefresh(
+  pane: number,
+  container: HTMLElement,
+  layer: HTMLElement,
+  current: Element[],
+): void {
+  pendingRefresh.get(pane)?.remove();
+  layer.classList.add("pending");
+  container.appendChild(layer);
+  pendingRefresh.set(pane, layer);
+  // Map renderers build their tiles in a requestAnimationFrame after attach;
+  // this frame callback is queued after theirs, so their images exist by now.
+  requestAnimationFrame(() => {
+    const images = Array.from(layer.querySelectorAll("img"));
+    const decoded = Promise.all(images.map((img) => img.decode().catch(() => undefined)));
+    const timeout = new Promise((resolve) => setTimeout(resolve, 1500));
+    Promise.race([decoded, timeout]).then(() => {
+      if (pendingRefresh.get(pane) !== layer || !layer.isConnected) return; // superseded
+      pendingRefresh.delete(pane);
+      for (const el of current) el.remove();
+      layer.classList.remove("pending");
+    });
+  });
 }
 
 function renderDots(): void {
@@ -910,12 +966,15 @@ function updateScoreChip(): void {
 
 // ---- Status rail -----------------------------------------------------------------
 
+let clockText = "";
 function tickClock(): void {
   const now = new Date();
   const time = now.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   });
+  if (time === clockText) return; // ticks every second, changes once a minute
+  clockText = time;
   clockEl.textContent = time;
   clockChip.textContent = time; // rail-less layouts (focus/mosaic) show the chip
   dateEl.textContent = now.toLocaleDateString([], {
@@ -961,8 +1020,14 @@ function renderWeather(): void {
 
 // ---- Blank / wake ------------------------------------------------------------------
 
+// Module updates that arrived while blanked and were not drawn.
+let renderDeferred = false;
+
 function blank(): void {
   blanked = true;
+  // Pauses every CSS animation (tape, radar loop, sweeps) under the blanker —
+  // they were compositing all night behind an opaque div.
+  document.documentElement.dataset.idle = "";
   blanker.classList.remove("hidden");
   updateScoreChip();
   reportDisplayState();
@@ -970,6 +1035,12 @@ function blank(): void {
 
 function wake(): void {
   blanked = false;
+  delete document.documentElement.dataset.idle;
+  if (renderDeferred) {
+    renderDeferred = false;
+    rebuildTape();
+    renderStage();
+  }
   blanker.classList.add("hidden");
   updateScoreChip();
   reportDisplayState();

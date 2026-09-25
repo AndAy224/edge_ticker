@@ -62,7 +62,7 @@ def discover_collectors(config: dict) -> Discovery:
     saved by then — crash-loop the next boot."""
     found = Discovery()
     for cls in collector_classes():
-        module_config = config.get("modules", {}).get(cls.name, {})
+        module_config = (config.get("modules") or {}).get(cls.name, {})
         if not isinstance(module_config, dict):
             found.skipped[cls.name] = "error: module config must be an object"
             continue

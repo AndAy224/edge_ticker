@@ -1,0 +1,344 @@
+{
+ "@context": [
+  "https://geojson.org/geojson-ld/geojson-context.jsonld",
+  {
+   "@version": "1.1",
+   "wx": "https://api.weather.gov/ontology#",
+   "@vocab": "https://api.weather.gov/ontology#"
+  }
+ ],
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9bf585e821e9fd62dc51b98aa252624cff62a976.001.1",
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9bf585e821e9fd62dc51b98aa252624cff62a976.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.9bf585e821e9fd62dc51b98aa252624cff62a976.001.1",
+    "areaDesc": "Guadalupe Mountains of Eddy County; Eddy County Plains; Northern Lea County; Central Lea County; Guadalupe Mountains Above 7000 Feet; Guadalupe and Delaware Mountains; Van Horn and Highway 54 Corridor; Eastern Culberson County; Chinati Mountains; Marfa Plateau; Davis Mountains; Davis Mountains Foothills; Presidio Valley",
+    "geocode": {
+     "SAME": [
+      "035015",
+      "035025",
+      "048109",
+      "048377",
+      "048243",
+      "048043",
+      "048389"
+     ],
+     "UGC": [
+      "NMZ027",
+      "NMZ028",
+      "NMZ029",
+      "NMZ033",
+      "TXZ270",
+      "TXZ271",
+      "TXZ272",
+      "TXZ273",
+      "TXZ275",
+      "TXZ276",
+      "TXZ277",
+      "TXZ278",
+      "TXZ281"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/forecast/NMZ027",
+     "https://api.weather.gov/zones/forecast/NMZ028",
+     "https://api.weather.gov/zones/forecast/NMZ029",
+     "https://api.weather.gov/zones/forecast/NMZ033",
+     "https://api.weather.gov/zones/forecast/TXZ270",
+     "https://api.weather.gov/zones/forecast/TXZ271",
+     "https://api.weather.gov/zones/forecast/TXZ272",
+     "https://api.weather.gov/zones/forecast/TXZ273",
+     "https://api.weather.gov/zones/forecast/TXZ275",
+     "https://api.weather.gov/zones/forecast/TXZ276",
+     "https://api.weather.gov/zones/forecast/TXZ277",
+     "https://api.weather.gov/zones/forecast/TXZ278",
+     "https://api.weather.gov/zones/forecast/TXZ281"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.05f699e764808fc04750ab8462d7b9061361020a.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.05f699e764808fc04750ab8462d7b9061361020a.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-09-23T12:15:00-06:00"
+     },
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6d947515d2591a3c916588c5cc2f05eb96ad91ac.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.6d947515d2591a3c916588c5cc2f05eb96ad91ac.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-09-24T13:18:00-06:00"
+     }
+    ],
+    "sent": "2026-09-25T05:28:00-06:00",
+    "effective": "2026-09-25T05:28:00-06:00",
+    "onset": "2026-09-25T05:28:00-06:00",
+    "expires": "2026-09-26T00:00:00-06:00",
+    "ends": "2026-09-26T00:00:00-06:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Severe",
+    "certainty": "Possible",
+    "urgency": "Future",
+    "event": "Flood Watch",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Midland/Odessa TX",
+    "headline": "Flood Watch issued September 25 at 5:28AM MDT until September 26 at 12:00AM MDT by NWS Midland/Odessa TX",
+    "description": "* WHAT...Flash flooding caused by excessive rainfall.\n\n* WHERE...Portions of southeast New Mexico, including the following\nareas, Central Lea, Eddy County Plains, Guadalupe Mountains of Eddy\nCounty and Northern Lea and southwest Texas, including the\nfollowing areas, Chinati Mountains, Davis Mountains, Davis\nMountains Foothills, Eastern Culberson, Guadalupe Mountains Above\n7000 Feet, Guadalupe and Delaware Mountains, Marfa Plateau,\nPresidio Valley and Van Horn and Highway 54 Corridor.\n\n* WHEN...Through this evening.\n\n* IMPACTS...Excessive runoff may result in flooding of rivers,\ncreeks, arroyos, streams, and other low-lying and flood-prone\nlocations. Flooding may occur in poor drainage and urban areas.\nLow-water crossings may be flooded.\n\n* ADDITIONAL DETAILS...\n- Additional rounds of showers and thunderstorms will continue to\ndevelop and spread over the Watch area today through this\nevening. Heavy rainfall may quickly result in areas of flash\nflooding.\n- http://www.weather.gov/safety/flood",
+    "instruction": "You should monitor later forecasts and be prepared to take action\nshould Flash Flood Warnings be issued.",
+    "response": "Prepare",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "FFAMAF"
+     ],
+     "WMOidentifier": [
+      "WGUS64 KMAF 251128"
+     ],
+     "NWSheadline": [
+      "FLOOD WATCH NOW IN EFFECT THROUGH THIS EVENING"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "EAS-ORG": [
+      "WXR"
+     ],
+     "VTEC": [
+      "/O.EXT.KMAF.FA.A.0005.000000T0000Z-260926T0600Z/"
+     ],
+     "eventEndingTime": [
+      "2026-09-26T00:00:00-06:00"
+     ],
+     "expiredReferences": [
+      "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.e8b6eb8e3ea0784c510b3f1e1f21c671cc761aac.001.1,2026-09-24T02:17:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.96a20b84ffe7e6d5f3fafc279dab60e396ad91e8.002.1,2026-09-23T15:39:00-05:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.96a20b84ffe7e6d5f3fafc279dab60e396ad91e8.001.1,2026-09-23T15:39:00-05:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.347f180f6ad106b4af622cfc37242fd9c5504df3.001.1,2026-09-23T02:32:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.88ff4b4f309a52ac1037e4c97b776e75fe5f2aa0.001.1,2026-09-22T12:48:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d0d68f592fd2b66e2587f09b90c3e66b4cb2927a.001.1,2026-09-22T02:16:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0307ad36f1b7090cb6803c2e51e99ab826ed6218.001.1,2026-09-21T10:08:00-06:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "FFA"
+     ],
+     "NationalWeatherService": [
+      "FAA"
+     ]
+    }
+   }
+  },
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.68e3dc7620ef5ee6c5c0f7507a4cb5e70029650d.001.1",
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -103.66,
+       29.09
+      ],
+      [
+       -103.58,
+       29.23
+      ],
+      [
+       -103.49,
+       29.2
+      ],
+      [
+       -103.4,
+       29.12
+      ],
+      [
+       -103.49,
+       29
+      ],
+      [
+       -103.66,
+       29.09
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.68e3dc7620ef5ee6c5c0f7507a4cb5e70029650d.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.68e3dc7620ef5ee6c5c0f7507a4cb5e70029650d.001.1",
+    "areaDesc": "Brewster, TX",
+    "geocode": {
+     "SAME": [
+      "048043"
+     ],
+     "UGC": [
+      "TXC043"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/county/TXC043"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c0e3f4a6f670461063f2c77069fc308e816ecc13.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.c0e3f4a6f670461063f2c77069fc308e816ecc13.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-09-25T03:12:00-05:00"
+     }
+    ],
+    "sent": "2026-09-25T04:57:00-05:00",
+    "effective": "2026-09-25T04:57:00-05:00",
+    "onset": "2026-09-25T04:57:00-05:00",
+    "expires": "2026-09-25T11:00:00-05:00",
+    "ends": "2026-09-25T11:00:00-05:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Severe",
+    "certainty": "Observed",
+    "urgency": "Immediate",
+    "event": "Flood Warning",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Midland/Odessa TX",
+    "headline": "Flood Warning issued September 25 at 4:57AM CDT until September 25 at 11:00AM CDT by NWS Midland/Odessa TX",
+    "description": "...The Flood Warning is extended for the following rivers in Texas...\n\nRio Grande at Rio Grande near Castolon, Texas affecting Brewster\nCounty.\n\nFor the Rio Grande...including Rio Grande near Castolon,  Texas...\nMinor flooding is forecast.\n\n* WHAT...Minor flooding is occurring and minor flooding is forecast.\n\n* WHERE...Rio Grande at Rio Grande near Castolon, Texas.\n\n* WHEN...Until this morning.\n\n* IMPACTS...At 13.0 feet, the river reaches bankfull, and no\nsignificant damage is expected. At 15.0 feet, the river reaches\nminor flood stage, and lowland flooding begins.  The river begins\nto flood the road between Santa Elena Canyon and Cottonwood\nCampground in Big Bend National Park.  The river begins to flood\nthe parking lot at Santa Elena Canyon, and cut off the nature trail\ninto the canyon.  Campers in Cottonwood Campground need to prepare\nfor possible evacuations. At 19.0 feet, the river reaches moderate\nflood stage, and begins flooding Cottonwood Campground.  The river\ninundates the restrooms upstream at Santa Elena Canyon parking lot.\nThe river begins to close all area roads.\n\n* ADDITIONAL DETAILS...\n- At 4:15 AM CDT Friday the stage was 17.7 feet (5.4 meters).\n- Bankfull stage is 13.0 feet (4.0 meters).\n- Recent Activity...The maximum river stage in the 24 hours ending\nat 4:15 AM CDT Friday was 17.8 feet (5.4 meters).\n- Forecast...The river is expected to fall below flood stage this\nmorning and continue falling to 2.7 feet (0.8 meters) early\nWednesday morning.\n- Flood stage is 15.0 feet (4.6 meters).\n- Flood History...This crest compares to a previous crest of 17.7\nfeet (5.4 meters) on 09/03/2024.\n- http://www.weather.gov/safety/flood",
+    "instruction": "Turn around, don't drown when encountering flooded roads. Most flood\ndeaths occur in vehicles.\n\nBe especially cautious at night when it is harder to recognize the\ndangers of flooding.\n\nAdditional information is available at www.weather.gov.\n\nThe next statement will be issued this morning at 1100 AM CDT.",
+    "response": "Avoid",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "FLSMAF"
+     ],
+     "WMOidentifier": [
+      "WGUS84 KMAF 250957"
+     ],
+     "NWSheadline": [
+      "FLOOD WARNING NOW IN EFFECT UNTIL THIS MORNING"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "EAS-ORG": [
+      "WXR"
+     ],
+     "VTEC": [
+      "/O.EXT.KMAF.FL.W.0004.000000T0000Z-260925T1600Z/"
+     ],
+     "eventEndingTime": [
+      "2026-09-25T11:00:00-05:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "FLS"
+     ],
+     "NationalWeatherService": [
+      "FLW"
+     ]
+    }
+   }
+  },
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3fc7c2c3dbe53d70b1b361062ebf5c46431789fa.001.1",
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3fc7c2c3dbe53d70b1b361062ebf5c46431789fa.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.3fc7c2c3dbe53d70b1b361062ebf5c46431789fa.001.1",
+    "areaDesc": "Inland Harris; Inland Brazoria; Inland Galveston; Coastal Harris; Coastal Brazoria; Coastal Galveston; Brazoria Islands; Galveston Island; Bolivar Peninsula",
+    "geocode": {
+     "SAME": [
+      "048201",
+      "048039",
+      "048167"
+     ],
+     "UGC": [
+      "TXZ213",
+      "TXZ237",
+      "TXZ238",
+      "TXZ313",
+      "TXZ337",
+      "TXZ338",
+      "TXZ437",
+      "TXZ438",
+      "TXZ439"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/forecast/TXZ213",
+     "https://api.weather.gov/zones/forecast/TXZ237",
+     "https://api.weather.gov/zones/forecast/TXZ238",
+     "https://api.weather.gov/zones/forecast/TXZ313",
+     "https://api.weather.gov/zones/forecast/TXZ337",
+     "https://api.weather.gov/zones/forecast/TXZ338",
+     "https://api.weather.gov/zones/forecast/TXZ437",
+     "https://api.weather.gov/zones/forecast/TXZ438",
+     "https://api.weather.gov/zones/forecast/TXZ439"
+    ],
+    "references": [],
+    "sent": "2026-09-24T14:56:00-05:00",
+    "effective": "2026-09-24T14:56:00-05:00",
+    "onset": "2026-09-24T14:56:00-05:00",
+    "expires": "2026-09-25T19:00:00-05:00",
+    "ends": null,
+    "status": "Actual",
+    "messageType": "Alert",
+    "category": "Met",
+    "severity": "Unknown",
+    "certainty": "Unknown",
+    "urgency": "Unknown",
+    "event": "Air Quality Alert",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Houston/Galveston TX",
+    "headline": "Air Quality Alert issued September 24 at 2:56PM CDT by NWS Houston/Galveston TX",
+    "description": "AQAHGX\n\nThe Texas Commission on Environmental Quality (TCEQ) has issued an\nOzone Action Day for the Houston, Galveston, and Brazoria area for\nFriday, September 25, 2026.\n\nAtmospheric conditions are expected to be favorable for producing\nhigh levels of ozone pollution in the Houston, Galveston, and\nsurrounding areas on Friday. You can help prevent ozone pollution by\nsharing a ride, walking, riding a bicycle, taking your lunch to work,\navoiding drive through lanes, conserving energy and keeping your vehicle\nproperly tuned.\n\nFor more information on ozone:\nOzone: The Facts www.tceq.texas.gov/airquality/monops/ozonefacts.html\nEPA AirNow: www.airnow.gov/?city=Houston&state=TX&country=USA\nTake Care of Texas:\nwww.takecareoftexas.org/conservation-tips/keep-our-air-clean",
+    "instruction": null,
+    "response": "Monitor",
+    "note": "Non-Weather Emergency Message. Not sent to IPAWS.",
+    "parameters": {
+     "AWIPSidentifier": [
+      "AQAHGX"
+     ],
+     "WMOidentifier": [
+      "AEUS74 KHGX 241956"
+     ],
+     "NWSheadline": [
+      "Ozone Action Day"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "NWS"
+     ],
+     "NationalWeatherService": [
+      "AQA"
+     ]
+    }
+   }
+  }
+ ],
+ "title": "Current watches, warnings, and advisories for Texas",
+ "updated": "2026-09-25T12:32:36+00:00"
+}

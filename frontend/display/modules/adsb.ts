@@ -2,6 +2,9 @@ import { register } from "./registry";
 import { AIRCRAFT_ICON, AIRCRAFT_PATH } from "../icons";
 import { COASTLINE, AIRPORTS, PLACES } from "./basemap-tampa";
 
+// .radar-sweep's animation period (styles.css radar-spin).
+const SWEEP_PERIOD_MS = 8000;
+
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(
     /[&<>"']/g,
@@ -151,8 +154,11 @@ function scopeSvg(aircraft: any[], radiusKm: number, center: any): string {
   // Slow rotating sweep wedge (30°), CSS-animated; respects reduced-motion.
   const tipX = (CX + MAX_R * Math.sin(Math.PI / 6)).toFixed(1);
   const tipY = (CY - MAX_R * Math.cos(Math.PI / 6)).toFixed(1);
+  // Phase-locked to page time: the scope is rebuilt on every 15s poll, and a
+  // fresh animation would snap the sweep back to north each time.
+  const phase = Math.round(performance.now() % SWEEP_PERIOD_MS);
   const sweep =
-    `<g class="radar-sweep"><path d="M${CX} ${CY} L${CX} ${CY - MAX_R} ` +
+    `<g class="radar-sweep" style="animation-delay:-${phase}ms"><path d="M${CX} ${CY} L${CX} ${CY - MAX_R} ` +
     `A${MAX_R} ${MAX_R} 0 0 1 ${tipX} ${tipY} Z"/></g>`;
 
   const planes = aircraft

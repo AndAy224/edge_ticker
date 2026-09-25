@@ -49,7 +49,22 @@ at startup, never errored.
 
 Config is seeded from [config/defaults.yaml](config/defaults.yaml) into
 SQLite on first boot; after that, edit via the admin page (or
-`PUT /api/config`). Delete `data/ticker.db` to re-seed.
+`PUT /api/config`, which validates before saving). The stored config is
+merged over the defaults on load, so keys added to `defaults.yaml` later reach
+existing installs. Every save is kept — the admin System tab can restore any of
+the last 20. Delete `data/ticker.db` to re-seed.
+
+## Tests and display checks
+
+```bash
+.venv/bin/python -m pytest -q tests/     # offline: recorded upstream fixtures, no network
+
+# a backend serving recorded payloads — polls nothing upstream
+TICKER_FIXTURE=scripts/fixtures/display_snapshot.json TICKER_DB=/tmp/dev.db \
+  FINNHUB_KEY= HA_URL= .venv/bin/uvicorn backend.main:app --port 8081
+(cd frontend && npm run build)
+.venv/bin/python scripts/layout_audit.py   # every theme × layout × module: flags clipped content
+```
 
 ## Appliance install (Ubuntu Server 24.04)
 
@@ -59,7 +74,10 @@ sudo bash deploy/install.sh     # idempotent; safe to re-run
 
 Installs cage + chromium, creates `ticker`/`kiosk` users, builds everything
 into `/opt/edge-ticker`, enables both systemd units, and disables console
-blanking. Updates later: `sudo bash deploy/update.sh`.
+blanking. Updates later: `sudo bash deploy/update.sh` — it builds and checks
+the new version beside the running one, switches, health-checks, and rolls back
+on failure (`--rollback` returns to the previous deploy by hand). The display
+reloads itself onto the new build when it reconnects.
 
 ## Layout
 
@@ -80,4 +98,6 @@ blanking. Updates later: `sudo bash deploy/update.sh`.
 3. Add the module id to `STAGE_MODULES` in
    `frontend/admin/src/tabs/modules.tsx` so the admin can add it to the
    rotation.
-4. Add the module to `rotation.order` and `modules.yourmodule` in config.
+4. Add `modules.yourmodule` to `config/defaults.yaml` (existing installs pick
+   the keys up on their next load), then add the module to `rotation.order`
+   in the admin.

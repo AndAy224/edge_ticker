@@ -6,6 +6,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from .build import builds
 from .origin import cross_site
 from .sysinfo import lan_ip
 
@@ -39,6 +40,8 @@ async def _serve(websocket: WebSocket) -> None:
                 "night": app.state.scheduler.state(),
                 # Host facts, resolved per connect — not bus state.
                 "system": {"ip": lan_ip()},
+                # Built asset set per page: a client on an older bundle reloads.
+                "build": builds(),
             }
         )
 

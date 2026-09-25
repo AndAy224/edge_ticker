@@ -1,0 +1,1624 @@
+{
+ "events": [
+  {
+   "id": "401817064",
+   "uid": "s:1~l:10~e:401817064",
+   "date": "2026-09-24T23:05Z",
+   "name": "Tampa Bay Rays at New York Yankees",
+   "shortName": "TB @ NYY",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 9,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817064",
+     "date": "2026-09-24T23:05Z",
+     "competitors": [
+      {
+       "id": "10",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "winner": true,
+       "team": {
+        "id": "10",
+        "abbreviation": "NYY",
+        "displayName": "New York Yankees",
+        "shortDisplayName": "Yankees",
+        "name": "Yankees",
+        "location": "New York",
+        "color": "132448",
+        "alternateColor": "c4ced4",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/nyy.png"
+       },
+       "score": "6",
+       "linescores": [
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 5
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 6
+        },
+        {
+         "value": 3.0,
+         "displayValue": "3",
+         "period": 7
+        },
+        {
+         "value": 2.0,
+         "displayValue": "2",
+         "period": 8
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 5134581,
+         "athlete": {
+          "id": "5134581",
+          "fullName": "Cam Schlittler",
+          "displayName": "Cam Schlittler",
+          "shortName": "C. Schlittler",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/5134581"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/5134581.png",
+          "jersey": "31",
+          "position": "SP",
+          "team": {
+           "id": "10"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "6",
+           "rankDisplayValue": "Tied-122nd"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "14",
+           "rankDisplayValue": "Tied-9th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "1.95",
+           "rankDisplayValue": "2nd"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "2",
+           "rankDisplayValue": "Tied-307th"
+          }
+         ],
+         "record": "(14-6, 1.95)"
+        }
+       ],
+       "hits": 7,
+       "errors": 2,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "92-67"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "45-33"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "47-34"
+        }
+       ]
+      },
+      {
+       "id": "30",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "winner": false,
+       "team": {
+        "id": "30",
+        "abbreviation": "TB",
+        "displayName": "Tampa Bay Rays",
+        "shortDisplayName": "Rays",
+        "name": "Rays",
+        "location": "Tampa Bay",
+        "color": "092c5c",
+        "alternateColor": "8fbce6",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/tb.png"
+       },
+       "score": "4",
+       "linescores": [
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 2.0,
+         "displayValue": "2",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 5
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 6
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 7
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 8
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 9
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 4669425,
+         "athlete": {
+          "id": "4669425",
+          "fullName": "Ian Seymour",
+          "displayName": "Ian Seymour",
+          "shortName": "I. Seymour",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/4669425"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/4669425.png",
+          "jersey": "61",
+          "position": "SP",
+          "team": {
+           "id": "30"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "2",
+           "rankDisplayValue": "Tied-99th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "7",
+           "rankDisplayValue": "Tied-93rd"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "9",
+           "rankDisplayValue": "Tied-52nd"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "4.22"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(9-7, 4.22)"
+        }
+       ],
+       "hits": 9,
+       "errors": 1,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "96-63"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "55-26"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "41-37"
+        }
+       ]
+      }
+     ],
+     "broadcast": "MLB.TV",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "Rays.TV"
+       ]
+      },
+      {
+       "market": "home",
+       "names": [
+        "YES"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "208",
+      "fullName": "Yankee Stadium",
+      "address": {
+       "city": "Bronx",
+       "state": "New York"
+      },
+      "indoor": false
+     },
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 9,
+      "type": {
+       "id": "3",
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "description": "Final",
+       "detail": "Final",
+       "shortDetail": "Final"
+      },
+      "featuredAthletes": [
+       {
+        "name": "winningPitcher",
+        "displayName": "Winning Pitcher",
+        "shortDisplayName": "Win",
+        "abbreviation": "WP",
+        "playerId": 5132070,
+        "athlete": {
+         "id": "5132070",
+         "fullName": "Bradley Hanner",
+         "displayName": "Bradley Hanner",
+         "shortName": "B. Hanner",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/5132070"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/5132070.png",
+         "jersey": "93",
+         "position": "RP",
+         "team": {
+          "id": "10"
+         }
+        },
+        "team": {
+         "id": "10"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "0"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "0"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "1"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "8.59"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817064/competitions/401817064/competitors/10/roster/5132070/projections?lang=en&region=us"
+        }
+       },
+       {
+        "name": "losingPitcher",
+        "displayName": "Losing Pitcher",
+        "shortDisplayName": "Loss",
+        "abbreviation": "LP",
+        "playerId": 33106,
+        "athlete": {
+         "id": "33106",
+         "fullName": "Steven Matz",
+         "displayName": "Steven Matz",
+         "shortName": "S. Matz",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/33106"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/33106.png",
+         "jersey": "32",
+         "position": "SP",
+         "team": {
+          "id": "30"
+         }
+        },
+        "team": {
+         "id": "30"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "1"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "6"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "5"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "5.56"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817064/competitions/401817064/competitors/30/roster/33106/projections?lang=en&region=us"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "401817063",
+   "uid": "s:1~l:10~e:401817063",
+   "date": "2026-09-24T16:35Z",
+   "name": "St. Louis Cardinals at Pittsburgh Pirates",
+   "shortName": "STL @ PIT",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 9,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817063",
+     "date": "2026-09-24T16:35Z",
+     "competitors": [
+      {
+       "id": "23",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "winner": true,
+       "team": {
+        "id": "23",
+        "abbreviation": "PIT",
+        "displayName": "Pittsburgh Pirates",
+        "shortDisplayName": "Pirates",
+        "name": "Pirates",
+        "location": "Pittsburgh",
+        "color": "000000",
+        "alternateColor": "fdb827",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/pit.png"
+       },
+       "score": "2",
+       "linescores": [
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 5
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 6
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 7
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 8
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 4719507,
+         "athlete": {
+          "id": "4719507",
+          "fullName": "Paul Skenes",
+          "displayName": "Paul Skenes",
+          "shortName": "P. Skenes",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/4719507"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/4719507.png",
+          "jersey": "30",
+          "position": "SP",
+          "team": {
+           "id": "23"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "11",
+           "rankDisplayValue": "Tied-14th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "10",
+           "rankDisplayValue": "Tied-38th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "3.82",
+           "rankDisplayValue": "28th"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(10-11, 3.82)"
+        }
+       ],
+       "hits": 7,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "81-78"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "44-37"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "37-41"
+        }
+       ]
+      },
+      {
+       "id": "24",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "winner": false,
+       "team": {
+        "id": "24",
+        "abbreviation": "STL",
+        "displayName": "St. Louis Cardinals",
+        "shortDisplayName": "Cardinals",
+        "name": "Cardinals",
+        "location": "St. Louis",
+        "color": "be0a14",
+        "alternateColor": "001541",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/stl.png"
+       },
+       "score": "1",
+       "linescores": [
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 5
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 6
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 7
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 8
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 9
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 5006093,
+         "athlete": {
+          "id": "5006093",
+          "fullName": "Kyle Leahy",
+          "displayName": "Kyle Leahy",
+          "shortName": "K. Leahy",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/5006093"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/5006093.png",
+          "jersey": "62",
+          "position": "SP",
+          "team": {
+           "id": "24"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "5",
+           "rankDisplayValue": "Tied-155th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "10",
+           "rankDisplayValue": "Tied-38th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "3.66"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-679th"
+          }
+         ],
+         "record": "(10-5, 3.66)"
+        }
+       ],
+       "hits": 5,
+       "errors": 2,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "77-82"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "38-43"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "39-39"
+        }
+       ]
+      }
+     ],
+     "broadcast": "MLB.TV",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "Cardinals.TV"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "47",
+      "fullName": "PNC Park",
+      "address": {
+       "city": "Pittsburgh",
+       "state": "Pennsylvania"
+      },
+      "indoor": false
+     },
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 9,
+      "type": {
+       "id": "3",
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "description": "Final",
+       "detail": "Final",
+       "shortDetail": "Final"
+      },
+      "featuredAthletes": [
+       {
+        "name": "winningPitcher",
+        "displayName": "Winning Pitcher",
+        "shortDisplayName": "Win",
+        "abbreviation": "WP",
+        "playerId": 33770,
+        "athlete": {
+         "id": "33770",
+         "fullName": "Luke Weaver",
+         "displayName": "Luke Weaver",
+         "shortName": "L. Weaver",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/33770"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/33770.png",
+         "jersey": "18",
+         "position": "RP",
+         "team": {
+          "id": "23"
+         }
+        },
+        "team": {
+         "id": "23"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "1"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "1"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "4"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "2.73"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817063/competitions/401817063/competitors/23/roster/33770/projections?lang=en&region=us"
+        }
+       },
+       {
+        "name": "losingPitcher",
+        "displayName": "Losing Pitcher",
+        "shortDisplayName": "Loss",
+        "abbreviation": "LP",
+        "playerId": 33301,
+        "athlete": {
+         "id": "33301",
+         "fullName": "Ryne Stanek",
+         "displayName": "Ryne Stanek",
+         "shortName": "R. Stanek",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/33301"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/33301.png",
+         "jersey": "55",
+         "position": "RP",
+         "team": {
+          "id": "24"
+         }
+        },
+        "team": {
+         "id": "24"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "2"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "3"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "2"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "4.02"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817063/competitions/401817063/competitors/24/roster/33301/projections?lang=en&region=us"
+        }
+       },
+       {
+        "name": "savingPitcher",
+        "displayName": "Saving Pitcher",
+        "shortDisplayName": "Save",
+        "abbreviation": "S",
+        "playerId": 4424112,
+        "athlete": {
+         "id": "4424112",
+         "fullName": "Mason Montgomery",
+         "displayName": "Mason Montgomery",
+         "shortName": "M. Montgomery",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/4424112"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/4424112.png",
+         "jersey": "46",
+         "position": "RP",
+         "team": {
+          "id": "23"
+         }
+        },
+        "team": {
+         "id": "23"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "17"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "3"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "6"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "2.55"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817063/competitions/401817063/competitors/23/roster/4424112/projections?lang=en&region=us"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "401817071",
+   "uid": "s:1~l:10~e:401817071",
+   "date": "2026-09-25T02:10Z",
+   "name": "San Diego Padres at Los Angeles Dodgers",
+   "shortName": "SD @ LAD",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 9,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817071",
+     "date": "2026-09-25T02:10Z",
+     "competitors": [
+      {
+       "id": "19",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "winner": false,
+       "team": {
+        "id": "19",
+        "abbreviation": "LAD",
+        "displayName": "Los Angeles Dodgers",
+        "shortDisplayName": "Dodgers",
+        "name": "Dodgers",
+        "location": "Los Angeles",
+        "color": "005a9c",
+        "alternateColor": "ffffff",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/lad.png"
+       },
+       "score": "2",
+       "linescores": [
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 5
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 6
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 7
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 8
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 9
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 33190,
+         "athlete": {
+          "id": "33190",
+          "fullName": "Tyler Glasnow",
+          "displayName": "Tyler Glasnow",
+          "shortName": "T. Glasnow",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/33190"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/33190.png",
+          "jersey": "31",
+          "position": "SP",
+          "team": {
+           "id": "19"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "2",
+           "rankDisplayValue": "Tied-348th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "5",
+           "rankDisplayValue": "Tied-164th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "3.53"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-679th"
+          }
+         ],
+         "record": "(5-2, 3.53)"
+        }
+       ],
+       "hits": 7,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "97-62"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "51-30"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "46-32"
+        }
+       ]
+      },
+      {
+       "id": "25",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "winner": true,
+       "team": {
+        "id": "25",
+        "abbreviation": "SD",
+        "displayName": "San Diego Padres",
+        "shortDisplayName": "Padres",
+        "name": "Padres",
+        "location": "San Diego",
+        "color": "2f241d",
+        "alternateColor": "ffc425",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/sd.png"
+       },
+       "score": "4",
+       "linescores": [
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 1
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 2
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 3
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 4
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 5
+        },
+        {
+         "value": 1.0,
+         "displayValue": "1",
+         "period": 6
+        },
+        {
+         "value": 3.0,
+         "displayValue": "3",
+         "period": 7
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 8
+        },
+        {
+         "value": 0.0,
+         "displayValue": "0",
+         "period": 9
+        }
+       ],
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 36071,
+         "athlete": {
+          "id": "36071",
+          "fullName": "Nick Pivetta",
+          "displayName": "Nick Pivetta",
+          "shortName": "N. Pivetta",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/36071"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/36071.png",
+          "jersey": "27",
+          "position": "SP",
+          "team": {
+           "id": "25"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "2",
+           "rankDisplayValue": "Tied-348th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "3",
+           "rankDisplayValue": "Tied-263rd"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "2.86"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-679th"
+          }
+         ],
+         "record": "(3-2, 2.86)"
+        }
+       ],
+       "hits": 6,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "89-70"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "49-29"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "40-41"
+        }
+       ]
+      }
+     ],
+     "broadcast": "MLB.TV/MLB Net",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV",
+        "MLB Net"
+       ]
+      },
+      {
+       "market": "home",
+       "names": [
+        "SportsNet LA"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "Padres.TV"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "19",
+      "fullName": "Dodger Stadium",
+      "address": {
+       "city": "Los Angeles",
+       "state": "California"
+      },
+      "indoor": false
+     },
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 9,
+      "type": {
+       "id": "3",
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "description": "Final",
+       "detail": "Final",
+       "shortDetail": "Final"
+      },
+      "featuredAthletes": [
+       {
+        "name": "winningPitcher",
+        "displayName": "Winning Pitcher",
+        "shortDisplayName": "Win",
+        "abbreviation": "WP",
+        "playerId": 4142414,
+        "athlete": {
+         "id": "4142414",
+         "fullName": "Yuki Matsui",
+         "displayName": "Yuki Matsui",
+         "shortName": "Y. Matsui",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/4142414"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/4142414.png",
+         "jersey": "1",
+         "position": "RP",
+         "team": {
+          "id": "25"
+         }
+        },
+        "team": {
+         "id": "25"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "1"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "1"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "4"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "1.84"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "1"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817071/competitions/401817071/competitors/25/roster/4142414/projections?lang=en&region=us"
+        }
+       },
+       {
+        "name": "losingPitcher",
+        "displayName": "Losing Pitcher",
+        "shortDisplayName": "Loss",
+        "abbreviation": "LP",
+        "playerId": 33190,
+        "athlete": {
+         "id": "33190",
+         "fullName": "Tyler Glasnow",
+         "displayName": "Tyler Glasnow",
+         "shortName": "T. Glasnow",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/33190"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/33190.png",
+         "jersey": "31",
+         "position": "SP",
+         "team": {
+          "id": "19"
+         }
+        },
+        "team": {
+         "id": "19"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "0"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "2"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "5"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "3.53"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "0"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817071/competitions/401817071/competitors/19/roster/33190/projections?lang=en&region=us"
+        }
+       },
+       {
+        "name": "savingPitcher",
+        "displayName": "Saving Pitcher",
+        "shortDisplayName": "Save",
+        "abbreviation": "S",
+        "playerId": 4730225,
+        "athlete": {
+         "id": "4730225",
+         "fullName": "Mason Miller",
+         "displayName": "Mason Miller",
+         "shortName": "M. Miller",
+         "links": [
+          {
+           "rel": [
+            "playercard",
+            "desktop",
+            "athlete"
+           ],
+           "href": "https://www.espn.com/mlb/player/_/id/4730225"
+          }
+         ],
+         "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/4730225.png",
+         "jersey": "22",
+         "position": "RP",
+         "team": {
+          "id": "25"
+         }
+        },
+        "team": {
+         "id": "25"
+        },
+        "statistics": [
+         {
+          "name": "saves",
+          "abbreviation": "SV",
+          "displayValue": "38"
+         },
+         {
+          "name": "losses",
+          "abbreviation": "L",
+          "displayValue": "2"
+         },
+         {
+          "name": "wins",
+          "abbreviation": "W",
+          "displayValue": "5"
+         },
+         {
+          "name": "ERA",
+          "abbreviation": "ERA",
+          "displayValue": "1.30"
+         },
+         {
+          "name": "errors",
+          "abbreviation": "E",
+          "displayValue": "1"
+         }
+        ],
+        "projections": {
+         "$ref": "http://sports.core.api.espn.pvt/v2/sports/baseball/leagues/mlb/events/401817071/competitions/401817071/competitors/25/roster/4730225/projections?lang=en&region=us"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

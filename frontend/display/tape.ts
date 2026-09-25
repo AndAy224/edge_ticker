@@ -7,6 +7,11 @@
 // structural change (items added/removed) rebuilds the track. --tape-duration
 // is likewise only set on rebuild — changing it mid-animation remaps the
 // elapsed-time fraction onto the new timeline and the tape jumps.
+//
+// A rebuild resumes at the same pixel offset rather than at the start. Item
+// counts change often (aircraft come and go every 15s poll), and restarting
+// at translateX(0) each time meant the tail of a long tape — news, mostly —
+// never scrolled into view at all.
 
 import { sportIcon } from "./icons";
 import type { TapeItem } from "./types";
@@ -53,7 +58,24 @@ export class Tape {
     });
   }
 
+  private scrollAnimation(): Animation | undefined {
+    return this.track
+      .getAnimations()
+      .find((a) => (a as CSSAnimation).animationName === "tape-scroll");
+  }
+
+  /** Pixels scrolled into the current loop (0 when nothing is running). */
+  private offsetPx(): number {
+    const anim = this.scrollAnimation();
+    const half = this.track.firstElementChild as HTMLElement | null;
+    const duration = Number(anim?.effect?.getComputedTiming().duration);
+    if (!anim || !half || !duration) return 0;
+    const t = Number(anim.currentTime ?? 0);
+    return ((t % duration) / duration) * half.scrollWidth;
+  }
+
   private rebuild(items: TapeItem[]): void {
+    const offset = this.offsetPx();
     const half = document.createElement("div");
     half.className = "tape-half";
     for (const item of items) {
@@ -79,6 +101,10 @@ export class Tape {
       this.track.classList.remove("scrolling");
       void this.track.offsetWidth; // reflow restarts the animation
       this.track.classList.add("scrolling");
+      const anim = this.scrollAnimation();
+      if (anim && width > 0) {
+        anim.currentTime = ((offset % width) / width) * duration * 1000;
+      }
     });
   }
 }

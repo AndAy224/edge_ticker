@@ -62,6 +62,8 @@ async def restore_config(request: Request):
 
 
 async def _apply(request: Request, config):
+    if isinstance(config, dict):
+        config = db.with_defaults(config)
     errors = validate(config)
     if errors:
         # Nothing is saved: a config that can't build its collectors used to be

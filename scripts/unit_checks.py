@@ -1,5 +1,12 @@
 """Dev checks for pieces the HTTP smoke test can't reach: scheduler broadcast,
-display_state relay, stretch collector shaping. Run with the backend up."""
+display_state relay, stretch collector shaping.
+
+Only the display_state relay needs a running backend, at TICKER_URL (default
+http://127.0.0.1:8081, the dev port). A fixture-mode backend is enough:
+`TICKER_FIXTURE=<snapshot.json> TICKER_DB=<tmp.db> FINNHUB_KEY= HA_URL=
+.venv/bin/uvicorn backend.main:app --port 8081`. check_astro_live calls
+Open-Meteo. The pytest suite (tests/) covers most of this offline.
+"""
 import asyncio
 import json
 import os
@@ -7,6 +14,9 @@ import sys
 from pathlib import Path
 
 import websockets
+
+BASE = os.environ.get("TICKER_URL", "http://127.0.0.1:8081").rstrip("/")
+WS_BASE = "ws" + BASE.removeprefix("http")  # http→ws, https→wss
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("ADSB_URL", "http://example.invalid/aircraft.json")
@@ -48,9 +58,9 @@ async def check_scheduler() -> None:
 
 
 async def check_display_state_relay() -> None:
-    async with websockets.connect("ws://127.0.0.1:8080/ws/admin") as admin:
+    async with websockets.connect(f"{WS_BASE}/ws/admin") as admin:
         await admin.recv()  # snapshot
-        async with websockets.connect("ws://127.0.0.1:8080/ws/display") as display:
+        async with websockets.connect(f"{WS_BASE}/ws/display") as display:
             await display.recv()  # snapshot
             await display.send(
                 json.dumps(
@@ -67,7 +77,7 @@ async def check_display_state_relay() -> None:
                     print("DISPLAY_STATE RELAY OK:", msg["state"])
                     break
     # late-joining admin gets it in the snapshot
-    async with websockets.connect("ws://127.0.0.1:8080/ws/admin") as admin:
+    async with websockets.connect(f"{WS_BASE}/ws/admin") as admin:
         snapshot = json.loads(await admin.recv())
         assert snapshot["display_state"]["module"] == "markets", snapshot["display_state"]
         print("DISPLAY_STATE IN SNAPSHOT OK")
@@ -98,19 +108,27 @@ def check_proxmox_shape() -> None:
         {"PVE_URL": "https://pve:8006", "PVE_TOKEN_ID": "t@pam!x", "PVE_TOKEN_SECRET": "s"}
     )
     collector = ProxmoxCollector({"modules": {}})
+    # fetch() returns {"resources": <cluster/resources data>, "pdu": <UniFi
+    # outlet reading or None>}; no PDU configured here.
     payload = collector.shape(
-        [
-            {"type": "node", "node": "pve1", "status": "online", "cpu": 0.42,
-             "mem": 8 * 2**30, "maxmem": 16 * 2**30, "uptime": 200000},
-            {"type": "qemu", "status": "running"},
-            {"type": "lxc", "status": "stopped"},
-            {"type": "storage", "storage": "local-zfs", "node": "pve1",
-             "disk": 100 * 2**30, "maxdisk": 200 * 2**30},
-        ]
+        {
+            "resources": [
+                {"type": "node", "node": "pve1", "status": "online", "cpu": 0.42,
+                 "mem": 8 * 2**30, "maxmem": 16 * 2**30, "uptime": 200000},
+                {"type": "qemu", "vmid": 100, "name": "ha", "status": "running", "cpu": 0.05},
+                {"type": "lxc", "vmid": 101, "status": "stopped"},
+                {"type": "storage", "storage": "local-zfs", "node": "pve1",
+                 "disk": 100 * 2**30, "maxdisk": 200 * 2**30},
+            ],
+            "pdu": None,
+        }
     )
     assert payload.stage["nodes"][0]["cpu"] == 42.0
-    assert payload.stage["guests"] == {"running": 1, "total": 2}
+    guests = payload.stage["guests"]
+    assert (guests["running"], guests["total"]) == (1, 2), guests
+    assert [g["name"] for g in guests["busiest"]] == ["ha"], guests
     assert payload.stage["storage"][0]["pct"] == 50.0
+    assert payload.stage["power"] is None
     assert payload.tape[0].text.startswith("PVE pve1")
     print("PROXMOX SHAPE OK:", payload.tape[0].text)
 

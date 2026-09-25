@@ -36,6 +36,7 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from . import db  # noqa: E402
 from .api.adsb import router as adsb_router  # noqa: E402
+from .build import builds, git_revision  # noqa: E402
 from .api.cameras import router as cameras_router  # noqa: E402
 from .api.config import router as config_router  # noqa: E402
 from .api.control import router as control_router  # noqa: E402
@@ -53,6 +54,7 @@ from . import ws as ws_channels  # noqa: E402
 from .ws import router as ws_router  # noqa: E402
 
 DIST = ROOT / "frontend" / "dist"
+REVISION = git_revision()  # read once: the code on disk may move under a running process
 
 # Fixture mode, for display work and layout audits: serve module payloads
 # recorded in a snapshot file (the `modules` map of a WS snapshot) instead of
@@ -77,7 +79,7 @@ def _load_fixture(bus: Bus, path: str) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.init()
-    config = await db.get_config()
+    config = db.with_defaults(await db.get_config())
     bus = Bus()
     manager = CollectorManager(enabled=not FIXTURE)
     if FIXTURE:
@@ -158,6 +160,8 @@ def health(request: Request) -> dict:
         "display_clients": ws_channels.display_clients,
         "dropped_messages": bus.dropped,
         "fixture": bool(FIXTURE),
+        "revision": REVISION,
+        "build": builds(),
     }
 
 
@@ -186,7 +190,9 @@ def root():
 def _page(name: str):
     index = DIST / name / "index.html"
     if index.exists():
-        return FileResponse(index)
+        # Always revalidated: the hashed assets it links are what a deploy
+        # changes, and a heuristically cached copy would reload into the old build.
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
     return JSONResponse(
         {
             "error": f"frontend not built — run `npm run build` in frontend/, "

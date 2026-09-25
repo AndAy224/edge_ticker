@@ -59,6 +59,7 @@ class Collector(ABC):
         self.last_duration_ms: int | None = None
         self._attempt_started: float | None = None  # monotonic; None when idle
         self._attempt_finished: float = time.monotonic()
+        self._created = time.monotonic()
 
     @classmethod
     def config_fingerprint(cls, config: dict) -> str:
@@ -136,7 +137,9 @@ class Collector(ABC):
     def overdue(self) -> bool:
         """No fresh data for three poll intervals (plus slack)."""
         if self.last_success is None:
-            age = time.monotonic() - self._attempt_finished if self.failures_total else 0.0
+            # Since startup, not since the last failed attempt: that resets on
+            # every retry, so a collector failing from the start never aged.
+            age = time.monotonic() - self._created if self.failures_total else 0.0
         else:
             age = (datetime.now(timezone.utc) - self.last_success).total_seconds()
         return age > 3 * max(self.interval, MIN_INTERVAL_SECONDS) + 60

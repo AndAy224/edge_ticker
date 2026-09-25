@@ -34,11 +34,34 @@ async def init() -> None:
     await _conn.commit()
     current = await get_config()
     if current is None:
-        with open(DEFAULTS_PATH, encoding="utf-8") as f:
-            seed = yaml.safe_load(f)
-        await put_config(seed)
+        await put_config(defaults())
     elif not await history():
         await _record(current)  # baseline for DBs that predate the history table
+
+
+def defaults() -> dict:
+    with open(DEFAULTS_PATH, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def _merge(base, override):
+    if isinstance(base, dict) and isinstance(override, dict):
+        out = dict(base)
+        for key, value in override.items():
+            out[key] = _merge(base[key], value) if key in base else value
+        return out
+    return override  # scalars and lists: the stored value wins whole
+
+
+def with_defaults(config: dict) -> dict:
+    """`config` over defaults.yaml: keys added to the defaults since the DB was
+    seeded appear with their default values, everything stored wins.
+
+    Existing databases never gained new default keys, so every collector and
+    admin patch had to guard against a missing key — and some didn't (the
+    admin couldn't toggle modules that postdate the DB, since its toggles
+    iterate cfg.modules)."""
+    return _merge(defaults(), config)
 
 
 async def close() -> None:

@@ -1,6 +1,7 @@
 // Shared admin state: config draft (signals), health polling, live preview WS.
 
 import { computed, signal } from "@preact/signals";
+import { isOutdated, reloadOnto } from "../../shared/build";
 
 export const config = signal<any>(null);
 const savedJson = signal("");
@@ -90,6 +91,11 @@ export function connectWs(): void {
     const msg = JSON.parse(event.data);
     switch (msg.type) {
       case "snapshot":
+        if (isOutdated(msg.build?.admin)) {
+          // A deploy happened. Reload only when that can't lose an edit.
+          if (!dirty.value && reloadOnto(msg.build.admin)) return;
+          saveStatus.value = "a new admin version is deployed — reload after saving";
+        }
         livePayloads.value = msg.modules ?? {};
         displayState.value = msg.display_state ?? {};
         haStatus.value = msg.ha?.status ?? haStatus.value;

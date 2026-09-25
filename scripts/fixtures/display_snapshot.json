@@ -1,0 +1,4350 @@
+{
+ "modules": {
+  "proxmox": {
+   "module": "proxmox",
+   "updated_at": "2026-09-25T11:57:54.120047Z",
+   "stale": false,
+   "stage": {
+    "nodes": [
+     {
+      "name": "pve",
+      "online": true,
+      "cpu": 2.9,
+      "mem_pct": 38.8,
+      "mem_used_gb": 195.6,
+      "mem_total_gb": 503.5,
+      "uptime": 3090548
+     }
+    ],
+    "guests": {
+     "running": 11,
+     "total": 28,
+     "busiest": [
+      {
+       "vmid": 102,
+       "name": "dc-01",
+       "type": "qemu",
+       "running": true,
+       "cpu": 6.6,
+       "mem_gb": 5.8,
+       "maxmem_gb": 8.0
+      },
+      {
+       "vmid": 116,
+       "name": "web-02",
+       "type": "qemu",
+       "running": true,
+       "cpu": 5.2,
+       "mem_gb": 13.1,
+       "maxmem_gb": 32.0
+      },
+      {
+       "vmid": 121,
+       "name": "tools-03",
+       "type": "qemu",
+       "running": true,
+       "cpu": 1.8,
+       "mem_gb": 4.8,
+       "maxmem_gb": 8.0
+      },
+      {
+       "vmid": 104,
+       "name": "files-04",
+       "type": "qemu",
+       "running": true,
+       "cpu": 1.5,
+       "mem_gb": 11.5,
+       "maxmem_gb": 32.0
+      },
+      {
+       "vmid": 125,
+       "name": "homeassistant-05",
+       "type": "qemu",
+       "running": true,
+       "cpu": 1.0,
+       "mem_gb": 3.6,
+       "maxmem_gb": 4.0
+      },
+      {
+       "vmid": 103,
+       "name": "backup-06",
+       "type": "qemu",
+       "running": true,
+       "cpu": 0.7,
+       "mem_gb": 1.3,
+       "maxmem_gb": 2.0
+      },
+      {
+       "vmid": 108,
+       "name": "media-07",
+       "type": "qemu",
+       "running": true,
+       "cpu": 0.4,
+       "mem_gb": 3.0,
+       "maxmem_gb": 16.0
+      },
+      {
+       "vmid": 111,
+       "name": "db-08",
+       "type": "qemu",
+       "running": true,
+       "cpu": 0.3,
+       "mem_gb": 1.7,
+       "maxmem_gb": 4.0
+      },
+      {
+       "vmid": 101,
+       "name": "ci-09",
+       "type": "qemu",
+       "running": true,
+       "cpu": 0.2,
+       "mem_gb": 2.5,
+       "maxmem_gb": 4.0
+      },
+      {
+       "vmid": 100,
+       "name": "vpn-10",
+       "type": "qemu",
+       "running": true,
+       "cpu": 0.1,
+       "mem_gb": 11.4,
+       "maxmem_gb": 12.0
+      }
+     ]
+    },
+    "storage": [
+     {
+      "name": "local",
+      "node": "pve",
+      "pct": 73.8,
+      "used_gb": 47.3,
+      "total_gb": 64.0,
+      "free_gb": 16.8
+     },
+     {
+      "name": "vault",
+      "node": "pve",
+      "pct": 49.3,
+      "used_gb": 12812.9,
+      "total_gb": 25975.0,
+      "free_gb": 13162.1
+     },
+     {
+      "name": "KIOXIA",
+      "node": "pve",
+      "pct": 35.5,
+      "used_gb": 10098.3,
+      "total_gb": 28452.1,
+      "free_gb": 18353.7
+     },
+     {
+      "name": "local-lvm",
+      "node": "pve",
+      "pct": 12.8,
+      "used_gb": 16.7,
+      "total_gb": 130.2,
+      "free_gb": 113.5
+     }
+    ],
+    "power": {
+     "node": "pve",
+     "feeds": [
+      {
+       "outlet": 10,
+       "label": "PSU 1",
+       "watts": 140.798,
+       "amps": 1.207,
+       "volts": 132.598,
+       "relay_on": true,
+       "live": true
+      },
+      {
+       "outlet": 16,
+       "label": "PSU 2",
+       "watts": 171.081,
+       "amps": 1.463,
+       "volts": 132.598,
+       "relay_on": true,
+       "live": true
+      }
+     ],
+     "total_w": 311.9,
+     "state": "ok",
+     "site_w": 615.195,
+     "budget_w": 1875.0,
+     "stale": false
+    }
+   },
+   "tape": [
+    {
+     "text": "PVE pve: CPU 3% \u00b7 MEM 39% \u00b7 312 W",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "fantasy": {
+   "module": "fantasy",
+   "updated_at": "2026-09-25T11:32:43.052990Z",
+   "stale": false,
+   "stage": {
+    "meta": {
+     "league": "Sample League",
+     "leagueId": "0",
+     "season": 2026,
+     "week": 1,
+     "seasonActive": true
+    },
+    "myTeam": {
+     "teamId": 2,
+     "name": "Team 1",
+     "abbrev": "T2",
+     "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+     "owner": "owner2",
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "pointsFor": 0.0,
+     "pointsAgainst": 0.0,
+     "seed": 0,
+     "mine": true,
+     "rank": 2
+    },
+    "matchup": {
+     "home": {
+      "teamId": 2,
+      "name": "Team 1",
+      "abbrev": "T2",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+      "owner": "owner2",
+      "record": "0-0",
+      "color": null,
+      "points": 0.0,
+      "projected": null,
+      "starters": []
+     },
+     "away": {
+      "teamId": 5,
+      "name": "Team 2",
+      "abbrev": "T5",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+      "owner": "owner5",
+      "record": "0-0",
+      "color": null,
+      "points": 0.0,
+      "projected": null,
+      "starters": []
+     },
+     "state": "pre",
+     "winner": "UNDECIDED",
+     "winProbability": {
+      "home_pct": 50.0,
+      "away_pct": 50.0
+     },
+     "mineSide": "home",
+     "attention": 0
+    },
+    "standings": [
+     {
+      "teamId": 1,
+      "name": "Team 3",
+      "abbrev": "T1",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/Hail_Mary-18.svg",
+      "owner": "owner1",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": false,
+      "rank": 1
+     },
+     {
+      "teamId": 2,
+      "name": "Team 1",
+      "abbrev": "T2",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+      "owner": "owner2",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": true,
+      "rank": 2
+     },
+     {
+      "teamId": 3,
+      "name": "Team 4",
+      "abbrev": "T3",
+      "logo": "https://g.espncdn.com/lm-static/ffl/images/default_logos/20.svg",
+      "owner": "owner3",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": false,
+      "rank": 3
+     },
+     {
+      "teamId": 4,
+      "name": "Team 5",
+      "abbrev": "T4",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/core/CatsAndDogs/cats_dogs-10.svg",
+      "owner": "owner4",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": false,
+      "rank": 4
+     },
+     {
+      "teamId": 5,
+      "name": "Team 2",
+      "abbrev": "T5",
+      "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+      "owner": "owner5",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": false,
+      "rank": 5
+     },
+     {
+      "teamId": 6,
+      "name": "Team 6",
+      "abbrev": "T6",
+      "logo": "https://g.espncdn.com/lm-static/ffl/images/default_logos/14.svg",
+      "owner": "owner6",
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "pointsFor": 0.0,
+      "pointsAgainst": 0.0,
+      "seed": 0,
+      "mine": false,
+      "rank": 6
+     }
+    ],
+    "scoreboard": [
+     {
+      "home": {
+       "teamId": 2,
+       "name": "Team 1",
+       "abbrev": "T2",
+       "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+       "owner": "owner2",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "away": {
+       "teamId": 5,
+       "name": "Team 2",
+       "abbrev": "T5",
+       "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/red_zone-17.svg",
+       "owner": "owner5",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "state": "pre",
+      "winner": "UNDECIDED",
+      "winProbability": {
+       "home_pct": 50.0,
+       "away_pct": 50.0
+      },
+      "mineSide": "home",
+      "attention": 0
+     },
+     {
+      "home": {
+       "teamId": 6,
+       "name": "Team 6",
+       "abbrev": "T6",
+       "logo": "https://g.espncdn.com/lm-static/ffl/images/default_logos/14.svg",
+       "owner": "owner6",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "away": {
+       "teamId": 4,
+       "name": "Team 5",
+       "abbrev": "T4",
+       "logo": "https://g.espncdn.com/lm-static/logo-packs/core/CatsAndDogs/cats_dogs-10.svg",
+       "owner": "owner4",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "state": "pre",
+      "winner": "UNDECIDED",
+      "winProbability": {
+       "home_pct": 50.0,
+       "away_pct": 50.0
+      },
+      "mineSide": null
+     },
+     {
+      "home": {
+       "teamId": 3,
+       "name": "Team 4",
+       "abbrev": "T3",
+       "logo": "https://g.espncdn.com/lm-static/ffl/images/default_logos/20.svg",
+       "owner": "owner3",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "away": {
+       "teamId": 1,
+       "name": "Team 3",
+       "abbrev": "T1",
+       "logo": "https://g.espncdn.com/lm-static/logo-packs/ffl/SmackTalk-LeoEspinosa/Hail_Mary-18.svg",
+       "owner": "owner1",
+       "record": "0-0",
+       "color": null,
+       "points": 0.0,
+       "projected": null,
+       "starters": []
+      },
+      "state": "pre",
+      "winner": "UNDECIDED",
+      "winProbability": {
+       "home_pct": 50.0,
+       "away_pct": 50.0
+      },
+      "mineSide": null
+     }
+    ],
+    "trend": []
+   },
+   "tape": [
+    {
+     "text": "FFL: SBD 0.0 vs KMM 0.0 \u00b7 50% win",
+     "accent": "up",
+     "priority": 1,
+     "icon": "football"
+    },
+    {
+     "text": "FFL: SBD 0-0, #2 \u00b7 0 PF",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "adsb": {
+   "module": "adsb",
+   "updated_at": "2026-09-25T12:31:52.917794Z",
+   "stale": false,
+   "stage": {
+    "aircraft": [
+     {
+      "hex": "ae27f7",
+      "flight": "C6006",
+      "alt_ft": 1875,
+      "speed_kt": 91.3,
+      "track": 335.4,
+      "distance_km": 8.9,
+      "bearing_deg": 102.4,
+      "direction": "E",
+      "lat": 27.948614,
+      "lon": -82.711541,
+      "type": "H60",
+      "registration": "6006",
+      "squawk": "3730",
+      "category": "A7",
+      "vert_rate": 1280,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "ac011d",
+      "flight": "SWA4375",
+      "alt_ft": 26000,
+      "speed_kt": 440.0,
+      "track": 90.0,
+      "distance_km": 10.5,
+      "bearing_deg": 205.6,
+      "direction": "SW",
+      "lat": 27.880737,
+      "lon": -82.84619,
+      "type": "B38M",
+      "registration": "N8727M",
+      "squawk": "2541",
+      "category": "A3",
+      "vert_rate": 0,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a0980e",
+      "flight": "N13732",
+      "alt_ft": 2900,
+      "speed_kt": 108.9,
+      "track": 159.57,
+      "distance_km": 12.4,
+      "bearing_deg": 183.4,
+      "direction": "S",
+      "lat": 27.854811,
+      "lon": -82.807652,
+      "type": "C172",
+      "registration": "N13732",
+      "squawk": "4626",
+      "category": "A1",
+      "vert_rate": -69,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a36661",
+      "flight": "AAL1928",
+      "alt_ft": 25025,
+      "speed_kt": 426.1,
+      "track": 257.53,
+      "distance_km": 16.9,
+      "bearing_deg": 339.1,
+      "direction": "N",
+      "lat": 28.107496,
+      "lon": -82.861364,
+      "type": "B38M",
+      "registration": "N318UX",
+      "squawk": "1514",
+      "category": "A3",
+      "vert_rate": 1024,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a23138",
+      "flight": "ENY3638",
+      "alt_ft": 29000,
+      "speed_kt": 457.6,
+      "track": 156.29,
+      "distance_km": 19.6,
+      "bearing_deg": 5.1,
+      "direction": "N",
+      "lat": 28.141663,
+      "lon": -82.782458,
+      "type": "E75L",
+      "registration": "N240NN",
+      "squawk": "4031",
+      "category": "A3",
+      "vert_rate": 0,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a7d36f",
+      "flight": "N603LS",
+      "alt_ft": 6025,
+      "speed_kt": 178.5,
+      "track": 12.95,
+      "distance_km": 20.3,
+      "bearing_deg": 45.9,
+      "direction": "NE",
+      "lat": 28.092786,
+      "lon": -82.651439,
+      "type": null,
+      "registration": null,
+      "squawk": "2311",
+      "category": "A1",
+      "vert_rate": 1472,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a662b7",
+      "flight": "N510PC",
+      "alt_ft": 1975,
+      "speed_kt": 86.2,
+      "track": 3.99,
+      "distance_km": 21.4,
+      "bearing_deg": 150.3,
+      "direction": "SE",
+      "lat": 27.798981,
+      "lon": -82.692433,
+      "type": "TAMP",
+      "registration": "N510PC",
+      "squawk": "0016",
+      "category": "A1",
+      "vert_rate": 128,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a2e571",
+      "flight": "N286N",
+      "alt_ft": 4650,
+      "speed_kt": 243.0,
+      "track": 359.29,
+      "distance_km": 27.0,
+      "bearing_deg": 66.6,
+      "direction": "NE",
+      "lat": 28.062201,
+      "lon": -82.547715,
+      "type": "C25B",
+      "registration": "N286N",
+      "squawk": "4520",
+      "category": "A1",
+      "vert_rate": 1472,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a02987",
+      "flight": "N1097Y",
+      "alt_ft": 550,
+      "speed_kt": 72.2,
+      "track": 36.55,
+      "distance_km": 35.6,
+      "bearing_deg": 96.7,
+      "direction": "E",
+      "lat": 27.92807,
+      "lon": -82.440007,
+      "type": "C172",
+      "registration": "N1097Y",
+      "squawk": "1200",
+      "category": "A1",
+      "vert_rate": 768,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a55b2a",
+      "flight": "N444TH",
+      "alt_ft": 750,
+      "speed_kt": 110.1,
+      "track": 212.39,
+      "distance_km": 36.9,
+      "bearing_deg": 100.6,
+      "direction": "E",
+      "lat": 27.904482,
+      "lon": -82.431265,
+      "type": "C172",
+      "registration": "N444TH",
+      "squawk": "1200",
+      "category": "A1",
+      "vert_rate": -704,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "ac0fb6",
+      "flight": "SWA3914",
+      "alt_ft": 10450,
+      "speed_kt": 290.3,
+      "track": 354.66,
+      "distance_km": 39.1,
+      "bearing_deg": 35.3,
+      "direction": "NE",
+      "lat": 28.252646,
+      "lon": -82.569365,
+      "type": "B38M",
+      "registration": "N8765Q",
+      "squawk": "6013",
+      "category": "A3",
+      "vert_rate": 1856,
+      "on_ground": false,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "aae2f1",
+      "flight": "ECJ80",
+      "alt_ft": 0,
+      "speed_kt": 43.5,
+      "track": 8.44,
+      "distance_km": 25.4,
+      "bearing_deg": 87.4,
+      "direction": "E",
+      "lat": 27.975838,
+      "lon": -82.541934,
+      "type": "H25B",
+      "registration": "N800MA",
+      "squawk": "4764",
+      "category": "A2",
+      "vert_rate": 0,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "aa234a",
+      "flight": "AAL1740",
+      "alt_ft": 0,
+      "speed_kt": 15.5,
+      "track": 180.0,
+      "distance_km": 25.5,
+      "bearing_deg": 89.0,
+      "direction": "E",
+      "lat": 27.969601,
+      "lon": -82.540904,
+      "type": "A319",
+      "registration": "N752US",
+      "squawk": "4521",
+      "category": "A3",
+      "vert_rate": null,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a8222c",
+      "flight": "JBU1906",
+      "alt_ft": 0,
+      "speed_kt": 0.0,
+      "track": null,
+      "distance_km": 26.4,
+      "bearing_deg": 88.5,
+      "direction": "E",
+      "lat": 27.971948,
+      "lon": -82.531061,
+      "type": "A320",
+      "registration": "N623JB",
+      "squawk": "4701",
+      "category": "A3",
+      "vert_rate": null,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "ac79b1",
+      "flight": "SWA3733",
+      "alt_ft": 0,
+      "speed_kt": 0.0,
+      "track": null,
+      "distance_km": 26.5,
+      "bearing_deg": 85.8,
+      "direction": "E",
+      "lat": 27.982923,
+      "lon": -82.530549,
+      "type": null,
+      "registration": "N9025R",
+      "squawk": "3563",
+      "category": "A3",
+      "vert_rate": null,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a475de",
+      "flight": "LXJ387",
+      "alt_ft": 0,
+      "speed_kt": 7.2,
+      "track": null,
+      "distance_km": 26.5,
+      "bearing_deg": 88.2,
+      "direction": "E",
+      "lat": 27.973011,
+      "lon": -82.529904,
+      "type": "E55P",
+      "registration": "N387FX",
+      "squawk": "4602",
+      "category": "A2",
+      "vert_rate": null,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     },
+     {
+      "hex": "a7f6bf",
+      "flight": "LXJ612",
+      "alt_ft": 0,
+      "speed_kt": 0.1,
+      "track": null,
+      "distance_km": 27.4,
+      "bearing_deg": 89.4,
+      "direction": "E",
+      "lat": 27.968061,
+      "lon": -82.521353,
+      "type": "E550",
+      "registration": "N612FX",
+      "squawk": "7130",
+      "category": "A2",
+      "vert_rate": null,
+      "on_ground": true,
+      "desc": null,
+      "operator": null
+     }
+    ],
+    "count_in_radius": 17,
+    "count_airborne": 11,
+    "count_total": 19,
+    "radius_km": 40.0,
+    "center": {
+     "lat": 27.9659,
+     "lon": -82.8001
+    }
+   },
+   "tape": [
+    {
+     "text": "C6006 \u00b7 1875 ft \u00b7 9 km E",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "SWA4375 \u00b7 26000 ft \u00b7 10 km SW",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "N13732 \u00b7 2900 ft \u00b7 12 km S",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "hurricanes": {
+   "module": "hurricanes",
+   "updated_at": "2026-09-25T11:52:45.729136Z",
+   "stale": false,
+   "stage": {
+    "storms": [
+     {
+      "id": "al062026",
+      "name": "Fay",
+      "class": "TS",
+      "class_text": "Tropical Storm",
+      "category": "TS",
+      "wind_mph": 52,
+      "pressure_mb": "1004",
+      "lat": 29.8,
+      "lon": -42.8,
+      "movement_dir": "W",
+      "movement_mph": 6,
+      "distance_mi": 2405,
+      "bearing_from_home": "ENE",
+      "advisory_time": "2026-09-25T09:00:00.000Z",
+      "track": [
+       {
+        "lat": 29.8,
+        "lon": -42.8,
+        "label": ""
+       },
+       {
+        "lat": 29.7,
+        "lon": -43.4,
+        "label": ""
+       },
+       {
+        "lat": 29.7,
+        "lon": -44.3,
+        "label": ""
+       },
+       {
+        "lat": 29.5,
+        "lon": -45.0,
+        "label": ""
+       },
+       {
+        "lat": 29.3,
+        "lon": -45.4,
+        "label": ""
+       },
+       {
+        "lat": 29.0,
+        "lon": -45.8,
+        "label": ""
+       },
+       {
+        "lat": 28.5,
+        "lon": -46.3,
+        "label": ""
+       },
+       {
+        "lat": 27.6,
+        "lon": -46.6,
+        "label": ""
+       }
+      ],
+      "cone": [
+       [
+        25.37041,
+        -46.75165
+       ],
+       [
+        25.36553,
+        -46.58895
+       ],
+       [
+        25.37661,
+        -46.42307
+       ],
+       [
+        25.39035,
+        -46.25985
+       ],
+       [
+        25.41427,
+        -46.10679
+       ],
+       [
+        25.4421,
+        -45.96869
+       ],
+       [
+        25.48331,
+        -45.82182
+       ],
+       [
+        25.52337,
+        -45.69592
+       ],
+       [
+        25.57459,
+        -45.55906
+       ],
+       [
+        25.62768,
+        -45.43511
+       ],
+       [
+        25.69095,
+        -45.31028
+       ],
+       [
+        25.75326,
+        -45.20659
+       ],
+       [
+        25.82194,
+        -45.09821
+       ],
+       [
+        25.89292,
+        -44.99214
+       ],
+       [
+        25.97392,
+        -44.89606
+       ],
+       [
+        26.05803,
+        -44.79202
+       ],
+       [
+        26.14647,
+        -44.70337
+       ],
+       [
+        26.23899,
+        -44.61879
+       ],
+       [
+        26.33719,
+        -44.53988
+       ],
+       [
+        26.43201,
+        -44.46866
+       ],
+       [
+        26.54687,
+        -44.39531
+       ],
+       [
+        26.65818,
+        -44.32949
+       ],
+       [
+        26.79111,
+        -44.26314
+       ],
+       [
+        26.9026,
+        -44.2196
+       ],
+       [
+        27.04387,
+        -44.17263
+       ],
+       [
+        27.18265,
+        -44.13423
+       ],
+       [
+        27.32143,
+        -44.1069
+       ],
+       [
+        27.47971,
+        -44.08797
+       ],
+       [
+        27.65855,
+        -44.07867
+       ],
+       [
+        27.8186,
+        -44.09584
+       ],
+       [
+        27.96687,
+        -44.11371
+       ],
+       [
+        28.11274,
+        -44.14503
+       ],
+       [
+        28.24851,
+        -44.18643
+       ],
+       [
+        28.37807,
+        -44.23403
+       ],
+       [
+        28.49683,
+        -44.29242
+       ],
+       [
+        28.62329,
+        -44.354
+       ],
+       [
+        28.73796,
+        -44.35948
+       ],
+       [
+        28.87161,
+        -44.31631
+       ],
+       [
+        28.97601,
+        -44.25464
+       ],
+       [
+        29.03955,
+        -44.15219
+       ],
+       [
+        29.09396,
+        -44.02957
+       ],
+       [
+        29.1396,
+        -43.90926
+       ],
+       [
+        29.17629,
+        -43.75788
+       ],
+       [
+        29.20589,
+        -43.61049
+       ],
+       [
+        29.24055,
+        -43.46814
+       ],
+       [
+        29.27679,
+        -43.32738
+       ],
+       [
+        29.31756,
+        -43.20219
+       ],
+       [
+        29.36612,
+        -43.06267
+       ],
+       [
+        29.42373,
+        -42.94324
+       ],
+       [
+        29.47912,
+        -42.83265
+       ],
+       [
+        29.54186,
+        -42.70728
+       ],
+       [
+        29.61444,
+        -42.59174
+       ],
+       [
+        29.72876,
+        -42.50681
+       ],
+       [
+        29.85718,
+        -42.50327
+       ],
+       [
+        29.97266,
+        -42.56476
+       ],
+       [
+        30.04284,
+        -42.68269
+       ],
+       [
+        30.06739,
+        -42.84619
+       ],
+       [
+        30.0845,
+        -42.995
+       ],
+       [
+        30.09247,
+        -43.17503
+       ],
+       [
+        30.11835,
+        -43.32614
+       ],
+       [
+        30.1538,
+        -43.45663
+       ],
+       [
+        30.19554,
+        -43.60297
+       ],
+       [
+        30.23515,
+        -43.7293
+       ],
+       [
+        30.27078,
+        -43.87068
+       ],
+       [
+        30.30844,
+        -44.02108
+       ],
+       [
+        30.3376,
+        -44.15786
+       ],
+       [
+        30.35054,
+        -44.33294
+       ],
+       [
+        30.35054,
+        -44.50988
+       ],
+       [
+        30.3501,
+        -44.68639
+       ],
+       [
+        30.33104,
+        -44.84431
+       ],
+       [
+        30.32838,
+        -45.00753
+       ],
+       [
+        30.32838,
+        -45.18447
+       ],
+       [
+        30.32838,
+        -45.36142
+       ],
+       [
+        30.32838,
+        -45.53836
+       ],
+       [
+        30.3244,
+        -45.71132
+       ],
+       [
+        30.3026,
+        -45.8665
+       ],
+       [
+        30.27628,
+        -46.02822
+       ],
+       [
+        30.24419,
+        -46.16208
+       ],
+       [
+        30.21016,
+        -46.31611
+       ],
+       [
+        30.17773,
+        -46.44961
+       ],
+       [
+        30.13678,
+        -46.6078
+       ],
+       [
+        30.0985,
+        -46.7244
+       ],
+       [
+        30.04355,
+        -46.86861
+       ],
+       [
+        29.99233,
+        -46.98336
+       ],
+       [
+        29.93366,
+        -47.10173
+       ],
+       [
+        29.88199,
+        -47.2271
+       ],
+       [
+        29.82625,
+        -47.35945
+       ],
+       [
+        29.77077,
+        -47.46995
+       ],
+       [
+        29.70803,
+        -47.58426
+       ],
+       [
+        29.63633,
+        -47.71174
+       ],
+       [
+        29.57518,
+        -47.80552
+       ],
+       [
+        29.50863,
+        -47.91602
+       ],
+       [
+        29.44216,
+        -48.02661
+       ],
+       [
+        29.37561,
+        -48.13711
+       ],
+       [
+        29.30116,
+        -48.23974
+       ],
+       [
+        29.22096,
+        -48.33661
+       ],
+       [
+        29.13694,
+        -48.44074
+       ],
+       [
+        29.05444,
+        -48.52425
+       ],
+       [
+        28.94543,
+        -48.6145
+       ],
+       [
+        28.85672,
+        -48.69183
+       ],
+       [
+        28.75755,
+        -48.75871
+       ],
+       [
+        28.63641,
+        -48.83683
+       ],
+       [
+        28.52634,
+        -48.89283
+       ],
+       [
+        28.40829,
+        -48.95193
+       ],
+       [
+        28.28174,
+        -49.00253
+       ],
+       [
+        28.14774,
+        -49.04571
+       ],
+       [
+        28.00382,
+        -49.07897
+       ],
+       [
+        27.83703,
+        -49.10047
+       ],
+       [
+        27.6901,
+        -49.11967
+       ],
+       [
+        27.51861,
+        -49.11745
+       ],
+       [
+        27.35102,
+        -49.09676
+       ],
+       [
+        27.20081,
+        -49.06977
+       ],
+       [
+        27.06903,
+        -49.03544
+       ],
+       [
+        26.93583,
+        -48.99147
+       ],
+       [
+        26.80627,
+        -48.94387
+       ],
+       [
+        26.68751,
+        -48.88549
+       ],
+       [
+        26.56778,
+        -48.81701
+       ],
+       [
+        26.46454,
+        -48.7542
+       ],
+       [
+        26.35615,
+        -48.67439
+       ],
+       [
+        26.26443,
+        -48.60007
+       ],
+       [
+        26.16314,
+        -48.5132
+       ],
+       [
+        26.07451,
+        -48.42473
+       ],
+       [
+        25.98908,
+        -48.32201
+       ],
+       [
+        25.90666,
+        -48.22735
+       ],
+       [
+        25.83966,
+        -48.12835
+       ],
+       [
+        25.76956,
+        -48.02139
+       ],
+       [
+        25.69893,
+        -47.9039
+       ],
+       [
+        25.64248,
+        -47.79437
+       ],
+       [
+        25.5839,
+        -47.66485
+       ],
+       [
+        25.53445,
+        -47.53727
+       ],
+       [
+        25.49067,
+        -47.40403
+       ],
+       [
+        25.45194,
+        -47.2547
+       ],
+       [
+        25.41941,
+        -47.12128
+       ],
+       [
+        25.39389,
+        -46.96982
+       ],
+       [
+        25.38148,
+        -46.80792
+       ]
+      ]
+     },
+     {
+      "id": "al072026",
+      "name": "Gonzalo",
+      "class": "TS",
+      "class_text": "Tropical Storm",
+      "category": "TS",
+      "wind_mph": 46,
+      "pressure_mb": "1004",
+      "lat": 14.2,
+      "lon": -22.4,
+      "movement_dir": "NNW",
+      "movement_mph": 9,
+      "distance_mi": 3965,
+      "bearing_from_home": "E",
+      "advisory_time": "2026-09-25T09:00:00.000Z",
+      "track": [
+       {
+        "lat": 14.2,
+        "lon": -22.4,
+        "label": ""
+       },
+       {
+        "lat": 15.4,
+        "lon": -22.8,
+        "label": ""
+       },
+       {
+        "lat": 17.0,
+        "lon": -23.2,
+        "label": ""
+       },
+       {
+        "lat": 18.5,
+        "lon": -23.7,
+        "label": ""
+       },
+       {
+        "lat": 19.8,
+        "lon": -24.2,
+        "label": ""
+       },
+       {
+        "lat": 20.5,
+        "lon": -24.3,
+        "label": ""
+       },
+       {
+        "lat": 21.0,
+        "lon": -24.4,
+        "label": ""
+       },
+       {
+        "lat": 22.0,
+        "lon": -24.5,
+        "label": ""
+       },
+       {
+        "lat": 22.2,
+        "lon": -25.7,
+        "label": ""
+       }
+      ],
+      "cone": [
+       [
+        13.93396,
+        -22.43068
+       ],
+       [
+        14.00942,
+        -22.20905
+       ],
+       [
+        14.2424,
+        -22.1326
+       ],
+       [
+        14.48825,
+        -22.17943
+       ],
+       [
+        14.75459,
+        -22.23487
+       ],
+       [
+        15.00828,
+        -22.28896
+       ],
+       [
+        15.26533,
+        -22.3397
+       ],
+       [
+        15.53548,
+        -22.37737
+       ],
+       [
+        15.81537,
+        -22.40531
+       ],
+       [
+        16.09582,
+        -22.43269
+       ],
+       [
+        16.37671,
+        -22.45963
+       ],
+       [
+        16.66119,
+        -22.48298
+       ],
+       [
+        16.94108,
+        -22.51093
+       ],
+       [
+        17.21022,
+        -22.54959
+       ],
+       [
+        17.4713,
+        -22.59631
+       ],
+       [
+        17.72689,
+        -22.64851
+       ],
+       [
+        17.97879,
+        -22.70439
+       ],
+       [
+        18.23069,
+        -22.76027
+       ],
+       [
+        18.48259,
+        -22.81615
+       ],
+       [
+        18.7355,
+        -22.87103
+       ],
+       [
+        18.98751,
+        -22.9268
+       ],
+       [
+        19.23841,
+        -22.98369
+       ],
+       [
+        19.49019,
+        -23.03968
+       ],
+       [
+        19.74769,
+        -23.08975
+       ],
+       [
+        19.97015,
+        -23.04639
+       ],
+       [
+        20.13338,
+        -22.90199
+       ],
+       [
+        20.30355,
+        -22.76452
+       ],
+       [
+        20.48671,
+        -22.64001
+       ],
+       [
+        20.66584,
+        -22.51148
+       ],
+       [
+        20.85123,
+        -22.38921
+       ],
+       [
+        21.05913,
+        -22.27544
+       ],
+       [
+        21.27364,
+        -22.18223
+       ],
+       [
+        21.51468,
+        -22.10153
+       ],
+       [
+        21.75505,
+        -22.04811
+       ],
+       [
+        22.02945,
+        -22.01469
+       ],
+       [
+        22.33061,
+        -22.02028
+       ],
+       [
+        22.59796,
+        -22.06074
+       ],
+       [
+        22.84896,
+        -22.11752
+       ],
+       [
+        23.07847,
+        -22.19575
+       ],
+       [
+        23.29354,
+        -22.2884
+       ],
+       [
+        23.5076,
+        -22.38206
+       ],
+       [
+        23.71292,
+        -22.48444
+       ],
+       [
+        23.90795,
+        -22.5971
+       ],
+       [
+        24.08988,
+        -22.72283
+       ],
+       [
+        24.26207,
+        -22.85829
+       ],
+       [
+        24.42194,
+        -23.00604
+       ],
+       [
+        24.58942,
+        -23.17414
+       ],
+       [
+        24.72131,
+        -23.33586
+       ],
+       [
+        24.85297,
+        -23.51178
+       ],
+       [
+        24.97612,
+        -23.69619
+       ],
+       [
+        25.08897,
+        -23.90485
+       ],
+       [
+        25.18704,
+        -24.10033
+       ],
+       [
+        25.28153,
+        -24.32732
+       ],
+       [
+        25.35856,
+        -24.55778
+       ],
+       [
+        25.42484,
+        -24.79896
+       ],
+       [
+        25.47566,
+        -25.05557
+       ],
+       [
+        25.51194,
+        -25.32671
+       ],
+       [
+        25.5135,
+        -25.6325
+       ],
+       [
+        25.5135,
+        -25.93986
+       ],
+       [
+        25.49156,
+        -26.2253
+       ],
+       [
+        25.44812,
+        -26.48929
+       ],
+       [
+        25.38755,
+        -26.73618
+       ],
+       [
+        25.31758,
+        -26.97367
+       ],
+       [
+        25.23361,
+        -27.1972
+       ],
+       [
+        25.13565,
+        -27.40676
+       ],
+       [
+        25.03109,
+        -27.60972
+       ],
+       [
+        24.91454,
+        -27.80073
+       ],
+       [
+        24.78758,
+        -27.98134
+       ],
+       [
+        24.64809,
+        -28.14943
+       ],
+       [
+        24.49191,
+        -28.32882
+       ],
+       [
+        24.33685,
+        -28.48137
+       ],
+       [
+        24.16612,
+        -28.61829
+       ],
+       [
+        23.98811,
+        -28.74793
+       ],
+       [
+        23.80294,
+        -28.87042
+       ],
+       [
+        23.60097,
+        -28.97615
+       ],
+       [
+        23.39822,
+        -29.06713
+       ],
+       [
+        23.17296,
+        -29.14961
+       ],
+       [
+        22.91994,
+        -29.21835
+       ],
+       [
+        22.65864,
+        -29.26484
+       ],
+       [
+        22.37091,
+        -29.28496
+       ],
+       [
+        22.11868,
+        -29.28697
+       ],
+       [
+        21.81898,
+        -29.26484
+       ],
+       [
+        21.56943,
+        -29.22058
+       ],
+       [
+        21.3257,
+        -29.15654
+       ],
+       [
+        21.08533,
+        -29.07518
+       ],
+       [
+        20.87665,
+        -28.97615
+       ],
+       [
+        20.68106,
+        -28.87803
+       ],
+       [
+        20.47876,
+        -28.75866
+       ],
+       [
+        20.29951,
+        -28.63024
+       ],
+       [
+        20.12789,
+        -28.49423
+       ],
+       [
+        19.96477,
+        -28.33574
+       ],
+       [
+        19.81777,
+        -28.18911
+       ],
+       [
+        19.66383,
+        -28.00749
+       ],
+       [
+        19.54628,
+        -27.84543
+       ],
+       [
+        19.41753,
+        -27.65264
+       ],
+       [
+        19.30468,
+        -27.44398
+       ],
+       [
+        19.20213,
+        -27.239
+       ],
+       [
+        19.11212,
+        -27.02151
+       ],
+       [
+        19.03408,
+        -26.79206
+       ],
+       [
+        18.9687,
+        -26.54998
+       ],
+       [
+        18.91799,
+        -26.29325
+       ],
+       [
+        18.88351,
+        -26.02032
+       ],
+       [
+        18.88015,
+        -25.71632
+       ],
+       [
+        18.88172,
+        -25.41054
+       ],
+       [
+        18.9143,
+        -25.13571
+       ],
+       [
+        18.88664,
+        -24.91352
+       ],
+       [
+        18.70483,
+        -24.80165
+       ],
+       [
+        18.51305,
+        -24.68575
+       ],
+       [
+        18.32888,
+        -24.57622
+       ],
+       [
+        18.11482,
+        -24.45462
+       ],
+       [
+        17.90994,
+        -24.3518
+       ],
+       [
+        17.71066,
+        -24.25735
+       ],
+       [
+        17.4994,
+        -24.1609
+       ],
+       [
+        17.29083,
+        -24.06177
+       ],
+       [
+        17.07856,
+        -23.96632
+       ],
+       [
+        16.86484,
+        -23.87233
+       ],
+       [
+        16.64988,
+        -23.77956
+       ],
+       [
+        16.43482,
+        -23.68691
+       ],
+       [
+        16.21516,
+        -23.59884
+       ],
+       [
+        15.99551,
+        -23.51077
+       ],
+       [
+        15.7716,
+        -23.42694
+       ],
+       [
+        15.55552,
+        -23.3353
+       ],
+       [
+        15.33956,
+        -23.24354
+       ],
+       [
+        15.1236,
+        -23.15178
+       ],
+       [
+        14.91502,
+        -23.05265
+       ],
+       [
+        14.70096,
+        -22.95899
+       ],
+       [
+        14.4859,
+        -22.85237
+       ],
+       [
+        14.28796,
+        -22.74261
+       ],
+       [
+        14.08711,
+        -22.64974
+       ],
+       [
+        13.94191,
+        -22.46745
+       ]
+      ]
+     }
+    ],
+    "quiet": false,
+    "home": {
+     "lat": 27.9659,
+     "lon": -82.8001
+    },
+    "location_name": "Clearwater, FL"
+   },
+   "tape": [
+    {
+     "text": "TS Fay \u2014 52 mph, 2405 mi ENE, moving W 6 mph",
+     "accent": "alert",
+     "priority": 5,
+     "icon": null
+    },
+    {
+     "text": "TS Gonzalo \u2014 46 mph, 3965 mi E, moving NNW 9 mph",
+     "accent": "alert",
+     "priority": 5,
+     "icon": null
+    }
+   ]
+  },
+  "weather_alerts": {
+   "module": "weather_alerts",
+   "updated_at": "2026-09-25T11:56:53.530049Z",
+   "stale": false,
+   "stage": {
+    "alerts": [],
+    "location": "Clearwater, FL"
+   },
+   "tape": []
+  },
+  "markets": {
+   "module": "markets",
+   "updated_at": "2026-09-25T11:58:08.010189Z",
+   "stale": false,
+   "stage": {
+    "quotes": [
+     {
+      "symbol": "AAPL",
+      "price": 335.92,
+      "change": -1.1,
+      "pct": -0.3264,
+      "spark": [
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       335.92,
+       336.31,
+       335.92,
+       335.92,
+       335.92
+      ],
+      "open": 336.72,
+      "high": 338.91,
+      "low": 334.3,
+      "prev_close": 337.02,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "MSFT",
+      "price": 497.93,
+      "change": -2.66,
+      "pct": -0.5314,
+      "spark": [
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93,
+       497.93
+      ],
+      "open": 495.07,
+      "high": 498.9,
+      "low": 491.22,
+      "prev_close": 500.59,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "NVDA",
+      "price": 224.58,
+      "change": -0.93,
+      "pct": -0.4124,
+      "spark": [
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       224.58,
+       225.89,
+       224.58,
+       225.75,
+       225.83,
+       224.58,
+       224.58,
+       226.05,
+       226.05,
+       224.58
+      ],
+      "open": 222.08,
+      "high": 224.94,
+      "low": 221.09,
+      "prev_close": 225.51,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "TSLA",
+      "price": 377.94,
+      "change": -2.18,
+      "pct": -0.5735,
+      "spark": [
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94,
+       377.94
+      ],
+      "open": 377.35,
+      "high": 383.3324,
+      "low": 375.7,
+      "prev_close": 380.12,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "SPCX",
+      "price": 148.03,
+      "change": -0.33,
+      "pct": -0.2224,
+      "spark": [
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       149.07,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       148.03,
+       149.26,
+       148.03,
+       148.03,
+       148.03,
+       149.63,
+       148.03,
+       148.03,
+       148.03
+      ],
+      "open": 148.2,
+      "high": 149,
+      "low": 145.88,
+      "prev_close": 148.36,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "VTI",
+      "price": 378.08,
+      "change": -0.15,
+      "pct": -0.0397,
+      "spark": [
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08,
+       378.08
+      ],
+      "open": 376.36,
+      "high": 378.81,
+      "low": 376.0297,
+      "prev_close": 378.23,
+      "currency": "USD",
+      "market_state": null
+     },
+     {
+      "symbol": "DOGE-USD",
+      "price": 0.09798,
+      "change": 0.005319999999999991,
+      "pct": 5.7414202460608585,
+      "spark": [
+       0.09628,
+       0.096,
+       0.09626,
+       0.09646,
+       0.09664,
+       0.09618,
+       0.09602,
+       0.09592,
+       0.09632,
+       0.09586,
+       0.09549,
+       0.09505,
+       0.09495,
+       0.09483,
+       0.09486,
+       0.0952,
+       0.09497,
+       0.09535,
+       0.09568,
+       0.09508,
+       0.09487,
+       0.09506,
+       0.09505,
+       0.09509,
+       0.095,
+       0.09503,
+       0.09487,
+       0.09497,
+       0.09477,
+       0.09532,
+       0.09513,
+       0.09547,
+       0.09552,
+       0.09631,
+       0.09599,
+       0.09617,
+       0.09637,
+       0.09685,
+       0.09686,
+       0.0967,
+       0.09627,
+       0.09679,
+       0.09673,
+       0.09688,
+       0.09848,
+       0.0982,
+       0.09793,
+       0.09787
+      ],
+      "open": 0.09266,
+      "high": 0.09888,
+      "low": 0.09212,
+      "prev_close": 0.09266,
+      "currency": "USD",
+      "market_state": null
+     }
+    ],
+    "featured": [
+     "VTI",
+     "SPCX"
+    ]
+   },
+   "tape": [
+    {
+     "text": "AAPL 335.92 \u25bc 0.33%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "MSFT 497.93 \u25bc 0.53%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "NVDA 224.58 \u25bc 0.41%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "TSLA 377.94 \u25bc 0.57%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "SPCX 148.03 \u25bc 0.22%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "VTI 378.08 \u25bc 0.04%",
+     "accent": "down",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "DOGE-USD 0.10 \u25b2 5.74%",
+     "accent": "up",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "airquality": {
+   "module": "airquality",
+   "updated_at": "2026-09-25T11:32:43.804724Z",
+   "stale": false,
+   "stage": {
+    "location": "Clearwater, FL",
+    "aqi": {
+     "value": 31,
+     "category": "Good",
+     "accent": "up",
+     "dominant": "O\u2083"
+    },
+    "pollutants": [
+     {
+      "key": "pm2_5",
+      "label": "PM2.5",
+      "value": 3.1,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 22
+     },
+     {
+      "key": "pm10",
+      "label": "PM10",
+      "value": 3.5,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 4
+     },
+     {
+      "key": "ozone",
+      "label": "O\u2083",
+      "value": 58.0,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 31
+     },
+     {
+      "key": "nitrogen_dioxide",
+      "label": "NO\u2082",
+      "value": 3.4,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 2
+     },
+     {
+      "key": "sulphur_dioxide",
+      "label": "SO\u2082",
+      "value": 0.8,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 0
+     },
+     {
+      "key": "carbon_monoxide",
+      "label": "CO",
+      "value": 155.0,
+      "unit": "\u03bcg/m\u00b3",
+      "sub_aqi": 1
+     }
+    ],
+    "pollen": [],
+    "hourly": [
+     {
+      "time": "2026-09-25T07:00",
+      "aqi": 31,
+      "pm2_5": 3.1
+     },
+     {
+      "time": "2026-09-25T08:00",
+      "aqi": 30,
+      "pm2_5": 3.1
+     },
+     {
+      "time": "2026-09-25T09:00",
+      "aqi": 29,
+      "pm2_5": 3.3
+     },
+     {
+      "time": "2026-09-25T10:00",
+      "aqi": 29,
+      "pm2_5": 3.5
+     },
+     {
+      "time": "2026-09-25T11:00",
+      "aqi": 29,
+      "pm2_5": 3.7
+     },
+     {
+      "time": "2026-09-25T12:00",
+      "aqi": 30,
+      "pm2_5": 4.0
+     },
+     {
+      "time": "2026-09-25T13:00",
+      "aqi": 31,
+      "pm2_5": 4.3
+     },
+     {
+      "time": "2026-09-25T14:00",
+      "aqi": 33,
+      "pm2_5": 4.5
+     },
+     {
+      "time": "2026-09-25T15:00",
+      "aqi": 35,
+      "pm2_5": 4.5
+     },
+     {
+      "time": "2026-09-25T16:00",
+      "aqi": 38,
+      "pm2_5": 4.4
+     },
+     {
+      "time": "2026-09-25T17:00",
+      "aqi": 40,
+      "pm2_5": 4.5
+     },
+     {
+      "time": "2026-09-25T18:00",
+      "aqi": 42,
+      "pm2_5": 4.5
+     },
+     {
+      "time": "2026-09-25T19:00",
+      "aqi": 44,
+      "pm2_5": 4.6
+     },
+     {
+      "time": "2026-09-25T20:00",
+      "aqi": 45,
+      "pm2_5": 5.0
+     },
+     {
+      "time": "2026-09-25T21:00",
+      "aqi": 45,
+      "pm2_5": 4.8
+     },
+     {
+      "time": "2026-09-25T22:00",
+      "aqi": 45,
+      "pm2_5": 5.3
+     },
+     {
+      "time": "2026-09-25T23:00",
+      "aqi": 44,
+      "pm2_5": 6.2
+     },
+     {
+      "time": "2026-09-26T00:00",
+      "aqi": 43,
+      "pm2_5": 6.3
+     },
+     {
+      "time": "2026-09-26T01:00",
+      "aqi": 41,
+      "pm2_5": 6.2
+     },
+     {
+      "time": "2026-09-26T02:00",
+      "aqi": 40,
+      "pm2_5": 6.0
+     },
+     {
+      "time": "2026-09-26T03:00",
+      "aqi": 38,
+      "pm2_5": 5.9
+     },
+     {
+      "time": "2026-09-26T04:00",
+      "aqi": 37,
+      "pm2_5": 6.2
+     },
+     {
+      "time": "2026-09-26T05:00",
+      "aqi": 36,
+      "pm2_5": 6.8
+     },
+     {
+      "time": "2026-09-26T06:00",
+      "aqi": 36,
+      "pm2_5": 7.5
+     }
+    ]
+   },
+   "tape": [
+    {
+     "text": "Clearwater, FL AQI 31 \u2014 Good",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "sports": {
+   "module": "sports",
+   "updated_at": "2026-09-25T11:52:46.641483Z",
+   "stale": false,
+   "stage": {
+    "games": [
+     {
+      "id": "401872948",
+      "sport": "football",
+      "league": "NFL",
+      "state": "post",
+      "detail": "Final",
+      "start": "2026-09-25T00:15Z",
+      "home": {
+       "abbrev": "GB",
+       "id": "9",
+       "name": "Green Bay Packers",
+       "score": "14",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/gb.png",
+       "color": "204e32",
+       "record": "1-2",
+       "records": {
+        "overall": "1-2",
+        "home": "0-1",
+        "road": "1-1"
+       },
+       "winner": false,
+       "probable": null,
+       "linescores": [
+        7.0,
+        0.0,
+        0.0,
+        7.0
+       ]
+      },
+      "away": {
+       "abbrev": "ATL",
+       "id": "1",
+       "name": "Atlanta Falcons",
+       "score": "35",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/atl.png",
+       "color": "a71930",
+       "record": "1-2",
+       "records": {
+        "overall": "1-2",
+        "home": "0-1",
+        "road": "1-1"
+       },
+       "winner": true,
+       "probable": null,
+       "linescores": [
+        7.0,
+        10.0,
+        7.0,
+        11.0
+       ]
+      },
+      "followed": true,
+      "odds": null,
+      "win_prob": null,
+      "situation": null,
+      "broadcast": "Prime Video",
+      "venue": {
+       "name": "Lambeau Field",
+       "city": "Green Bay"
+      },
+      "note": null,
+      "followed_side": "home",
+      "bucket": "recent"
+     },
+     {
+      "id": "401872953",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 1:00 PM EDT",
+      "start": "2026-09-27T17:00Z",
+      "home": {
+       "abbrev": "BUF",
+       "id": "2",
+       "name": "Buffalo Bills",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/buf.png",
+       "color": "00338d",
+       "record": "2-0",
+       "records": {
+        "overall": "2-0",
+        "home": "1-0",
+        "road": "1-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "LAC",
+       "id": "24",
+       "name": "Los Angeles Chargers",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lac.png",
+       "color": "0080c6",
+       "record": "0-2",
+       "records": {
+        "overall": "0-2",
+        "home": "0-2",
+        "road": "0-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": false,
+      "odds": {
+       "details": "BUF -7",
+       "over_under": 50.5,
+       "spread": -7.0,
+       "favorite_side": "home",
+       "moneyline": {
+        "home": "-340",
+        "away": "+270"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 74.1,
+       "away": 25.9,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "FOX",
+      "venue": {
+       "name": "Highmark Stadium",
+       "city": "Orchard Park"
+      },
+      "note": null,
+      "followed_side": null,
+      "bucket": "next"
+     },
+     {
+      "id": "401872949",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 1:00 PM EDT",
+      "start": "2026-09-27T17:00Z",
+      "home": {
+       "abbrev": "CLE",
+       "id": "5",
+       "name": "Cleveland Browns",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/cle.png",
+       "color": "472a08",
+       "record": "1-1",
+       "records": {
+        "overall": "1-1",
+        "home": "0-0",
+        "road": "1-1"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "CAR",
+       "id": "29",
+       "name": "Carolina Panthers",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/car.png",
+       "color": "0085ca",
+       "record": "1-1",
+       "records": {
+        "overall": "1-1",
+        "home": "0-1",
+        "road": "1-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": false,
+      "odds": {
+       "details": "CAR -2.5",
+       "over_under": 42.5,
+       "spread": 2.5,
+       "favorite_side": "away",
+       "moneyline": {
+        "home": "+124",
+        "away": "-148"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 42.8,
+       "away": 57.2,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "FOX",
+      "venue": {
+       "name": "Huntington Bank Field",
+       "city": "Cleveland"
+      },
+      "note": null,
+      "followed_side": null,
+      "bucket": "next"
+     },
+     {
+      "id": "401872954",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 1:00 PM EDT",
+      "start": "2026-09-27T17:00Z",
+      "home": {
+       "abbrev": "DET",
+       "id": "8",
+       "name": "Detroit Lions",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/det.png",
+       "color": "0076b6",
+       "record": "1-1",
+       "records": {
+        "overall": "1-1",
+        "home": "1-0",
+        "road": "0-1"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "NYJ",
+       "id": "20",
+       "name": "New York Jets",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/nyj.png",
+       "color": "115740",
+       "record": "1-1",
+       "records": {
+        "overall": "1-1",
+        "home": "0-1",
+        "road": "1-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": false,
+      "odds": {
+       "details": "DET -6.5",
+       "over_under": 47.5,
+       "spread": -6.5,
+       "favorite_side": "home",
+       "moneyline": {
+        "home": "-298",
+        "away": "+240"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 71.8,
+       "away": 28.2,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "FOX",
+      "venue": {
+       "name": "Ford Field",
+       "city": "Detroit"
+      },
+      "note": null,
+      "followed_side": null,
+      "bucket": "next"
+     },
+     {
+      "id": "401872951",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 1:00 PM EDT",
+      "start": "2026-09-27T17:00Z",
+      "home": {
+       "abbrev": "IND",
+       "id": "11",
+       "name": "Indianapolis Colts",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ind.png",
+       "color": "003b75",
+       "record": "0-2",
+       "records": {
+        "overall": "0-2",
+        "home": "0-1",
+        "road": "0-1"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "HOU",
+       "id": "34",
+       "name": "Houston Texans",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/hou.png",
+       "color": "021018",
+       "record": "0-2",
+       "records": {
+        "overall": "0-2",
+        "home": "0-2",
+        "road": "0-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": false,
+      "odds": {
+       "details": "HOU -1.5",
+       "over_under": 42.5,
+       "spread": 1.5,
+       "favorite_side": "away",
+       "moneyline": {
+        "home": "+105",
+        "away": "-125"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 46.8,
+       "away": 53.2,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "CBS",
+      "venue": {
+       "name": "Lucas Oil Stadium",
+       "city": "Indianapolis"
+      },
+      "note": null,
+      "followed_side": null,
+      "bucket": "next"
+     },
+     {
+      "id": "401872952",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 1:00 PM EDT",
+      "start": "2026-09-27T17:00Z",
+      "home": {
+       "abbrev": "MIA",
+       "id": "15",
+       "name": "Miami Dolphins",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/mia.png",
+       "color": "008e97",
+       "record": "0-2",
+       "records": {
+        "overall": "0-2",
+        "home": "0-0",
+        "road": "0-2"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "KC",
+       "id": "12",
+       "name": "Kansas City Chiefs",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/kc.png",
+       "color": "e31837",
+       "record": "2-0",
+       "records": {
+        "overall": "2-0",
+        "home": "2-0",
+        "road": "0-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": false,
+      "odds": {
+       "details": "KC -10.5",
+       "over_under": 45.5,
+       "spread": 10.5,
+       "favorite_side": "away",
+       "moneyline": {
+        "home": "+470",
+        "away": "-650"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 16.8,
+       "away": 83.2,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "CBS",
+      "venue": {
+       "name": "Hard Rock Stadium",
+       "city": "Miami Gardens"
+      },
+      "note": null,
+      "followed_side": null,
+      "bucket": "next"
+     },
+     {
+      "id": "401872959",
+      "sport": "football",
+      "league": "NFL",
+      "state": "pre",
+      "detail": "9/27 - 4:05 PM EDT",
+      "start": "2026-09-27T20:05Z",
+      "home": {
+       "abbrev": "TB",
+       "id": "27",
+       "name": "Tampa Bay Buccaneers",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/tb.png",
+       "color": "bd1c36",
+       "record": "0-2",
+       "records": {
+        "overall": "0-2",
+        "home": "0-1",
+        "road": "0-1"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "away": {
+       "abbrev": "MIN",
+       "id": "16",
+       "name": "Minnesota Vikings",
+       "score": "0",
+       "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/min.png",
+       "color": "4f2683",
+       "record": "2-0",
+       "records": {
+        "overall": "2-0",
+        "home": "1-0",
+        "road": "1-0"
+       },
+       "winner": null,
+       "probable": null,
+       "linescores": []
+      },
+      "followed": true,
+      "odds": {
+       "details": "MIN -1.5",
+       "over_under": 42.5,
+       "spread": 1.5,
+       "favorite_side": "away",
+       "moneyline": {
+        "home": "+100",
+        "away": "-120"
+       },
+       "provider": "DraftKings"
+      },
+      "win_prob": {
+       "home": 47.8,
+       "away": 52.2,
+       "source": "moneyline"
+      },
+      "situation": null,
+      "broadcast": "FOX",
+      "venue": {
+       "name": "Raymond James Stadium",
+       "city": "Tampa"
+      },
+      "note": null,
+      "followed_side": "home",
+      "bucket": "next"
+     }
+    ],
+    "next_up": "401872959"
+   },
+   "tape": [
+    {
+     "text": "ATL 35 \u2013 GB 14 (F)",
+     "accent": "neutral",
+     "priority": 1,
+     "icon": "football"
+    },
+    {
+     "text": "LAC at BUF \u00b7 Sun 1:00 PM \u00b7 BUF -7",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "football"
+    },
+    {
+     "text": "CAR at CLE \u00b7 Sun 1:00 PM \u00b7 CAR -2.5",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "football"
+    },
+    {
+     "text": "NYJ at DET \u00b7 Sun 1:00 PM \u00b7 DET -6.5",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "football"
+    },
+    {
+     "text": "HOU at IND \u00b7 Sun 1:00 PM \u00b7 HOU -1.5",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "football"
+    },
+    {
+     "text": "KC at MIA \u00b7 Sun 1:00 PM \u00b7 KC -10.5",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "football"
+    },
+    {
+     "text": "MIN at TB \u00b7 Sun 4:05 PM \u00b7 MIN -1.5",
+     "accent": "neutral",
+     "priority": 1,
+     "icon": "football"
+    }
+   ]
+  },
+  "launches": {
+   "module": "launches",
+   "updated_at": "2026-09-25T11:32:44.974513Z",
+   "stale": false,
+   "stage": {
+    "launches": [
+     {
+      "name": "Electron | Owlright, Owlright, Owlright (StriX Launch 13)",
+      "provider": "Rocket Lab",
+      "mission": "Owlright, Owlright, Owlright (StriX Launch 13)",
+      "mission_description": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+      "orbit": "LEO",
+      "orbit_name": "Low Earth Orbit",
+      "net": "2026-09-26T00:26:00Z",
+      "window_start": "2026-09-26T00:26:00Z",
+      "window_end": "2026-09-26T00:26:00Z",
+      "status": "Go",
+      "status_text": "Go for Launch",
+      "pad": "Rocket Lab Launch Complex 1B",
+      "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+      "pad_count": 40,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [],
+      "boosters": [],
+      "rocket": {
+       "full_name": "Electron",
+       "total": 96,
+       "successes": 92,
+       "streak": 55
+      },
+      "florida": false,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "Falcon 9 Block 5 | USSF-385",
+      "provider": "SpaceX",
+      "mission": "USSF-385",
+      "mission_description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX\u2019s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with\u2026",
+      "orbit": "LEO",
+      "orbit_name": "Low Earth Orbit",
+      "net": "2026-09-26T11:56:00Z",
+      "window_start": "2026-09-26T11:56:00Z",
+      "window_end": "2026-09-26T14:56:00Z",
+      "status": "Go",
+      "status_text": "Go for Launch",
+      "pad": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "pad_count": 298,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [],
+      "boosters": [
+       {
+        "serial": "B1100",
+        "flight_no": 10,
+        "reused": true,
+        "landing_attempt": true,
+        "landing_type": "ASDS",
+        "landing_location": "Of Course I Still Love You"
+       }
+      ],
+      "rocket": {
+       "full_name": "Falcon 9 Block 5",
+       "total": 633,
+       "successes": 632,
+       "streak": 335
+      },
+      "florida": false,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
+      "provider": "SpaceX",
+      "mission": "Starlink Group 31-1 (Starship Flight 14)",
+      "mission_description": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth\u2026",
+      "orbit": "LEO",
+      "orbit_name": "Low Earth Orbit",
+      "net": "2026-09-28T12:15:00Z",
+      "window_start": "2026-09-28T12:15:00Z",
+      "window_end": "2026-09-28T13:30:00Z",
+      "status": "TBC",
+      "status_text": "To Be Confirmed",
+      "pad": "Orbital Launch Pad 2",
+      "location": "SpaceX Starbase, TX, USA",
+      "pad_count": 2,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [
+       "Starlink",
+       "SpaceX Starship"
+      ],
+      "boosters": [
+       {
+        "serial": "Booster 21",
+        "flight_no": 1,
+        "reused": false,
+        "landing_attempt": true,
+        "landing_type": "Ocean",
+        "landing_location": "Gulf of Mexico"
+       }
+      ],
+      "rocket": {
+       "full_name": "Starship V3",
+       "total": 2,
+       "successes": 2,
+       "streak": 2
+      },
+      "florida": false,
+      "starship": true,
+      "live": false
+     },
+     {
+      "name": "Falcon 9 Block 5 | Crew-13",
+      "provider": "SpaceX",
+      "mission": "Crew-13",
+      "mission_description": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
+      "orbit": "LEO",
+      "orbit_name": "Low Earth Orbit",
+      "net": "2026-10-01T15:10:06Z",
+      "window_start": "2026-10-01T15:10:06Z",
+      "window_end": "2026-10-01T15:10:06Z",
+      "status": "Go",
+      "status_text": "Go for Launch",
+      "pad": "Space Launch Complex 40",
+      "location": "Cape Canaveral SFS, FL, USA",
+      "pad_count": 401,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [
+       "Commercial Crew Program",
+       "International Space Station"
+      ],
+      "boosters": [
+       {
+        "serial": "B1101",
+        "flight_no": 3,
+        "reused": true,
+        "landing_attempt": true,
+        "landing_type": "RTLS",
+        "landing_location": "Landing Zone 40"
+       }
+      ],
+      "rocket": {
+       "full_name": "Falcon 9 Block 5",
+       "total": 633,
+       "successes": 632,
+       "streak": 335
+      },
+      "florida": true,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "Falcon 9 Block 5 | Transporter 18 (Dedicated SSO Rideshare)",
+      "provider": "SpaceX",
+      "mission": "Transporter 18 (Dedicated SSO Rideshare)",
+      "mission_description": "Dedicated rideshare flight to a sun-synchronous orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
+      "orbit": "SSO",
+      "orbit_name": "Sun-Synchronous Orbit",
+      "net": "2026-10-01T18:18:00Z",
+      "window_start": "2026-10-01T18:18:00Z",
+      "window_end": "2026-10-01T19:16:00Z",
+      "status": "Go",
+      "status_text": "Go for Launch",
+      "pad": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "pad_count": 298,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [],
+      "boosters": [
+       {
+        "serial": "B1082",
+        "flight_no": 25,
+        "reused": true,
+        "landing_attempt": true,
+        "landing_type": "RTLS",
+        "landing_location": "Landing Zone 4"
+       }
+      ],
+      "rocket": {
+       "full_name": "Falcon 9 Block 5",
+       "total": 633,
+       "successes": 632,
+       "streak": 335
+      },
+      "florida": false,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "Falcon Heavy | NROL-97",
+      "provider": "SpaceX",
+      "mission": "NROL-97",
+      "mission_description": "Classified payload for the US National Reconnaissance Office.",
+      "orbit": "N/A",
+      "orbit_name": "Unknown",
+      "net": "2026-10-02T03:53:00Z",
+      "window_start": "2026-10-02T03:53:00Z",
+      "window_end": "2026-10-02T04:42:00Z",
+      "status": "Go",
+      "status_text": "Go for Launch",
+      "pad": "Launch Complex 39A",
+      "location": "Kennedy Space Center, FL, USA",
+      "pad_count": 223,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [],
+      "boosters": [
+       {
+        "serial": "B1104",
+        "flight_no": 2,
+        "reused": true,
+        "landing_attempt": true,
+        "landing_type": "RTLS",
+        "landing_location": "Landing Zone 1"
+       },
+       {
+        "serial": "B1072",
+        "flight_no": 4,
+        "reused": true,
+        "landing_attempt": true,
+        "landing_type": "RTLS",
+        "landing_location": "Landing Zone 2"
+       },
+       {
+        "serial": "B1106",
+        "flight_no": 1,
+        "reused": false,
+        "landing_attempt": false,
+        "landing_type": "EXP",
+        "landing_location": "Atlantic Ocean"
+       }
+      ],
+      "rocket": {
+       "full_name": "Falcon Heavy",
+       "total": 13,
+       "successes": 13,
+       "streak": 13
+      },
+      "florida": true,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "SR75 | Flight 2",
+      "provider": "HyImpulse",
+      "mission": "Flight 2",
+      "mission_description": "Test flight of HyImpulse's SR75 sounding rocket.",
+      "orbit": "Sub",
+      "orbit_name": "Suborbital",
+      "net": "2026-10-05T00:00:00Z",
+      "window_start": "2026-10-05T00:00:00Z",
+      "window_end": "2026-10-05T00:00:00Z",
+      "status": "TBD",
+      "status_text": "To Be Determined",
+      "pad": "Unknown Pad",
+      "location": "SaxaVord Spaceport",
+      "pad_count": 0,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/sr-75_liftoff__image_20240503065630.jpeg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [],
+      "boosters": [],
+      "rocket": {
+       "full_name": "SR75",
+       "total": 1,
+       "successes": 1,
+       "streak": 1
+      },
+      "florida": false,
+      "starship": false,
+      "live": false
+     },
+     {
+      "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
+      "provider": "Arianespace",
+      "mission": "Amazon Leo (LE-04)",
+      "mission_description": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of\u2026",
+      "orbit": "LEO",
+      "orbit_name": "Low Earth Orbit",
+      "net": "2026-10-07T00:00:00Z",
+      "window_start": "2026-10-07T00:00:00Z",
+      "window_end": "2026-10-07T00:00:00Z",
+      "status": "TBD",
+      "status_text": "To Be Determined",
+      "pad": "Ariane Launch Area 4",
+      "location": "Guiana Space Centre, French Guiana",
+      "pad_count": 9,
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
+      "probability": null,
+      "weather_concerns": null,
+      "programs": [
+       "Amazon Leo"
+      ],
+      "boosters": [],
+      "rocket": {
+       "full_name": "Ariane 64 Block 2",
+       "total": 1,
+       "successes": 1,
+       "streak": 1
+      },
+      "florida": false,
+      "starship": false,
+      "live": false
+     }
+    ],
+    "recent": [
+     {
+      "name": "Long March 6A | Yaogan 40 Group 04",
+      "provider": "China Aerospace Science and Technology Corporation",
+      "status": "Success",
+      "net": "2026-09-24T08:46:00Z"
+     },
+     {
+      "name": "Long March 8A | SatNet LEO Group 26",
+      "provider": "China Aerospace Science and Technology Corporation",
+      "status": "Success",
+      "net": "2026-09-23T13:32:00Z"
+     },
+     {
+      "name": "Kinetica 1 | 9 satellites",
+      "provider": "CAS Space",
+      "status": "Success",
+      "net": "2026-09-20T04:03:00Z"
+     }
+    ],
+    "live": false
+   },
+   "tape": [
+    {
+     "text": "Rocket Lab: Electron | Owlright, Owlright, Owlright (StriX Launch 13) \u2014 Fri 8:26 PM",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "weather_radar": {
+   "module": "weather_radar",
+   "updated_at": "2026-09-25T11:57:56.903076Z",
+   "stale": false,
+   "stage": {
+    "host": "https://tilecache.rainviewer.com",
+    "frames": [
+     {
+      "time": 1790331600,
+      "path": "/v2/radar/1b3061c2cb6d",
+      "nowcast": false
+     },
+     {
+      "time": 1790332200,
+      "path": "/v2/radar/820cf9ce5e5b",
+      "nowcast": false
+     },
+     {
+      "time": 1790332800,
+      "path": "/v2/radar/7d610414bf04",
+      "nowcast": false
+     },
+     {
+      "time": 1790333400,
+      "path": "/v2/radar/5cdb09f96f18",
+      "nowcast": false
+     },
+     {
+      "time": 1790334000,
+      "path": "/v2/radar/5415fe0e827c",
+      "nowcast": false
+     },
+     {
+      "time": 1790334600,
+      "path": "/v2/radar/a2016da65ef3",
+      "nowcast": false
+     },
+     {
+      "time": 1790335200,
+      "path": "/v2/radar/f80799c9bdb6",
+      "nowcast": false
+     },
+     {
+      "time": 1790335800,
+      "path": "/v2/radar/e4b3f83e0bab",
+      "nowcast": false
+     },
+     {
+      "time": 1790336400,
+      "path": "/v2/radar/d2afee3bf0bd",
+      "nowcast": false
+     },
+     {
+      "time": 1790337000,
+      "path": "/v2/radar/d571bae84328",
+      "nowcast": false
+     }
+    ],
+    "center": {
+     "lat": 27.9659,
+     "lon": -82.8001
+    },
+    "zoom": 8.0,
+    "color": 4,
+    "location_name": "Clearwater, FL"
+   },
+   "tape": []
+  },
+  "news": {
+   "module": "news",
+   "updated_at": "2026-09-25T11:53:12.014673Z",
+   "stale": false,
+   "stage": {
+    "items": [
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/c3y0z7kxlegdo#0",
+      "title": "Netanyahu defends Israeli military action as delegates walk out before UN speech",
+      "link": "https://www.bbc.co.uk/news/articles/c3y0z7kxlegdo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T11:44:44+00:00",
+      "summary": "The Israeli leader labels those who left his speech at the UN General Assembly as \"moral cowards\"."
+     },
+     {
+      "guid": "https://www.npr.org/2026/09/25/g-s1-144994/up-first-newsletter-trump-xi-netanyahu-united-nations-mortgage-rates",
+      "title": "Trump and Xi strike cordial tone at summit. And, Netanyahu gives defiant UNGA speech",
+      "link": "https://www.npr.org/2026/09/25/g-s1-144994/up-first-newsletter-trump-xi-netanyahu-united-nations-mortgage-rates",
+      "source": "NPR",
+      "published": "2026-09-25T11:18:52+00:00",
+      "summary": "Trump and Xi's U.S. summit continues after a state dinner Thursday night. And, Netanyahu returns to Israel after giving a defensive and defiant speech at the U.N. General Assembly."
+     },
+     {
+      "guid": "https://arstechnica.com/health/2026/09/cdc-opens-state-ordering-for-covid-19-vaccines-after-unexplained-delay/",
+      "title": "CDC opens state ordering for COVID-19 vaccines after unexplained delay",
+      "link": "https://arstechnica.com/health/2026/09/cdc-opens-state-ordering-for-covid-19-vaccines-after-unexplained-delay/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T22:29:48+00:00",
+      "summary": "Health department previously blamed delay on \"not yet finalized procurement decisions.\""
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49842596",
+      "title": "Show HN: Agentic CUDA Kernel Optimizer",
+      "link": "https://github.com/bertaye/agentic-cuda-optimizer",
+      "source": "Hacker News",
+      "published": "2026-09-25T10:32:58+00:00",
+      "summary": "Hello; I was working on optimizing some CUDA kernels and I thought may be it is a good oppurtunity learn langgraph as well. I created a simple C++ CUDA Test Harness and handed that to AI agents. They can run kernels, get benchmarks, and even can profile via nsight Comments URL: https://news.ycombinator.com/item?id=49842596 Points: 4 # Comments: 0"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/iranian-president-denies-nuclear-ambitions-while-blaming-us-middle-east-conflict-more-top-headlines",
+      "title": "Iranian president denies nuclear ambitions while blaming US for Middle East conflict and more top headlines",
+      "link": "https://www.foxnews.com/us/iranian-president-denies-nuclear-ambitions-while-blaming-us-middle-east-conflict-more-top-headlines",
+      "source": "Fox News",
+      "published": "2026-09-25T11:30:11+00:00",
+      "summary": "Get all the stories you need-to-know from the most powerful name in news delivered first thing every morning to your inbox."
+     },
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/cm4g53547wygo#0",
+      "title": "Jay-Z rape accuser says her allegation was false",
+      "link": "https://www.bbc.co.uk/news/articles/cm4g53547wygo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T10:51:28+00:00",
+      "summary": "A woman who accused Jay-Z of raping her when she was 13 now says she has never met the rap superstar."
+     },
+     {
+      "guid": "https://www.npr.org/sections/planet-money/2026/09/25/nx-s1-5980393/why-this-pokemon-set-is-dropping-in-value",
+      "title": "Why this Pok\u00e9mon set is dropping in value",
+      "link": "https://www.npr.org/sections/planet-money/2026/09/25/nx-s1-5980393/why-this-pokemon-set-is-dropping-in-value",
+      "source": "NPR",
+      "published": "2026-09-25T11:00:00+00:00",
+      "summary": "How does one price a cemetery plot? Are they using dynamic pricing to figure it out? We tackle that question and many more in this week's Indicator newsletter."
+     },
+     {
+      "guid": "https://arstechnica.com/space/2026/09/disneys-ludwig-von-drake-was-inspired-by-rocket-scientists-65-years-ago/",
+      "title": "Donald Duck's uncle was partly based on Wernher von Braun",
+      "link": "https://arstechnica.com/space/2026/09/disneys-ludwig-von-drake-was-inspired-by-rocket-scientists-65-years-ago/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T21:40:07+00:00",
+      "summary": "Introducing the \"world-famous authority on outer space...\""
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49842487",
+      "title": "The Mafia may be keeping fentanyl out of Italy",
+      "link": "https://economist.com/europe/2026/09/24/the-mafia-may-be-keeping-fentanyl-out-of-italy",
+      "source": "Hacker News",
+      "published": "2026-09-25T10:20:20+00:00",
+      "summary": "Article URL: https://economist.com/europe/2026/09/24/the-mafia-may-be-keeping-fentanyl-out-of-italy Comments URL: https://news.ycombinator.com/item?id=49842487 Points: 57 # Comments: 47"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/fox-news-antisemitism-exposed-newsletter-bibi-big-apple",
+      "title": "Fox News \u2018Antisemitism Exposed\u2019 Newsletter: Bibi in the Big Apple",
+      "link": "https://www.foxnews.com/us/fox-news-antisemitism-exposed-newsletter-bibi-big-apple",
+      "source": "Fox News",
+      "published": "2026-09-25T11:12:41+00:00",
+      "summary": "Fox News' \"Antisemitism Exposed\" newsletter brings you stories on the rising anti-Jewish prejudice across the U.S. and the world."
+     },
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/cxq63dqp93n1o#0",
+      "title": "Trump and Xi exchange warm words at state dinner but little progress on key issues",
+      "link": "https://www.bbc.co.uk/news/articles/cxq63dqp93n1o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T10:36:55+00:00",
+      "summary": "Despite diplomatic niceties and gifts, little was shared on substantial issues separating the leaders."
+     },
+     {
+      "guid": "https://www.npr.org/2026/09/25/nx-s1-5979852/israels-prime-minister-addresses-u-n-general-assembly",
+      "title": "Netanyahu rages against critics, including Mamdani, at the U.N. General Assembly",
+      "link": "https://www.npr.org/2026/09/25/nx-s1-5979852/israels-prime-minister-addresses-u-n-general-assembly",
+      "source": "NPR",
+      "published": "2026-09-25T10:25:03+00:00",
+      "summary": "Middle East crises in focus as U.N. General Assembly hears from Israel, the Palestinian Authority and Yemen."
+     },
+     {
+      "guid": "https://arstechnica.com/gadgets/2026/09/f-droid-gets-its-biggest-update-in-a-decade-with-new-ui-and-smoother-app-installs/",
+      "title": "F-Droid gets its biggest update in a decade with new UI and smoother app installs",
+      "link": "https://arstechnica.com/gadgets/2026/09/f-droid-gets-its-biggest-update-in-a-decade-with-new-ui-and-smoother-app-installs/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T19:30:42+00:00",
+      "summary": "F-Droid's Android app store has been rebuilt from the ground up."
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49842483",
+      "title": "Oracle on the hook to pay data centre investors even if site has no electricity",
+      "link": "https://www.ft.com/content/a96bf05a-a299-4d6a-a753-b298dd0f4016",
+      "source": "Hacker News",
+      "published": "2026-09-25T10:19:36+00:00",
+      "summary": "Article URL: https://www.ft.com/content/a96bf05a-a299-4d6a-a753-b298dd0f4016 Comments URL: https://news.ycombinator.com/item?id=49842483 Points: 34 # Comments: 21"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/mistress-told-american-idol-contestant-she-wanted-kill-wife-testified-divorce-not-murder-was-plan",
+      "title": "Mistress told \u2018American Idol\u2019 contestant she wanted \u2018to kill\u2019 wife but testified divorce, not murder, was plan",
+      "link": "https://www.foxnews.com/us/mistress-told-american-idol-contestant-she-wanted-kill-wife-testified-divorce-not-murder-was-plan",
+      "source": "Fox News",
+      "published": "2026-09-25T10:00:21+00:00",
+      "summary": "Alleigha Botner testified about Caleb Flynn's eerie remark after Ashley Flynn's death and the final messages exchanged before the shooting."
+     },
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/cmq8j904212po#0",
+      "title": "Hundreds of thousands expected in Paris for Pope's visit",
+      "link": "https://www.bbc.co.uk/news/articles/cmq8j904212po?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T09:35:37+00:00",
+      "summary": "The highpoint of his time in Paris will be a giant Mass attended by more than half a million people."
+     },
+     {
+      "guid": "https://www.npr.org/2026/09/25/nx-s1-5978936/how-to-manage-mom-rage",
+      "title": "Mom! Mom! MOM! 3 ways to stay calm in stressful parenting moments",
+      "link": "https://www.npr.org/2026/09/25/nx-s1-5978936/how-to-manage-mom-rage",
+      "source": "NPR",
+      "published": "2026-09-25T09:01:00+00:00",
+      "summary": "Parenthood can be overwhelming. A therapist and mom of three shares techniques to help calibrate your emotions \u2014 so you can show up better for yourself and your family."
+     },
+     {
+      "guid": "https://arstechnica.com/tech-policy/2026/09/new-york-asks-court-to-shut-down-polymarkets-illegal-gambling-operation/",
+      "title": "New York defies Trump admin, asks court to shut down Polymarket gambling",
+      "link": "https://arstechnica.com/tech-policy/2026/09/new-york-asks-court-to-shut-down-polymarkets-illegal-gambling-operation/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T19:07:19+00:00",
+      "summary": "New York sues Polymarket as Trump admin tries to override state gambling laws."
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49842270",
+      "title": "Ink and Switch Interactive Homepage",
+      "link": "https://www.inkandswitch.com/",
+      "source": "Hacker News",
+      "published": "2026-09-25T09:50:25+00:00",
+      "summary": "Article URL: https://www.inkandswitch.com/ Comments URL: https://news.ycombinator.com/item?id=49842270 Points: 47 # Comments: 8"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/pittsburgh-doctor-stabbed-death-intruder-allegedly-attacks-wife-slept-police",
+      "title": "Pittsburgh doctor stabbed to death after intruder allegedly attacks him, wife as they slept: police",
+      "link": "https://www.foxnews.com/us/pittsburgh-doctor-stabbed-death-intruder-allegedly-attacks-wife-slept-police",
+      "source": "Fox News",
+      "published": "2026-09-25T02:19:36+00:00",
+      "summary": "Dr. Idris Evans was stabbed to death in his Edgewood, Pennsylvania, home while sleeping as his wife fights for her life in critical condition."
+     },
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/c6z9z7lv41wgo#1",
+      "title": "Africa's richest man helps fund $660m fuel pipeline between Ethiopia and Djibouti",
+      "link": "https://www.bbc.co.uk/news/articles/c6z9z7lv41wgo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T06:48:07+00:00",
+      "summary": "The pipeline would strengthen energy security in landlocked Ethiopia, while creating jobs at Djibouti's port."
+     },
+     {
+      "guid": "https://www.npr.org/2026/09/25/g-s1-144665/trump-arch-fat-bear-media-ai-news-quiz",
+      "title": "Fill in the blank in the quiz: Trump's says his triumphal arch will include _____",
+      "link": "https://www.npr.org/2026/09/25/g-s1-144665/trump-arch-fat-bear-media-ai-news-quiz",
+      "source": "NPR",
+      "published": "2026-09-25T09:01:00+00:00",
+      "summary": "Plus: It's a very special week! But which one?"
+     },
+     {
+      "guid": "https://arstechnica.com/culture/2026/09/we-have-a-trailer-for-musk-documentary-elon-called-a-hit-piece/",
+      "title": "We have a trailer for Musk documentary Elon called a \"hit piece\"",
+      "link": "https://arstechnica.com/culture/2026/09/we-have-a-trailer-for-musk-documentary-elon-called-a-hit-piece/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T18:52:23+00:00",
+      "summary": "Oscar-winning documentarian Alex Gibney focuses on the world's wealthiest man."
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49841893",
+      "title": "Special Projects (2016)",
+      "link": "https://openai.com/index/special-projects/",
+      "source": "Hacker News",
+      "published": "2026-09-25T08:55:43+00:00",
+      "summary": "Article URL: https://openai.com/index/special-projects/ Comments URL: https://news.ycombinator.com/item?id=49841893 Points: 33 # Comments: 10"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/michigan-nurse-accused-breaking-bones-bruising-premature-infant-childrens-hospital",
+      "title": "Michigan nurse accused of breaking bones and bruising premature infant at children's hospital",
+      "link": "https://www.foxnews.com/us/michigan-nurse-accused-breaking-bones-bruising-premature-infant-childrens-hospital",
+      "source": "Fox News",
+      "published": "2026-09-25T00:27:48+00:00",
+      "summary": "Kieran Ansley allegedly left a premature baby with broken bones and bruises at Helen DeVos Children's Hospital, entering her room 27 times that night."
+     },
+     {
+      "guid": "https://www.bbc.co.uk/news/articles/cr93e4x7kdjjo#0",
+      "title": "Xi got Trump's red carpet welcome - but not everything he wanted",
+      "link": "https://www.bbc.co.uk/news/articles/cr93e4x7kdjjo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC World",
+      "published": "2026-09-25T03:57:09+00:00",
+      "summary": "China wanted progress on trade, technology and Taiwan - but hasn't got as much as it would have hoped for."
+     },
+     {
+      "guid": "https://www.npr.org/2026/09/25/nx-s1-5946736/voting-confusion-turnout",
+      "title": "Americans are confused and worried about elections. Will that impact turnout?",
+      "link": "https://www.npr.org/2026/09/25/nx-s1-5946736/voting-confusion-turnout",
+      "source": "NPR",
+      "published": "2026-09-25T09:00:00+00:00",
+      "summary": "New polling shows many voters are concerned about the midterms. But prior elections show no clear link between voter concerns and fewer voters actually casting ballots."
+     },
+     {
+      "guid": "https://arstechnica.com/gadgets/2026/09/robots-make-combat-airdrops-clear-mines-as-ukraine-defeats-russian-pincer/",
+      "title": "Robots make combat airdrops, clear mines as Ukraine defeats Russian pincer",
+      "link": "https://arstechnica.com/gadgets/2026/09/robots-make-combat-airdrops-clear-mines-as-ukraine-defeats-russian-pincer/",
+      "source": "Ars Technica",
+      "published": "2026-09-24T18:39:47+00:00",
+      "summary": "Ukraine\u2019s Operation Vivaldi has erased Russian gains with the help of robots."
+     },
+     {
+      "guid": "https://news.ycombinator.com/item?id=49841563",
+      "title": "Dutch governments builds alternative for Microsoft based on NixOS",
+      "link": "https://www.dawo.community/en/",
+      "source": "Hacker News",
+      "published": "2026-09-25T08:06:49+00:00",
+      "summary": "Article URL: https://www.dawo.community/en/ Comments URL: https://news.ycombinator.com/item?id=49841563 Points: 307 # Comments: 138"
+     },
+     {
+      "guid": "https://www.foxnews.com/us/corie-walsh-husband-faces-alleged-killer-mom-accused-plotting-poison-attorney-lays-blame",
+      "title": "Corie Walsh\u2019s husband faces alleged killer mom accused of plotting to poison him as attorney lays blame",
+      "link": "https://www.foxnews.com/us/corie-walsh-husband-faces-alleged-killer-mom-accused-plotting-poison-attorney-lays-blame",
+      "source": "Fox News",
+      "published": "2026-09-24T22:57:23+00:00",
+      "summary": "Corie Walsh, accused of strangling 2-year-old Barrett during an alleged psychotic episode, entered a not guilty plea as her defense seeks hospital release."
+     }
+    ]
+   },
+   "tape": [
+    {
+     "text": "BBC World: Netanyahu defends Israeli military action as delegates walk out before UN speech",
+     "accent": "alert",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "NPR: Trump and Xi strike cordial tone at summit. And, Netanyahu gives defiant UNGA speech",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Ars Technica: CDC opens state ordering for COVID-19 vaccines after unexplained delay",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Hacker News: Show HN: Agentic CUDA Kernel Optimizer",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Fox News: Iranian president denies nuclear ambitions while blaming US for Middle East conflict and more top headlines",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "BBC World: Jay-Z rape accuser says her allegation was false",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "NPR: Why this Pok\u00e9mon set is dropping in value",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Ars Technica: Donald Duck's uncle was partly based on Wernher von Braun",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Hacker News: The Mafia may be keeping fentanyl out of Italy",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    },
+    {
+     "text": "Fox News: Fox News \u2018Antisemitism Exposed\u2019 Newsletter: Bibi in the Big Apple",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "weather": {
+   "module": "weather",
+   "updated_at": "2026-09-25T11:48:16.524799Z",
+   "stale": false,
+   "stage": {
+    "location": "Clearwater, FL",
+    "current": {
+     "temp": 67.6,
+     "feels_like": 70.4,
+     "humidity": 90,
+     "wind": 5.9,
+     "code": 0,
+     "text": "Clear"
+    },
+    "daily": [
+     {
+      "date": "2026-09-25",
+      "high": 80.2,
+      "low": 67.4,
+      "precip": 2,
+      "code": 3,
+      "text": "Overcast"
+     },
+     {
+      "date": "2026-09-26",
+      "high": 79.3,
+      "low": 64.8,
+      "precip": 1,
+      "code": 3,
+      "text": "Overcast"
+     },
+     {
+      "date": "2026-09-27",
+      "high": 86.1,
+      "low": 67.0,
+      "precip": 1,
+      "code": 3,
+      "text": "Overcast"
+     },
+     {
+      "date": "2026-09-28",
+      "high": 88.1,
+      "low": 76.8,
+      "precip": 3,
+      "code": 3,
+      "text": "Overcast"
+     },
+     {
+      "date": "2026-09-29",
+      "high": 89.2,
+      "low": 78.0,
+      "precip": 17,
+      "code": 0,
+      "text": "Clear"
+     }
+    ],
+    "hourly": [
+     {
+      "time": "2026-09-25T07:00",
+      "temp": 68.4,
+      "precip": 0,
+      "code": 3
+     },
+     {
+      "time": "2026-09-25T08:00",
+      "temp": 68.0,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T09:00",
+      "temp": 69.5,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T10:00",
+      "temp": 71.4,
+      "precip": 0,
+      "code": 1
+     },
+     {
+      "time": "2026-09-25T11:00",
+      "temp": 73.4,
+      "precip": 0,
+      "code": 2
+     },
+     {
+      "time": "2026-09-25T12:00",
+      "temp": 75.1,
+      "precip": 0,
+      "code": 1
+     },
+     {
+      "time": "2026-09-25T13:00",
+      "temp": 77.6,
+      "precip": 0,
+      "code": 1
+     },
+     {
+      "time": "2026-09-25T14:00",
+      "temp": 79.6,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T15:00",
+      "temp": 80.2,
+      "precip": 0,
+      "code": 1
+     },
+     {
+      "time": "2026-09-25T16:00",
+      "temp": 79.2,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T17:00",
+      "temp": 78.6,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T18:00",
+      "temp": 77.3,
+      "precip": 1,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T19:00",
+      "temp": 74.6,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T20:00",
+      "temp": 72.9,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T21:00",
+      "temp": 72.3,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T22:00",
+      "temp": 72.0,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-25T23:00",
+      "temp": 71.2,
+      "precip": 2,
+      "code": 0
+     },
+     {
+      "time": "2026-09-26T00:00",
+      "temp": 70.0,
+      "precip": 1,
+      "code": 1
+     },
+     {
+      "time": "2026-09-26T01:00",
+      "temp": 69.0,
+      "precip": 0,
+      "code": 0
+     },
+     {
+      "time": "2026-09-26T02:00",
+      "temp": 68.3,
+      "precip": 0,
+      "code": 3
+     },
+     {
+      "time": "2026-09-26T03:00",
+      "temp": 67.5,
+      "precip": 0,
+      "code": 3
+     },
+     {
+      "time": "2026-09-26T04:00",
+      "temp": 66.8,
+      "precip": 0,
+      "code": 3
+     },
+     {
+      "time": "2026-09-26T05:00",
+      "temp": 66.0,
+      "precip": 0,
+      "code": 2
+     },
+     {
+      "time": "2026-09-26T06:00",
+      "temp": 65.3,
+      "precip": 0,
+      "code": 1
+     }
+    ],
+    "sun": {
+     "sunrise": "2026-09-25T07:20",
+     "sunset": "2026-09-25T19:23"
+    }
+   },
+   "tape": [
+    {
+     "text": "Clearwater, FL 68\u00b0F Clear",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  },
+  "astro": {
+   "module": "astro",
+   "updated_at": "2026-09-25T11:44:47.263229Z",
+   "stale": false,
+   "stage": {
+    "sunset": "2026-09-25T19:23",
+    "sunrise": "2026-09-26T07:21",
+    "hours": [
+     {
+      "time": "2026-09-25T19:00",
+      "total": 0,
+      "low": 0,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-25T20:00",
+      "total": 0,
+      "low": 0,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-25T21:00",
+      "total": 0,
+      "low": 0,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-25T22:00",
+      "total": 0,
+      "low": 0,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-25T23:00",
+      "total": 0,
+      "low": 0,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-26T00:00",
+      "total": 21,
+      "low": 21,
+      "mid": 0,
+      "high": 0
+     },
+     {
+      "time": "2026-09-26T01:00",
+      "total": 1,
+      "low": 0,
+      "mid": 0,
+      "high": 1
+     },
+     {
+      "time": "2026-09-26T02:00",
+      "total": 97,
+      "low": 0,
+      "mid": 0,
+      "high": 97
+     },
+     {
+      "time": "2026-09-26T03:00",
+      "total": 96,
+      "low": 1,
+      "mid": 0,
+      "high": 96
+     },
+     {
+      "time": "2026-09-26T04:00",
+      "total": 93,
+      "low": 2,
+      "mid": 0,
+      "high": 93
+     },
+     {
+      "time": "2026-09-26T05:00",
+      "total": 63,
+      "low": 1,
+      "mid": 0,
+      "high": 63
+     },
+     {
+      "time": "2026-09-26T06:00",
+      "total": 30,
+      "low": 1,
+      "mid": 0,
+      "high": 30
+     },
+     {
+      "time": "2026-09-26T07:00",
+      "total": 5,
+      "low": 0,
+      "mid": 0,
+      "high": 5
+     }
+    ],
+    "avg_cloud": 31,
+    "moon": {
+     "phase": "Full moon",
+     "illumination": 99
+    },
+    "targets": [
+     {
+      "name": "M31 Andromeda",
+      "transit": "2026-09-26T05:53:21.770560+00:00",
+      "above40_from": "2026-09-26T01:54:24.848349+00:00",
+      "above40_until": "2026-09-26T09:52:18.692771+00:00",
+      "max_alt": null,
+      "always_above": false
+     },
+     {
+      "name": "NGC 7000 N. America",
+      "transit": "2026-09-26T02:09:48.893800+00:00",
+      "above40_from": "2026-09-25T22:09:52.750806+00:00",
+      "above40_until": "2026-09-26T06:09:45.036794+00:00",
+      "max_alt": null,
+      "always_above": false
+     },
+     {
+      "name": "M27 Dumbbell",
+      "transit": "2026-09-26T01:10:52.575918+00:00",
+      "above40_from": "2026-09-25T21:29:30.811355+00:00",
+      "above40_until": "2026-09-26T04:52:14.340481+00:00",
+      "max_alt": null,
+      "always_above": false
+     }
+    ]
+   },
+   "tape": [
+    {
+     "text": "Astro: 31% cloud tonight (mixed) \u00b7 Moon 99% Full moon",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": null
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,373 @@
+{
+ "count": 367,
+ "next": null,
+ "previous": null,
+ "results": [
+  {
+   "id": "9e24bef7-c44b-4fdc-ba52-68545ce9457e",
+   "name": "Electron | Owlright, Owlright, Owlright (StriX Launch 13)",
+   "status": {
+    "id": 1,
+    "name": "Go for Launch",
+    "abbrev": "Go"
+   },
+   "net": "2026-09-26T00:26:00Z",
+   "window_start": "2026-09-26T00:26:00Z",
+   "window_end": "2026-09-26T00:26:00Z",
+   "probability": null,
+   "weather_concerns": null,
+   "launch_service_provider": {
+    "id": 147,
+    "name": "Rocket Lab",
+    "type": "Commercial"
+   },
+   "rocket": {
+    "id": 8269,
+    "configuration": {
+     "id": 26,
+     "name": "Electron",
+     "full_name": "Electron",
+     "total_launch_count": 96,
+     "successful_launches": 92,
+     "consecutive_successful_launches": 55,
+     "failed_launches": 4
+    },
+    "launcher_stage": []
+   },
+   "mission": {
+    "id": 6850,
+    "name": "Owlright, Owlright, Owlright (StriX Launch 13)",
+    "description": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+    "type": "Earth Science",
+    "orbit": {
+     "id": 8,
+     "name": "Low Earth Orbit",
+     "abbrev": "LEO"
+    }
+   },
+   "pad": {
+    "id": 185,
+    "name": "Rocket Lab Launch Complex 1B",
+    "location": {
+     "id": 10,
+     "name": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+     "country_code": "NZL"
+    },
+    "total_launch_count": 40
+   },
+   "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "program": []
+  },
+  {
+   "id": "7d1afb26-6f9c-429b-9ccf-29012fd1e519",
+   "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
+   "status": {
+    "id": 8,
+    "name": "To Be Confirmed",
+    "abbrev": "TBC"
+   },
+   "net": "2026-09-28T12:15:00Z",
+   "window_start": "2026-09-28T12:15:00Z",
+   "window_end": "2026-09-28T13:30:00Z",
+   "probability": null,
+   "weather_concerns": null,
+   "launch_service_provider": {
+    "id": 121,
+    "name": "SpaceX",
+    "type": "Commercial"
+   },
+   "rocket": {
+    "id": 9105,
+    "configuration": {
+     "id": 522,
+     "name": "Starship",
+     "full_name": "Starship V3",
+     "total_launch_count": 2,
+     "successful_launches": 2,
+     "consecutive_successful_launches": 2,
+     "failed_launches": 0
+    },
+    "launcher_stage": [
+     {
+      "type": "Core",
+      "reused": false,
+      "launcher_flight_number": 1,
+      "launcher": {
+       "id": 260,
+       "serial_number": "Booster 21",
+       "flight_number": null,
+       "status": "active"
+      },
+      "landing": {
+       "attempt": true,
+       "success": null,
+       "type": {
+        "id": 3,
+        "name": "Ocean",
+        "abbrev": "Ocean"
+       },
+       "location": {
+        "id": 16,
+        "name": "Gulf of Mexico",
+        "abbrev": "GOM"
+       }
+      }
+     }
+    ]
+   },
+   "mission": {
+    "id": 7700,
+    "name": "Starlink Group 31-1 (Starship Flight 14)",
+    "description": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit.\r\n\r\nThe ship is expected to fly at an altitude approximately 275 km above Earth and complete approximately 6 orbits around the planet for nearly 10 hours, with splashdown targeted in the Pacific Ocean west of Chile.\r\n\r\nThe booster’s primary test objective on Flight 14 will be executing a successful launch, ascent, stage separation, boostback burn, and landing burn at an offshore landing point in the Gulf.\r\n\r\nStarship will deliver 26 Starlink V3 satellites to orbit for the first time, which aim to greatly expand the network's capacity and user speeds. Each Starlink V3 satellite will add 1 Tbps of capacity to the constellation.",
+    "type": "Communications",
+    "orbit": {
+     "id": 8,
+     "name": "Low Earth Orbit",
+     "abbrev": "LEO"
+    }
+   },
+   "pad": {
+    "id": 235,
+    "name": "Orbital Launch Pad 2",
+    "location": {
+     "id": 143,
+     "name": "SpaceX Starbase, TX, USA",
+     "country_code": "USA"
+    },
+    "total_launch_count": 2
+   },
+   "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+   "program": [
+    {
+     "id": 25,
+     "name": "Starlink"
+    },
+    {
+     "id": 1,
+     "name": "SpaceX Starship"
+    }
+   ]
+  },
+  {
+   "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
+   "name": "Falcon 9 Block 5 | Crew-13",
+   "status": {
+    "id": 1,
+    "name": "Go for Launch",
+    "abbrev": "Go"
+   },
+   "net": "2026-10-01T15:10:06Z",
+   "window_start": "2026-10-01T15:10:06Z",
+   "window_end": "2026-10-01T15:10:06Z",
+   "probability": null,
+   "weather_concerns": null,
+   "launch_service_provider": {
+    "id": 121,
+    "name": "SpaceX",
+    "type": "Commercial"
+   },
+   "rocket": {
+    "id": 7600,
+    "configuration": {
+     "id": 164,
+     "name": "Falcon 9",
+     "full_name": "Falcon 9 Block 5",
+     "total_launch_count": 633,
+     "successful_launches": 632,
+     "consecutive_successful_launches": 335,
+     "failed_launches": 1
+    },
+    "launcher_stage": [
+     {
+      "type": "Core",
+      "reused": true,
+      "launcher_flight_number": 3,
+      "launcher": {
+       "id": 240,
+       "serial_number": "B1101",
+       "flight_number": null,
+       "status": "active"
+      },
+      "landing": {
+       "attempt": true,
+       "success": null,
+       "type": {
+        "id": 2,
+        "name": "Return to Launch Site",
+        "abbrev": "RTLS"
+       },
+       "location": {
+        "id": 62,
+        "name": "Landing Zone 40",
+        "abbrev": "LZ-40"
+       }
+      }
+     }
+    ]
+   },
+   "mission": {
+    "id": 6043,
+    "name": "Crew-13",
+    "description": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
+    "type": "Human Exploration",
+    "orbit": {
+     "id": 8,
+     "name": "Low Earth Orbit",
+     "abbrev": "LEO"
+    }
+   },
+   "pad": {
+    "id": 80,
+    "name": "Space Launch Complex 40",
+    "location": {
+     "id": 12,
+     "name": "Cape Canaveral SFS, FL, USA",
+     "country_code": "USA"
+    },
+    "total_launch_count": 401
+   },
+   "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
+   "program": [
+    {
+     "id": 5,
+     "name": "Commercial Crew Program"
+    },
+    {
+     "id": 17,
+     "name": "International Space Station"
+    }
+   ]
+  },
+  {
+   "id": "4651fd8a-43de-4166-bf8f-c168b3bd1d2c",
+   "name": "Falcon Heavy | NROL-97",
+   "status": {
+    "id": 1,
+    "name": "Go for Launch",
+    "abbrev": "Go"
+   },
+   "net": "2026-10-02T03:53:00Z",
+   "window_start": "2026-10-02T03:53:00Z",
+   "window_end": "2026-10-02T04:42:00Z",
+   "probability": null,
+   "weather_concerns": null,
+   "launch_service_provider": {
+    "id": 121,
+    "name": "SpaceX",
+    "type": "Commercial"
+   },
+   "rocket": {
+    "id": 8574,
+    "configuration": {
+     "id": 161,
+     "name": "Falcon Heavy",
+     "full_name": "Falcon Heavy",
+     "total_launch_count": 13,
+     "successful_launches": 13,
+     "consecutive_successful_launches": 13,
+     "failed_launches": 0
+    },
+    "launcher_stage": [
+     {
+      "type": "Strap-On Booster",
+      "reused": true,
+      "launcher_flight_number": 2,
+      "launcher": {
+       "id": 250,
+       "serial_number": "B1104",
+       "flight_number": null,
+       "status": "active"
+      },
+      "landing": {
+       "attempt": true,
+       "success": null,
+       "type": {
+        "id": 2,
+        "name": "Return to Launch Site",
+        "abbrev": "RTLS"
+       },
+       "location": {
+        "id": 4,
+        "name": "Landing Zone 1",
+        "abbrev": "LZ-1"
+       }
+      }
+     },
+     {
+      "type": "Strap-On Booster",
+      "reused": true,
+      "launcher_flight_number": 4,
+      "launcher": {
+       "id": 111,
+       "serial_number": "B1072",
+       "flight_number": null,
+       "status": "active"
+      },
+      "landing": {
+       "attempt": true,
+       "success": null,
+       "type": {
+        "id": 2,
+        "name": "Return to Launch Site",
+        "abbrev": "RTLS"
+       },
+       "location": {
+        "id": 5,
+        "name": "Landing Zone 2",
+        "abbrev": "LZ-2"
+       }
+      }
+     },
+     {
+      "type": "Core",
+      "reused": false,
+      "launcher_flight_number": 1,
+      "launcher": {
+       "id": 261,
+       "serial_number": "B1106",
+       "flight_number": null,
+       "status": "active"
+      },
+      "landing": {
+       "attempt": false,
+       "success": null,
+       "type": {
+        "id": 8,
+        "name": "Expended",
+        "abbrev": "EXP"
+       },
+       "location": {
+        "id": 6,
+        "name": "Atlantic Ocean",
+        "abbrev": "ATL"
+       }
+      }
+     }
+    ]
+   },
+   "mission": {
+    "id": 7165,
+    "name": "NROL-97",
+    "description": "Classified payload for the US National Reconnaissance Office.",
+    "type": "Government/Top Secret",
+    "orbit": {
+     "id": 25,
+     "name": "Unknown",
+     "abbrev": "N/A"
+    }
+   },
+   "pad": {
+    "id": 87,
+    "name": "Launch Complex 39A",
+    "location": {
+     "id": 27,
+     "name": "Kennedy Space Center, FL, USA",
+     "country_code": "USA"
+    },
+    "total_launch_count": 223
+   },
+   "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
+   "program": []
+  }
+ ]
+}

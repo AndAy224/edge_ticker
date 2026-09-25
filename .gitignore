@@ -10,6 +10,10 @@ __pycache__/
 # node
 node_modules/
 frontend/dist/
+frontend/dist.new/
+
+# deploy state (update.sh: previous commit + bundle, for --rollback)
+.deploy/
 
 # runtime state
 data/

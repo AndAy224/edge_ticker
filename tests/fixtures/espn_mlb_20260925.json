@@ -1,0 +1,1751 @@
+{
+ "events": [
+  {
+   "id": "401817078",
+   "uid": "s:1~l:10~e:401817078",
+   "date": "2026-09-25T22:40Z",
+   "name": "Tampa Bay Rays at Philadelphia Phillies",
+   "shortName": "TB @ PHI",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 1,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Scheduled",
+     "shortDetail": "9/25 - 6:40 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817078",
+     "date": "2026-09-25T22:40Z",
+     "competitors": [
+      {
+       "id": "22",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "team": {
+        "id": "22",
+        "abbreviation": "PHI",
+        "displayName": "Philadelphia Phillies",
+        "shortDisplayName": "Phillies",
+        "name": "Phillies",
+        "location": "Philadelphia",
+        "color": "e81828",
+        "alternateColor": "003278",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/phi.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 42359,
+         "athlete": {
+          "id": "42359",
+          "fullName": "Cristopher Sanchez",
+          "displayName": "Cristopher Sanchez",
+          "shortName": "C. Sanchez",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/42359"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/42359.png",
+          "jersey": "61",
+          "position": "SP",
+          "team": {
+           "id": "22"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "6",
+           "rankDisplayValue": "Tied-122nd"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "18",
+           "rankDisplayValue": "Tied-1st"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "2.93",
+           "rankDisplayValue": "11th"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(18-6, 2.93)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "87-72"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "42-36"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "45-36"
+        }
+       ]
+      },
+      {
+       "id": "30",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "team": {
+        "id": "30",
+        "abbreviation": "TB",
+        "displayName": "Tampa Bay Rays",
+        "shortDisplayName": "Rays",
+        "name": "Rays",
+        "location": "Tampa Bay",
+        "color": "092c5c",
+        "alternateColor": "8fbce6",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/tb.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 39825,
+         "athlete": {
+          "id": "39825",
+          "fullName": "Freddy Peralta",
+          "displayName": "Freddy Peralta",
+          "shortName": "F. Peralta",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/39825"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/39825.png",
+          "jersey": "51",
+          "position": "SP",
+          "team": {
+           "id": "30"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "11",
+           "rankDisplayValue": "Tied-14th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "9",
+           "rankDisplayValue": "Tied-52nd"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "4.56",
+           "rankDisplayValue": "41st"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(9-11, 4.56)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "96-63"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "55-26"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "41-37"
+        }
+       ]
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1,
+        "logos": [
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Light.svg",
+          "rel": [
+           "light"
+          ]
+         },
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Dark.svg",
+          "rel": [
+           "dark"
+          ]
+         }
+        ]
+       },
+       "details": "PHI -171",
+       "overUnder": 6.5,
+       "spread": -1.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "30",
+         "uid": "s:1~l:10~t:30",
+         "abbreviation": "TB",
+         "name": "Rays",
+         "displayName": "Tampa Bay Rays",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/tb.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "22",
+         "uid": "s:1~l:10~t:22",
+         "abbreviation": "PHI",
+         "name": "Phillies",
+         "displayName": "Philadelphia Phillies",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/phi.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-171",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "home",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0ML86450238_1",
+           "text": "Home Bet",
+           "shortText": "Home Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "home",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "-156"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+141",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "away",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0ML86450238_3",
+           "text": "Away Bet",
+           "shortText": "Away Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "away",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "+129"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Runline",
+        "shortDisplayName": "RL",
+        "home": {
+         "close": {
+          "line": "-1.5",
+          "odds": "+138",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "homeSpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0HC86450238N150_1",
+           "text": "Home Point Spread",
+           "shortText": "Home Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:PHI-1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "-1.5",
+          "odds": "+141"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+1.5",
+          "odds": "-167",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "awaySpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0HC86450238P150_3",
+           "text": "Away Point Spread",
+           "shortText": "Away Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:TB+1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "+1.5",
+          "odds": "-171"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total Runs",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o6.5",
+          "odds": "-115",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "over",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0OU86450238O650_1",
+           "text": "Over Odds",
+           "shortText": "Over Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "over",
+             "betType": "straight",
+             "betDetails": "Over:6.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "o6.5",
+          "odds": "-122"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u6.5",
+          "odds": "-105",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "under",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533%3Foutcomes%3D0OU86450238U650_3",
+           "text": "Under Odds",
+           "shortText": "Under Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817078,
+             "betSide": "under",
+             "betType": "straight",
+             "betDetails": "Under:6.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "u6.5",
+          "odds": "+102"
+         }
+        }
+       },
+       "link": {
+        "language": "en-US",
+        "rel": [
+         "game",
+         "desktop",
+         "bets"
+        ],
+        "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720533",
+        "text": "See More Odds",
+        "shortText": "Game",
+        "isExternal": true,
+        "isPremium": false,
+        "tracking": {
+         "campaign": "betting-integrations",
+         "tags": {
+          "league": "mlb",
+          "sport": "baseball",
+          "gameId": 401817078,
+          "betSide": "none",
+          "betType": "straight"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ],
+     "broadcast": "MLB.TV",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "Rays.TV"
+       ]
+      },
+      {
+       "market": "home",
+       "names": [
+        "NBC Sports Phil"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "84",
+      "fullName": "Citizens Bank Park",
+      "address": {
+       "city": "Philadelphia",
+       "state": "Pennsylvania"
+      },
+      "indoor": false
+     },
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 1,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Scheduled",
+       "shortDetail": "9/25 - 6:40 PM EDT"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "401817104",
+   "uid": "s:1~l:10~e:401817104",
+   "date": "2026-09-25T17:05Z",
+   "name": "Chicago Cubs at Boston Red Sox",
+   "shortName": "CHC @ BOS",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 1,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Scheduled",
+     "shortDetail": "9/25 - 1:05 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817104",
+     "date": "2026-09-25T17:05Z",
+     "competitors": [
+      {
+       "id": "2",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "team": {
+        "id": "2",
+        "abbreviation": "BOS",
+        "displayName": "Boston Red Sox",
+        "shortDisplayName": "Red Sox",
+        "name": "Red Sox",
+        "location": "Boston",
+        "color": "0d2b56",
+        "alternateColor": "bd3039",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/bos.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 5200550,
+         "athlete": {
+          "id": "5200550",
+          "fullName": "Alec Gamboa",
+          "displayName": "Alec Gamboa",
+          "shortName": "A. Gamboa",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/5200550"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/5200550.png",
+          "jersey": "68",
+          "position": "RP",
+          "team": {
+           "id": "2"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-146th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-590th"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-432nd"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "1.16"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-679th"
+          }
+         ],
+         "record": "(1-0, 1.16)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "85-74"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "39-39"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "46-35"
+        }
+       ]
+      },
+      {
+       "id": "16",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "team": {
+        "id": "16",
+        "abbreviation": "CHC",
+        "displayName": "Chicago Cubs",
+        "shortDisplayName": "Cubs",
+        "name": "Cubs",
+        "location": "Chicago",
+        "color": "0e3386",
+        "alternateColor": "cc3433",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chc.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 32827,
+         "athlete": {
+          "id": "32827",
+          "fullName": "Clay Holmes",
+          "displayName": "Clay Holmes",
+          "shortName": "C. Holmes",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/32827"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/32827.png",
+          "jersey": "25",
+          "position": "SP",
+          "team": {
+           "id": "16"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "8",
+           "rankDisplayValue": "Tied-72nd"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "6",
+           "rankDisplayValue": "Tied-116th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "3.25"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(6-8, 3.25)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "88-71"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "46-35"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "42-36"
+        }
+       ]
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1,
+        "logos": [
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Light.svg",
+          "rel": [
+           "light"
+          ]
+         },
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Dark.svg",
+          "rel": [
+           "dark"
+          ]
+         }
+        ],
+        "displayName": "DraftKings"
+       },
+       "details": "CHC -122",
+       "overUnder": 6.5,
+       "spread": 1.5,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "16",
+         "uid": "s:1~l:10~t:16",
+         "abbreviation": "CHC",
+         "name": "Cubs",
+         "displayName": "Chicago Cubs",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chc.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "2",
+         "uid": "s:1~l:10~t:2",
+         "abbreviation": "BOS",
+         "name": "Red Sox",
+         "displayName": "Boston Red Sox",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/bos.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "+101",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "home",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0ML86450213_1",
+           "text": "Home Bet",
+           "shortText": "Home Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "home",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "+102"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-122",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "away",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0ML86450213_3",
+           "text": "Away Bet",
+           "shortText": "Away Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "away",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "-123"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Runline",
+        "shortDisplayName": "RL",
+        "home": {
+         "close": {
+          "line": "+1.5",
+          "odds": "-182",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "homeSpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0HC86450213P150_1",
+           "text": "Home Point Spread",
+           "shortText": "Home Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:BOS+1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "+1.5",
+          "odds": "-176"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-1.5",
+          "odds": "+150",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "awaySpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0HC86450213N150_3",
+           "text": "Away Point Spread",
+           "shortText": "Away Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:CHC-1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "-1.5",
+          "odds": "+145"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total Runs",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o6.5",
+          "odds": "-104",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "over",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0OU86450213O650_1",
+           "text": "Over Odds",
+           "shortText": "Over Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "over",
+             "betType": "straight",
+             "betDetails": "Over:6.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "o6.5",
+          "odds": "+100"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u6.5",
+          "odds": "-116",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "under",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528%3Foutcomes%3D0OU86450213U650_3",
+           "text": "Under Odds",
+           "shortText": "Under Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817104,
+             "betSide": "under",
+             "betType": "straight",
+             "betDetails": "Under:6.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "u6.5",
+          "odds": "-120"
+         }
+        }
+       },
+       "link": {
+        "language": "en-US",
+        "rel": [
+         "game",
+         "desktop",
+         "bets"
+        ],
+        "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720528",
+        "text": "See More Odds",
+        "shortText": "Game",
+        "isExternal": true,
+        "isPremium": false,
+        "tracking": {
+         "campaign": "betting-integrations",
+         "tags": {
+          "league": "mlb",
+          "sport": "baseball",
+          "gameId": 401817104,
+          "betSide": "none",
+          "betType": "straight"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ],
+     "broadcast": "MLB.TV",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "Marquee Sports Net"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "2",
+      "fullName": "Fenway Park",
+      "address": {
+       "city": "Boston",
+       "state": "Massachusetts"
+      },
+      "indoor": false
+     },
+     "notes": [
+      {
+       "type": "event",
+       "headline": "Doubleheader - Game 1 - Rescheduled from Sep. 27"
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 1,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Scheduled",
+       "shortDetail": "9/25 - 1:05 PM EDT"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "401817086",
+   "uid": "s:1~l:10~e:401817086",
+   "date": "2026-09-26T02:15Z",
+   "name": "Los Angeles Dodgers at San Francisco Giants",
+   "shortName": "LAD @ SF",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 1,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Scheduled",
+     "shortDetail": "9/25 - 10:15 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "id": "401817086",
+     "date": "2026-09-26T02:15Z",
+     "competitors": [
+      {
+       "id": "26",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "team": {
+        "id": "26",
+        "abbreviation": "SF",
+        "displayName": "San Francisco Giants",
+        "shortDisplayName": "Giants",
+        "name": "Giants",
+        "location": "San Francisco",
+        "color": "000000",
+        "alternateColor": "fd5a1e",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/sf.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 5333217,
+         "athlete": {
+          "id": "5333217",
+          "fullName": "Yunior Marte",
+          "displayName": "Yunior Marte",
+          "shortName": "Y. Marte",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/5333217"
+           }
+          ],
+          "jersey": "87",
+          "position": "SP",
+          "team": {
+           "id": "26"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-451st"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-550th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "4.66"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "1",
+           "rankDisplayValue": "Tied-425th"
+          }
+         ],
+         "record": "(0-1, 4.66)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "65-94"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "37-41"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "28-53"
+        }
+       ]
+      },
+      {
+       "id": "19",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "team": {
+        "id": "19",
+        "abbreviation": "LAD",
+        "displayName": "Los Angeles Dodgers",
+        "shortDisplayName": "Dodgers",
+        "name": "Dodgers",
+        "location": "Los Angeles",
+        "color": "005a9c",
+        "alternateColor": "ffffff",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/lad.png"
+       },
+       "score": "0",
+       "probables": [
+        {
+         "name": "probableStartingPitcher",
+         "displayName": "Probable Starting Pitcher",
+         "shortDisplayName": "Starter",
+         "abbreviation": "SP",
+         "playerId": 42409,
+         "athlete": {
+          "id": "42409",
+          "fullName": "Tarik Skubal",
+          "displayName": "Tarik Skubal",
+          "shortName": "T. Skubal",
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/mlb/player/_/id/42409"
+           }
+          ],
+          "headshot": "https://a.espncdn.com/i/headshots/mlb/players/full/42409.png",
+          "jersey": "29",
+          "position": "SP",
+          "team": {
+           "id": "19"
+          }
+         },
+         "statistics": [
+          {
+           "name": "saves",
+           "abbreviation": "SV",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-260th"
+          },
+          {
+           "name": "losses",
+           "abbreviation": "L",
+           "displayValue": "7",
+           "rankDisplayValue": "Tied-93rd"
+          },
+          {
+           "name": "wins",
+           "abbreviation": "W",
+           "displayValue": "11",
+           "rankDisplayValue": "Tied-30th"
+          },
+          {
+           "name": "ERA",
+           "abbreviation": "ERA",
+           "displayValue": "2.85"
+          },
+          {
+           "name": "errors",
+           "abbreviation": "E",
+           "displayValue": "0",
+           "rankDisplayValue": "Tied-679th"
+          }
+         ],
+         "record": "(11-7, 2.85)"
+        }
+       ],
+       "hits": 0,
+       "errors": 0,
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Total",
+         "type": "total",
+         "summary": "97-62"
+        },
+        {
+         "name": "Home",
+         "abbreviation": "Home",
+         "type": "home",
+         "summary": "51-30"
+        },
+        {
+         "name": "Road",
+         "abbreviation": "AWAY",
+         "type": "road",
+         "summary": "46-32"
+        }
+       ]
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1,
+        "logos": [
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Light.svg",
+          "rel": [
+           "light"
+          ]
+         },
+         {
+          "href": "https://a.espncdn.com/i/betting/Draftkings_Dark.svg",
+          "rel": [
+           "dark"
+          ]
+         }
+        ]
+       },
+       "details": "LAD -384",
+       "overUnder": 7.5,
+       "spread": 1.5,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "19",
+         "uid": "s:1~l:10~t:19",
+         "abbreviation": "LAD",
+         "name": "Dodgers",
+         "displayName": "Los Angeles Dodgers",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/lad.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "26",
+         "uid": "s:1~l:10~t:26",
+         "abbreviation": "SF",
+         "name": "Giants",
+         "displayName": "San Francisco Giants",
+         "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/sf.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "+297",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "home",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0ML86451211_1",
+           "text": "Home Bet",
+           "shortText": "Home Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "home",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "+307"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-384",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "away",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0ML86451211_3",
+           "text": "Away Bet",
+           "shortText": "Away Bet",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "away",
+             "betType": "straight"
+            }
+           }
+          }
+         },
+         "open": {
+          "odds": "-398"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Runline",
+        "shortDisplayName": "RL",
+        "home": {
+         "close": {
+          "line": "+1.5",
+          "odds": "+160",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "homeSpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0HC86451211P150_1",
+           "text": "Home Point Spread",
+           "shortText": "Home Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:SF+1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "+1.5",
+          "odds": "+159"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-1.5",
+          "odds": "-196",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "awaySpread",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0HC86451211N150_3",
+           "text": "Away Point Spread",
+           "shortText": "Away Point Spread",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "none",
+             "betType": "straight",
+             "betDetails": "Spread:LAD-1.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "-1.5",
+          "odds": "-194"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total Runs",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o7.5",
+          "odds": "+103",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "over",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0OU86451211O750_1",
+           "text": "Over Odds",
+           "shortText": "Over Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "over",
+             "betType": "straight",
+             "betDetails": "Over:7.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "o7",
+          "odds": "-118"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u7.5",
+          "odds": "-125",
+          "link": {
+           "language": "en-US",
+           "rel": [
+            "under",
+            "desktop",
+            "bets"
+           ],
+           "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865%3Foutcomes%3D0OU86451211U750_3",
+           "text": "Under Odds",
+           "shortText": "Under Odds",
+           "isExternal": true,
+           "isPremium": false,
+           "tracking": {
+            "campaign": "betting-integrations",
+            "tags": {
+             "league": "mlb",
+             "sport": "baseball",
+             "gameId": 401817086,
+             "betSide": "under",
+             "betType": "straight",
+             "betDetails": "Under:7.5"
+            }
+           }
+          }
+         },
+         "open": {
+          "line": "u7",
+          "odds": "-102"
+         }
+        }
+       },
+       "link": {
+        "language": "en-US",
+        "rel": [
+         "game",
+         "desktop",
+         "bets"
+        ],
+        "href": "https://sportsbook.draftkings.com/gateway?s=__s__&wpcid=__wpcid__&wpsrc=413&wpcn=ESPN&wpscn=Widget&wpcrn=BetSlipDeepLink&wpscid=__wpscid__&wpcrid=xx&preurl=https%3A%2F%2Fsportsbook.draftkings.com%2Fevent%2F34720865",
+        "text": "See More Odds",
+        "shortText": "Game",
+        "isExternal": true,
+        "isPremium": false,
+        "tracking": {
+         "campaign": "betting-integrations",
+         "tags": {
+          "league": "mlb",
+          "sport": "baseball",
+          "gameId": 401817086,
+          "betSide": "none",
+          "betType": "straight"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ],
+     "broadcast": "MLB.TV",
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MLB.TV"
+       ]
+      },
+      {
+       "market": "home",
+       "names": [
+        "NBC Sports BA"
+       ]
+      },
+      {
+       "market": "away",
+       "names": [
+        "SportsNet LA"
+       ]
+      }
+     ],
+     "venue": {
+      "id": "43",
+      "fullName": "Oracle Park",
+      "address": {
+       "city": "San Francisco",
+       "state": "California"
+      },
+      "indoor": false
+     },
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 1,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Scheduled",
+       "shortDetail": "9/25 - 10:15 PM EDT"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

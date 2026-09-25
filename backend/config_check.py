@@ -14,8 +14,9 @@ from typing import Any
 from .collectors import discover_collectors
 from .collectors.base import MIN_INTERVAL_SECONDS
 
-# Zero-padded 24h: the night scheduler compares these as strings.
-HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+# Zero-padded 24h: the night scheduler compares these as strings. Used with
+# fullmatch — `$` alone would also accept "04:00\n", which never equals a minute.
+HHMM = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
 MIN_ROTATION_SECONDS = 5
 
 
@@ -25,9 +26,7 @@ def _number(value: Any) -> bool:
 
 def _object(config: dict, key: str, errors: list[str]) -> dict:
     value = config.get(key, {})
-    if value is None:
-        return {}
-    if not isinstance(value, dict):
+    if not isinstance(value, dict):  # null included: every consumer .get()s it
         errors.append(f"{key} must be an object")
         return {}
     return value
@@ -62,11 +61,11 @@ def validate(config: Any) -> list[str]:
     night = _object(config, "night", errors)
     for key in ("dim_at", "wake_at", "nightly_reload_at"):
         value = night.get(key)
-        if value not in (None, "") and not (isinstance(value, str) and HHMM.match(value)):
+        if value not in (None, "") and not (isinstance(value, str) and HHMM.fullmatch(value)):
             errors.append(f"night.{key} must be HH:MM (24-hour, zero-padded)")
     for key in ("dim_level", "day_level"):
-        value = night.get(key)
-        if value is not None and (not _number(value) or not 0 <= value <= 100):
+        # null too: the scheduler does int() on these every minute
+        if key in night and (not _number(night[key]) or not 0 <= night[key] <= 100):
             errors.append(f"night.{key} must be a number from 0 to 100")
     if night.get("method", "ddc") not in ("ddc", "software"):
         errors.append("night.method must be ddc or software")

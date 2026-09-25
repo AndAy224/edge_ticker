@@ -27,6 +27,13 @@ DDCUTIL_TIMEOUT_SECONDS = 20
 WEATHER_TAKEOVER_SECONDS = 25
 
 
+def _level(night: dict, dimming: bool) -> int:
+    """The brightness for this side of the window (a null level falls back)."""
+    key, default = ("dim_level", 10) if dimming else ("day_level", 100)
+    value = night.get(key)
+    return int(default if value is None else value)
+
+
 def _in_night_window(night: dict, minute: str) -> bool:
     """Is `minute` ("HH:MM") inside the configured dim window?
 
@@ -59,7 +66,7 @@ class NightScheduler:
         the dim is the display's job (no working DDC)."""
         night = (self.get_config() or {}).get("night") or {}
         dimming = _in_night_window(night, datetime.now().strftime("%H:%M"))
-        level = int(night.get("dim_level", 10) if dimming else night.get("day_level", 100))
+        level = _level(night, dimming)
         method = self.method_used or night.get("method", "ddc")
         return {"mode": "dim" if dimming else "wake", "level": level, "software": method == "software"}
 
@@ -78,7 +85,7 @@ class NightScheduler:
             return
         if self._boost and not self._boost.done():
             self._boost.cancel()
-        day = int(night.get("day_level", 100))
+        day = _level(night, dimming=False)
         if not await self._ddcutil(day):
             return  # no ddcutil here — the display's software dim handles it
         log.info("takeover: brightness boosted to %d%% for %ss", day, seconds)
@@ -88,7 +95,7 @@ class NightScheduler:
                 await asyncio.sleep(seconds)
                 cfg = (self.get_config() or {}).get("night") or {}
                 if _in_night_window(cfg, datetime.now().strftime("%H:%M")):
-                    await self._ddcutil(int(cfg.get("dim_level", 10)))
+                    await self._ddcutil(_level(cfg, dimming=True))
             except asyncio.CancelledError:
                 pass
 
@@ -132,7 +139,7 @@ class NightScheduler:
     async def _tick(self, minute: str) -> None:
         night = (self.get_config() or {}).get("night") or {}
         dimming = _in_night_window(night, minute)
-        level = int(night.get("dim_level", 10) if dimming else night.get("day_level", 100))
+        level = _level(night, dimming)
         wanted = (dimming, level, night.get("method", "ddc"))
         if wanted != self._applied:
             if self._boost and not self._boost.done():
@@ -144,16 +151,20 @@ class NightScheduler:
             await self.bus.broadcast({"type": "control", "action": "reload"})
 
     async def _set_brightness(self, night: dict, dimming: bool) -> None:
-        level = int(night.get("dim_level", 10) if dimming else night.get("day_level", 100))
+        level = _level(night, dimming)
         method = night.get("method", "ddc")
         log.info("night schedule: %s to %d%% via %s", "dim" if dimming else "wake", level, method)
         if method == "ddc" and not await self._ddcutil(level):
             method = "software"
         self.method_used = method
-        if method == "software":
-            await self.bus.broadcast(
-                {"type": "night", "mode": "dim" if dimming else "wake", "level": level}
-            )
+        # Sent whichever way it went: a display left dimmed in software by an
+        # earlier ddcutil failure has to hear that DDC is handling it now.
+        await self.bus.broadcast({
+            "type": "night",
+            "mode": "dim" if dimming else "wake",
+            "level": level,
+            "software": method == "software",
+        })
 
     @staticmethod
     async def _ddcutil(level: int) -> bool:

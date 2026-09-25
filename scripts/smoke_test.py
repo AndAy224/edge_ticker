@@ -1,14 +1,19 @@
 """Dev smoke test: exercises REST endpoints and the display WebSocket.
 
-Usage: start the backend on :8080, then `python scripts/smoke_test.py`.
+Usage: start a dev backend (`.venv/bin/uvicorn backend.main:app --port 8081`),
+then `.venv/bin/python scripts/smoke_test.py`. Targets TICKER_URL, default
+http://127.0.0.1:8081 — the dev port. Pointing it at prod (:8080) is possible
+but deliberate: the script PUTs the config back and posts a `next` control.
 """
 import asyncio
 import json
+import os
 
 import httpx
 import websockets
 
-BASE = "http://127.0.0.1:8080"
+BASE = os.environ.get("TICKER_URL", "http://127.0.0.1:8081").rstrip("/")
+WS_BASE = "ws" + BASE.removeprefix("http")  # http→ws, https→wss
 
 
 async def main() -> None:
@@ -31,7 +36,7 @@ async def main() -> None:
         )
         print("HA ENTITIES:", (await client.get("/api/ha/entities")).json()["status"])
 
-    async with websockets.connect("ws://127.0.0.1:8080/ws/display") as ws:
+    async with websockets.connect(f"{WS_BASE}/ws/display") as ws:
         snapshot = json.loads(await ws.recv())
         print(
             "WS SNAPSHOT modules:",

@@ -10,7 +10,8 @@
     "jsxImportSource": "preact",
     "skipLibCheck": true,
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["vite/client"]
   },
   "include": ["display", "admin", "shared"]
 }
