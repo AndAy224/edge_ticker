@@ -126,6 +126,12 @@ export function SourcesTab() {
   const launches = cfg.modules?.launches ?? {};
   const patchLaunches = (key: string, value: unknown) =>
     patch((c) => (c.modules.launches = { ...(c.modules.launches ?? {}), [key]: value }));
+  const hurricanes = cfg.modules?.hurricanes ?? {};
+  const patchHurricanes = (key: string, value: unknown) =>
+    patch((c) => (c.modules.hurricanes = { ...(c.modules.hurricanes ?? {}), [key]: value }));
+  const marine = cfg.modules?.marine ?? {};
+  const patchMarine = (key: string, value: unknown) =>
+    patch((c) => (c.modules.marine = { ...(c.modules.marine ?? {}), [key]: value }));
   const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
@@ -487,6 +493,22 @@ export function SourcesTab() {
           />
           Full-screen takeover for severe warnings
         </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={weatherAlerts.map !== false}
+            onChange={(e) => patchWeatherAlerts("map", e.currentTarget.checked)}
+          />
+          Outline nearby tornado / thunderstorm / flood warnings on the radar
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={hurricanes.auto_feature === true}
+            onChange={(e) => patchHurricanes("auto_feature", e.currentTarget.checked)}
+          />
+          Pin the tropics page while home is inside a storm's forecast cone
+        </label>
         {weatherAlerts.enabled !== false && (
           <FetchStatus
             entry={
@@ -500,6 +522,22 @@ export function SourcesTab() {
             what="active alerts"
           />
         )}
+      </section>
+
+      <section>
+        <h2>Beach &amp; tides</h2>
+        <p class="hint">
+          NOAA tide predictions and water temperature, Open-Meteo waves and UV. Enable
+          <code>marine</code> in Modules and add it to the rotation.
+        </p>
+        <label class="field">
+          NOAA tide station id (blank: nearest reference station to the location above)
+          <input
+            value={marine.station ?? ""}
+            placeholder="e.g. 8726724"
+            onInput={(e) => patchMarine("station", e.currentTarget.value.trim() || null)}
+          />
+        </label>
       </section>
     </div>
   );

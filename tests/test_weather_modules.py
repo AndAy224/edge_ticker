@@ -3,9 +3,11 @@ airquality, weather_alerts, weather_radar, hurricanes."""
 from __future__ import annotations
 
 import copy
+from datetime import datetime, timezone
 import io
 import zipfile
 
+import httpx
 import pytest
 
 from backend.collectors import weather_alerts as alerts_module
@@ -117,10 +119,14 @@ def test_airquality_reuses_weather_location_unless_overridden(defaults_config):
 # ---- weather_alerts (NWS) --------------------------------------------------------------
 
 
-@pytest.fixture
-def fresh_overlay_state(monkeypatch):
-    monkeypatch.setattr(alerts_module, "_fired_ids", {})
-    monkeypatch.setattr(alerts_module, "_event_fired_at", {})
+# The recorded alerts end on 2026-09-25; pin the clock to the recording so the
+# expiry filter doesn't age them out of these tests.
+RECORDED_AT = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _alerts_clock(monkeypatch):
+    monkeypatch.setattr(alerts_module, "_now", lambda: RECORDED_AT)
 
 
 def parsed_alerts() -> list[dict]:
@@ -282,6 +288,59 @@ def test_kmz_parsers():
         {"lat": 30.6, "lon": -44.1, "label": "8 AM Sat"},
     ]
     assert parse_cone_kmz(kmz(CONE_KML)) == [[29.0, -42.0], [31.0, -45.0], [29.0, -46.0], [29.0, -42.0]]
+
+
+class Nhc:
+    """CurrentStorms + per-storm KMZs. Fay's products parse; Gonzalo's 404
+    until `gonzalo_ok`. The outlook bundle answers 304 (nothing new)."""
+
+    def __init__(self) -> None:
+        self.storms = load_json("nhc_current_storms.json")
+        self.kmz_requests: list[str] = []
+        self.gonzalo_ok = False
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("CurrentStorms.json"):
+            return json_response(self.storms)
+        if not url.lower().endswith(".kmz"):
+            return httpx.Response(304)  # outlook: unchanged
+        self.kmz_requests.append(url)
+        if "AL062026" in url or self.gonzalo_ok:
+            return httpx.Response(200, content=kmz(TRACK_KML if "TRACK" in url else CONE_KML))
+        return httpx.Response(404)
+
+
+async def test_hurricanes_fetch_atlantic_only_and_geometry_cache(http, defaults_config):
+    nhc = Nhc()
+    http.handler = nhc
+    collector = HurricanesCollector(defaults_config)
+    storms = await collector.fetch()
+    assert [s["id"] for s in storms] == ["al062026", "al072026"]  # East Pacific dropped
+    assert len(nhc.kmz_requests) == 4
+    fay, gonzalo = storms
+    assert len(fay["_geometry"]["track"]) == 2 and len(fay["_geometry"]["cone"]) == 4
+    assert gonzalo["_geometry"] == {"track": [], "cone": []}  # a missing product isn't fatal
+    assert "geometry" in (collector.degraded or "")
+    # Next poll, same advisories: Fay's parsed geometry is reused, Gonzalo's
+    # failed products are retried rather than cached as empty.
+    await collector.fetch()
+    fay_urls = [u for u in nhc.kmz_requests if "AL062026" in u]
+    assert len(fay_urls) == 2
+    assert len(nhc.kmz_requests) == 6
+    assert set(collector._geometry_cache) == {"al062026"}
+
+
+async def test_hurricanes_degraded_clears_after_geometry_recovers(http, defaults_config):
+    nhc = Nhc()
+    http.handler = nhc
+    collector = HurricanesCollector(defaults_config)
+    await collector.fetch()
+    assert collector.degraded
+    nhc.gonzalo_ok = True
+    storms = await collector.fetch()
+    assert storms[1]["_geometry"]["track"]  # recovered
+    assert collector.degraded is None
 
 
 def test_hurricanes_shape(defaults_config):

@@ -54,6 +54,8 @@ modules:
     enabled: true
     overlay: true        # full-screen takeover for Extreme/Severe warnings
     poll_seconds: 180
+    map: true            # outline storm-based warnings (tornado, t-storm, flash flood) on the radar
+    map_radius_km: 250   # …within this distance of home
 
   weather_radar:
     enabled: true
@@ -63,7 +65,8 @@ modules:
 
   hurricanes:
     enabled: true
-    poll_seconds: 600    # NHC CurrentStorms (keyless); reuses the weather location.
+    poll_seconds: 600    # NHC CurrentStorms + 7-day outlook areas (keyless); reuses the weather location.
+    auto_feature: false  # pin the tropics page while home is inside a storm's forecast cone
     # Has a stage page — add `hurricanes` to rotation.order above to show it.
 
   launches:
@@ -121,6 +124,12 @@ modules:
   astro:
     enabled: false
     poll_seconds: 1800
+
+  marine:              # beach & tides: NOAA tide curve + water temp, Open-Meteo waves + UV (keyless)
+    enabled: false
+    poll_seconds: 1800
+    station: null      # NOAA tide station id; null picks the nearest reference station to home
+    # Has a stage page — add `marine` to rotation.order to show it.
 
 appearance:
   theme: midnight     # midnight | daylight | amber | glance | frost | lcars | sovereign

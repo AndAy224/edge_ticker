@@ -88,3 +88,12 @@ def defaults_config() -> dict:
 
     return db.defaults()
 
+
+@pytest.fixture
+def fresh_overlay_state(monkeypatch):
+    """weather_alerts keeps its takeover dedup state at module level (on purpose:
+    it must survive collector restarts) — isolate it per test."""
+    from backend.collectors import weather_alerts
+
+    monkeypatch.setattr(weather_alerts, "_fired_ids", {})
+    monkeypatch.setattr(weather_alerts, "_event_fired_at", {})

@@ -1,0 +1,52 @@
+{
+ "stations": [
+  {
+   "id": "8724580",
+   "name": "KEY WEST",
+   "lat": 24.555700302124023,
+   "lng": -81.80789947509766,
+   "type": "R",
+   "state": "FL"
+  },
+  {
+   "id": "8726520",
+   "name": "St. Petersburg",
+   "lat": 27.76059913635254,
+   "lng": -82.62689971923828,
+   "type": "R",
+   "state": "FL"
+  },
+  {
+   "id": "8726706",
+   "name": "Clearwater",
+   "lat": 27.954999923706055,
+   "lng": -82.80670166015625,
+   "type": "S",
+   "state": "FL"
+  },
+  {
+   "id": "8726724",
+   "name": "Clearwater Beach",
+   "lat": 27.978300094604492,
+   "lng": -82.83170318603516,
+   "type": "R",
+   "state": "FL"
+  },
+  {
+   "id": "8726761",
+   "name": "Dunedin, St. Joseph Sound",
+   "lat": 28.0132999420166,
+   "lng": -82.79329681396484,
+   "type": "S",
+   "state": "FL"
+  },
+  {
+   "id": "8726809",
+   "name": "Honeymoon Island",
+   "lat": 28.06170082092285,
+   "lng": -82.81330108642578,
+   "type": "S",
+   "state": "FL"
+  }
+ ]
+}

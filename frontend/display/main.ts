@@ -12,8 +12,9 @@ import "./modules/astro";
 import "./modules/proxmox";
 import { setWeatherAlerts } from "./modules/weather";
 import "./modules/airquality";
-import "./modules/weather_radar";
+import { setRadarWarnings } from "./modules/weather_radar";
 import "./modules/hurricanes";
+import "./modules/marine";
 import { setLaunchSun } from "./modules/launches";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
@@ -235,6 +236,7 @@ function handleMessage(msg: any): void {
       haStates.clear();
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
       setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);
+      setRadarWarnings((modules.get("weather_alerts")?.stage as any)?.nearby ?? []);
       setLaunchSun((modules.get("weather")?.stage as any)?.sun ?? null);
       if (msg.night) applyNight(msg.night);
       applyConfig();
@@ -250,6 +252,8 @@ function handleMessage(msg: any): void {
         if (fantasy) autoFeatureFantasy(fantasy);
         const launches = modules.get("launches");
         if (launches) autoFeatureLaunches(launches);
+        const hurricanes = modules.get("hurricanes");
+        if (hurricanes) autoFeatureHurricanes(hurricanes);
       }
       updateScoreChip();
       break;
@@ -261,11 +265,14 @@ function handleMessage(msg: any): void {
         setLaunchSun((payload.stage as any)?.sun ?? null);
       }
       if (payload.module === "weather_alerts") {
-        // Alerts render inside the weather rail/stage, not their own pane.
+        // Alerts render inside the weather rail/stage and outline on the
+        // radar — not in a pane of their own.
         setWeatherAlerts(payload.stage?.alerts ?? []);
+        setRadarWarnings(payload.stage?.nearby ?? []);
         renderWeather();
         for (let i = 0; i < paneEls.length; i++) {
-          if (paneModule(i) === "weather" && !paneDetailTimers.has(i)) renderPane(i);
+          const id = paneModule(i);
+          if ((id === "weather" || id === "weather_radar") && !paneDetailTimers.has(i)) renderPane(i);
         }
       }
       if (payload.module === "sports") {
@@ -274,6 +281,7 @@ function handleMessage(msg: any): void {
       }
       if (payload.module === "fantasy") autoFeatureFantasy(payload);
       if (payload.module === "launches") autoFeatureLaunches(payload);
+      if (payload.module === "hurricanes") autoFeatureHurricanes(payload);
       if (blanked) {
         // Nobody can see it: keep the data, skip the DOM work until wake().
         renderDeferred = true;
@@ -291,7 +299,10 @@ function handleMessage(msg: any): void {
       // The collector stopped (module disabled): drop its data rather than
       // leave e.g. an expired warning on the tape until the next reload.
       modules.delete(msg.module);
-      if (msg.module === "weather_alerts") setWeatherAlerts([]);
+      if (msg.module === "weather_alerts") {
+        setWeatherAlerts([]);
+        setRadarWarnings([]);
+      }
       renderWeather();
       rebuildTape();
       renderStage();
@@ -403,7 +414,8 @@ function applyConfig(): void {
   setFantasyLiveMode((config.modules?.fantasy as any)?.live_mode !== false);
   const featureOff =
     (autoPinnedFor === "sports" && config.modules?.sports?.auto_feature !== true) ||
-    (autoPinnedFor === "fantasy" && (config.modules?.fantasy as any)?.auto_feature === false);
+    (autoPinnedFor === "fantasy" && (config.modules?.fantasy as any)?.auto_feature === false) ||
+    (autoPinnedFor === "hurricanes" && (config.modules?.hurricanes as any)?.auto_feature !== true);
   if (featureOff) {
     // Feature toggled off mid-game: release our pin, keep a manual one.
     autoPinnedFor = null;
@@ -450,6 +462,7 @@ const MODULE_LABELS: Record<string, string> = {
   fantasy: "FANTASY",
   weather_radar: "RADAR",
   hurricanes: "TROPICS",
+  marine: "TIDES",
   launches: "LAUNCHES",
 };
 
@@ -759,6 +772,19 @@ function autoFeatureLaunches(payload: ModulePayload): void {
   } else if (!live && launchLiveFeatured) {
     launchLiveFeatured = false;
     clearAutoFeature("launches");
+  }
+}
+
+let hurricaneThreatFeatured = false;
+/** Home inside a forecast cone: pin the tropics page (opt-in). */
+function autoFeatureHurricanes(payload: ModulePayload): void {
+  const threat = Boolean((payload.stage as any)?.threat);
+  if (threat && !hurricaneThreatFeatured) {
+    hurricaneThreatFeatured = true;
+    applyAutoFeature("hurricanes", (config.modules?.hurricanes as any)?.auto_feature === true);
+  } else if (!threat && hurricaneThreatFeatured) {
+    hurricaneThreatFeatured = false;
+    clearAutoFeature("hurricanes");
   }
 }
 

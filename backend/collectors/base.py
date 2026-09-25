@@ -61,6 +61,23 @@ class Collector(ABC):
         self._attempt_finished: float = time.monotonic()
         self._created = time.monotonic()
 
+    # The fallback home when neither this module nor modules.weather has one.
+    DEFAULT_HOME = (27.9659, -82.8001, "Clearwater, FL")
+
+    def home(self) -> tuple[float, float, str]:
+        """(latitude, longitude, name): this module's own override, else the
+        shared location in modules.weather (the admin's one location card),
+        else DEFAULT_HOME. Set uses_location = True alongside, so an edit to
+        the shared location restarts the collector."""
+        weather = (self.config.get("modules") or {}).get("weather") or {}
+        values = []
+        for key, default in zip(("latitude", "longitude", "location_name"), self.DEFAULT_HOME):
+            value = self.module_config.get(key)
+            if value is None:
+                value = weather.get(key)
+            values.append(default if value is None else value)
+        return float(values[0]), float(values[1]), str(values[2])
+
     @classmethod
     def config_fingerprint(cls, config: dict) -> str:
         """Everything in `config` this collector's behaviour depends on. A

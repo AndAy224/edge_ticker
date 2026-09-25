@@ -7,12 +7,19 @@ has routine 5xx blips that shouldn't mark the forecast stale.
 Active alerts become high-priority tape items; Extreme/Severe *warnings*
 additionally broadcast a `weather_alert` message that the display renders as
 a full-screen takeover (parallel to the sports `sport_event` pipeline).
+
+Separately, `nearby` carries the storm-based warnings (the ones NWS draws as
+polygons: tornado, severe thunderstorm, flash flood…) within map_radius_km of
+home, for the radar to outline — a tornado warning two towns over never
+reached the panel when only alerts containing the home point were fetched.
+Expired alerts are dropped from both lists.
 """
 from __future__ import annotations
 
 import logging
+import math
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 
@@ -22,6 +29,9 @@ from .base import Collector
 log = logging.getLogger(__name__)
 
 ALERTS_URL = "https://api.weather.gov/alerts/active"
+POINTS_URL = "https://api.weather.gov/points/{lat},{lon}"
+MAX_NEARBY = 25
+MAX_RING_POINTS = 60
 # NWS rejects requests without a User-Agent (and asks that it identify the app).
 HEADERS = {
     "User-Agent": "edge-ticker/1.0 (kiosk appliance)",
@@ -60,6 +70,46 @@ TEST_ALERT = {
 }
 
 
+def _now() -> datetime:
+    return datetime.now(timezone.utc)  # a function so tests can pin the clock
+
+
+def _expired(iso: str | None) -> bool:
+    if not iso:
+        return False
+    try:
+        ends = datetime.fromisoformat(iso)
+    except ValueError:
+        return False
+    if ends.tzinfo is None:
+        ends = ends.replace(tzinfo=timezone.utc)
+    return ends < _now()
+
+
+def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    return 6371.0 * 2 * math.asin(math.sqrt(a))
+
+
+def _rings(geometry: dict | None) -> list[list[list[float]]]:
+    """Outer rings of a GeoJSON (Multi)Polygon as [[lat, lon], ...], thinned."""
+    if not geometry:
+        return []
+    polygons = {
+        "Polygon": [geometry.get("coordinates") or []],
+        "MultiPolygon": geometry.get("coordinates") or [],
+    }.get(geometry.get("type"), [])
+    rings = []
+    for polygon in polygons:
+        if not polygon or len(polygon[0]) < 3:
+            continue
+        outer = polygon[0]
+        step = max(1, math.ceil(len(outer) / MAX_RING_POINTS))
+        rings.append([[round(pt[1], 4), round(pt[0], 4)] for pt in outer[::step]])
+    return rings
+
+
 def _short_time(iso: str | None) -> str | None:
     if not iso:
         return None
@@ -85,8 +135,12 @@ class WeatherAlertsCollector(Collector):
         self.latitude = round(float(weather_cfg.get("latitude", 27.9659)), 4)
         self.longitude = round(float(weather_cfg.get("longitude", -82.8001)), 4)
         self.location_name = weather_cfg.get("location_name", "Clearwater, FL")
+        self.map_enabled = self.module_config.get("map", True) is not False
+        self.map_radius_km = float(self.module_config.get("map_radius_km", 250))
         self._bus: Bus | None = None
         self._last_alerts: list[dict] = []
+        self._nearby: list[dict] = []
+        self._state: str | None = None  # US state of home, from NWS /points (once)
 
     async def start(self, bus: Bus) -> None:
         self._bus = bus  # kept for out-of-band weather_alert broadcasts
@@ -98,15 +152,57 @@ class WeatherAlertsCollector(Collector):
                 ALERTS_URL,
                 params={"point": f"{self.latitude},{self.longitude}"},
             )
-        response.raise_for_status()
-        alerts = [
-            parsed
-            for feature in response.json().get("features", [])
-            if (parsed := self._parse(feature)) is not None
-        ]
+            response.raise_for_status()
+            alerts = [
+                parsed
+                for feature in response.json().get("features", [])
+                if (parsed := self._parse(feature)) is not None
+            ]
+            if self.map_enabled:
+                await self._refresh_nearby(client)
         self._last_alerts = alerts
         await self._maybe_overlay(alerts)
         return alerts
+
+    async def _refresh_nearby(self, client: httpx.AsyncClient) -> None:
+        """Polygon warnings around home, from the home state's active alerts.
+        Extra to the module's job: a failure keeps the last list (expired
+        entries still drop out in shape())."""
+        try:
+            if self._state is None:
+                r = await client.get(POINTS_URL.format(lat=self.latitude, lon=self.longitude))
+                r.raise_for_status()
+                rel = (r.json().get("properties") or {}).get("relativeLocation") or {}
+                self._state = (rel.get("properties") or {}).get("state") or ""
+            if not self._state:
+                return  # outside NWS coverage: nothing to map
+            r = await client.get(ALERTS_URL, params={"area": self._state})
+            r.raise_for_status()
+            nearby = []
+            for feature in r.json().get("features", []):
+                rings = _rings(feature.get("geometry"))
+                parsed = self._parse(feature) if rings else None
+                if parsed is None:
+                    continue
+                closest = min(
+                    _km(self.latitude, self.longitude, lat, lon) for ring in rings for lat, lon in ring
+                )
+                if closest > self.map_radius_km:
+                    continue
+                nearby.append({
+                    "id": parsed["id"],
+                    "event": parsed["event"],
+                    "severity": parsed["severity"],
+                    "ends": parsed["ends"],
+                    "rings": rings,
+                    "km": round(closest),
+                })
+            nearby.sort(key=lambda a: a["km"])
+            self._nearby = nearby[:MAX_NEARBY]
+            self.degraded = None
+        except Exception as exc:
+            self.degraded = f"nearby warnings: {type(exc).__name__}: {exc}"
+            log.info("weather_alerts: nearby warnings failed: %s", exc)
 
     @staticmethod
     def _parse(feature: dict) -> dict | None:
@@ -114,6 +210,8 @@ class WeatherAlertsCollector(Collector):
         # Drop test/exercise/draft messages and cancellations.
         if p.get("status") != "Actual" or p.get("messageType") not in ("Alert", "Update"):
             return None
+        if _expired(p.get("ends") or p.get("expires")):
+            return None  # NWS can list an alert briefly past its end
         return {
             "id": p.get("id"),
             "event": p.get("event") or "Weather alert",
@@ -127,6 +225,8 @@ class WeatherAlertsCollector(Collector):
         }
 
     def shape(self, raw: list[dict]) -> ModulePayload:
+        raw = [a for a in raw if not _expired(a.get("ends"))]
+        nearby = [a for a in self._nearby if not _expired(a.get("ends"))]
         tape = []
         for a in raw[:MAX_TAPE_ALERTS]:
             until = _short_time(a.get("ends"))
@@ -135,7 +235,7 @@ class WeatherAlertsCollector(Collector):
             tape.append(TapeItem(text=text, accent="alert", priority=3, icon="warning"))
         return ModulePayload(
             module=self.name,
-            stage={"alerts": raw, "location": self.location_name},
+            stage={"alerts": raw, "nearby": nearby, "location": self.location_name},
             tape=tape,
         )
 

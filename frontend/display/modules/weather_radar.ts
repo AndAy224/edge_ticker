@@ -2,12 +2,17 @@
 // dark basemap, centered on the home location. The loop is pure CSS (generated
 // keyframes, negative delays) so nothing needs teardown when the layer is
 // removed — same reasoning as the ADS-B sweep animation.
+//
+// Storm-based NWS warnings near home (tornado, severe thunderstorm, flash
+// flood…) are outlined over the loop — they come from the weather_alerts
+// payload's `nearby` list, pushed in by main.ts via setRadarWarnings().
 import {
   BASEMAP_ATTRIB,
   MapView,
   basemapImgs,
   layerImgs,
   mapScaleStyle,
+  project,
   tileZoom,
 } from "../slippymap";
 import { register } from "./registry";
@@ -24,6 +29,29 @@ const RADAR_MAX_Z = 7; // RainViewer serves "Zoom Level Not Supported" tiles abo
 const STEP_SECONDS = 0.4; // per-frame dwell
 const NEWEST_DWELL_STEPS = 4; // hold on the latest observed frame
 const NOWCAST_END_DWELL_STEPS = 2; // brief pause on the last forecast frame
+
+// NWS hazard-map colours, the dark ones lifted to read on the dark basemap.
+const WARNING_COLORS: Record<string, string> = {
+  "Tornado Warning": "#ff2d2d",
+  "Extreme Wind Warning": "#ff8c00",
+  "Severe Thunderstorm Warning": "#ffa500",
+  "Special Marine Warning": "#ffa500",
+  "Flash Flood Warning": "#e0304a",
+  "Flood Warning": "#2ecc71",
+  "Flood Advisory": "#2ecc71",
+  "Snow Squall Warning": "#d0409a",
+};
+
+function warningColor(event: string): string {
+  return WARNING_COLORS[event] ?? "#e0c04a";
+}
+
+let warnings: any[] = [];
+
+/** Nearby polygon warnings from the weather_alerts payload (main.ts). */
+export function setRadarWarnings(list: any[]): void {
+  warnings = Array.isArray(list) ? list : [];
+}
 
 interface RadarFrame {
   time: number;
@@ -111,13 +139,48 @@ function buildMap(stage: HTMLElement, data: any): void {
     )}</span>`;
   }
 
+  // Warning outlines ride inside the scaled map (so they track the tiles),
+  // above the radar frames; strokes stay constant via vector-effect.
+  let polys = "";
+  for (const w of warnings) {
+    const color = warningColor(w.event);
+    for (const ring of w.rings ?? []) {
+      if (!Array.isArray(ring) || ring.length < 3) continue;
+      const points = ring
+        .map((c: number[]) => {
+          const pt = project(view, c[0], c[1]);
+          return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+        })
+        .join(" ");
+      polys += `<polygon points="${points}" class="radar-warning" style="stroke:${color};fill:${color}" vector-effect="non-scaling-stroke"/>`;
+    }
+  }
+  // One chip per event type, its nearest instance (the list arrives nearest first).
+  const events: any[] = [];
+  for (const w of warnings) {
+    if (!events.some((e) => e.event === w.event)) events.push(w);
+  }
+  events.splice(3);
+  const legend = events.length
+    ? `<div class="radar-warn-legend">${events
+        .map(
+          (w) =>
+            `<span class="radar-warn-chip"><i style="background:${warningColor(w.event)}"></i>${escapeHtml(
+              w.event,
+            )}${w.km != null ? ` · ${w.km} km` : ""}</span>`,
+        )
+        .join("")}</div>`
+    : "";
+
   viewport.innerHTML = `
     <style>${css}</style>
     <div class="radar-map" style="${mapScaleStyle(view)}">
       <div class="radar-basemap">${basemapImgs(view)}</div>
       ${frameDivs}
+      ${polys ? `<svg class="radar-warnings" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${polys}</svg>` : ""}
     </div>
     ${chips}
+    ${legend}
     <div class="radar-home"></div>`;
 }
 

@@ -1,6 +1,9 @@
 // NHC tropical tracker: storm positions, forecast track and cone drawn over
 // the shared Esri dark slippy map, auto-fitted to home + every active storm.
-// Off-season it renders a calm basin map with a "tropics quiet" chip.
+// NHC's 7-day outlook areas (where a storm may form, with the odds) draw
+// under the storms in NHC's yellow/orange/red. With neither storms nor
+// outlook areas it renders a calm basin map with a "tropics quiet" chip; with
+// home inside a forecast cone, the chip becomes the warning.
 // Reuses the radar module's map plumbing classes (.radar-viewport/.radar-map/
 // .radar-basemap/.radar-home) — those are effectively the shared slippy-map
 // styles; module-specific bits are .hurr-*.
@@ -28,6 +31,17 @@ const QUIET_BASIN = [
   { lat: 9, lon: -98 },
   { lat: 33, lon: -48 },
 ];
+
+// NHC's formation-risk colours (low / medium / high).
+const RISK_COLORS: Record<string, string> = {
+  Low: "#ffd24d",
+  Medium: "#ff9a3c",
+  High: "#ff4d4d",
+};
+
+function riskColor(risk: string | null | undefined): string {
+  return RISK_COLORS[risk ?? ""] ?? RISK_COLORS.Low;
+}
 
 function categoryColor(category: string): string {
   if (category === "CAT 5" || category === "CAT 4") return "#ff4d4d";
@@ -57,18 +71,21 @@ function buildMap(stage: HTMLElement, data: any): void {
   if (!width || !height) return;
 
   const storms: any[] = data.storms ?? [];
+  const outlook: any[] = data.outlook ?? [];
   const home = data.home ?? { lat: 27.9659, lon: -82.8001 };
 
-  const fitPoints = storms.length
-    ? [
-        home,
-        ...storms.flatMap((s) => [
-          { lat: s.lat, lon: s.lon },
-          ...(s.track ?? []),
-          ...(s.cone ?? []).map((c: number[]) => ({ lat: c[0], lon: c[1] })),
-        ]),
-      ]
-    : QUIET_BASIN;
+  const fitPoints =
+    storms.length || outlook.length
+      ? [
+          home,
+          ...storms.flatMap((s) => [
+            { lat: s.lat, lon: s.lon },
+            ...(s.track ?? []),
+            ...(s.cone ?? []).map((c: number[]) => ({ lat: c[0], lon: c[1] })),
+          ]),
+          ...outlook.flatMap((a) => (a.polygon ?? []).map((c: number[]) => ({ lat: c[0], lon: c[1] }))),
+        ]
+      : QUIET_BASIN;
   const view: MapView = fitView(fitPoints, width, height, {
     minZoom: 2.5,
     maxZoom: 7,
@@ -84,6 +101,31 @@ function buildMap(stage: HTMLElement, data: any): void {
     x: width / 2 + (p.x - width / 2) * scale,
     y: height / 2 + (p.y - height / 2) * scale,
   });
+  const toPoints = (coords: number[][]) =>
+    coords
+      .map((c) => {
+        const p = project(view, c[0], c[1]);
+        return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      })
+      .join(" ");
+  // Outlook areas first, so storms draw on top of them.
+  for (const a of outlook) {
+    const color = riskColor(a.risk7);
+    if ((a.polygon ?? []).length >= 3) {
+      svg += `<polygon points="${toPoints(a.polygon)}" class="hurr-outlook" style="stroke:${color};fill:${color}" vector-effect="non-scaling-stroke"/>`;
+    }
+    if ((a.path ?? []).length >= 2) {
+      svg += `<polyline points="${toPoints(a.path)}" class="hurr-outlook-path" style="stroke:${color}" vector-effect="non-scaling-stroke"/>`;
+    }
+    if (a.x) {
+      const p = project(view, a.x.lat, a.x.lon);
+      svg += `<g transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" class="hurr-x" style="stroke:${color}">
+        <path d="M -9 -9 L 9 9 M 9 -9 L -9 9" vector-effect="non-scaling-stroke"/></g>`;
+      const chip = postScale(p);
+      chips += `<div class="hurr-name hurr-odds" style="left:${chip.x.toFixed(1)}px;top:${(chip.y - 18).toFixed(1)}px;border-color:${color}">
+        ${escapeHtml(a.prob7 ?? "?")}% · 7 day</div>`;
+    }
+  }
   for (const s of storms) {
     const color = categoryColor(s.category);
     const pos = project(view, s.lat, s.lon);
@@ -132,7 +174,15 @@ function buildMap(stage: HTMLElement, data: any): void {
         ? `<div class="radar-home" style="left:${homePos.x.toFixed(1)}px;top:${homePos.y.toFixed(1)}px;margin:-7px 0 0 -7px"></div>`
         : ""
     }
-    ${data.quiet ? `<div class="hurr-quiet">No active Atlantic systems</div>` : ""}`;
+    ${
+      data.threat
+        ? `<div class="hurr-quiet hurr-threat">${escapeHtml(data.home_name ?? "Home")} is inside the forecast cone of ${escapeHtml(
+            data.threat.class_text ?? "",
+          )} ${escapeHtml(data.threat.storm ?? "")}</div>`
+        : data.quiet
+          ? `<div class="hurr-quiet">No active Atlantic systems</div>`
+          : ""
+    }`;
 }
 
 // NHC omits a motion fix (null) on newly-formed systems, and reports 0 mph
@@ -156,26 +206,53 @@ function stormCard(s: any): string {
     </div>
     <div class="hurr-card-dist">${s.distance_mi} mi ${escapeHtml(s.bearing_from_home)} of ${escapeHtml(
       s.home_name ?? "home",
-    )}</div>
+    )}${
+      s.closest_mi != null && s.closest_mi < s.distance_mi
+        ? ` · forecast closest ${escapeHtml(s.closest_mi)} mi`
+        : ""
+    }</div>
+  </div>`;
+}
+
+/** A disturbance NHC is watching: its 7-day odds lead, in the risk colour. */
+function outlookCard(a: any, homeName: string): string {
+  const color = riskColor(a.risk7);
+  const name = a.title ?? `Area ${a.area}`;
+  return `<div class="hurr-card hurr-outlook-card" style="border-color:${color}">
+    <div class="hurr-card-head">
+      <span class="hurr-cat" style="background:${color}">${escapeHtml(a.prob7 ?? "?")}%</span>
+      <span class="hurr-card-name">${escapeHtml(name)}</span>
+    </div>
+    <div class="hurr-card-stats">
+      formation: ${escapeHtml(a.prob2 ?? "?")}% in 2 days · ${escapeHtml(a.prob7 ?? "?")}% in 7${
+        a.invest ? ` · ${escapeHtml(a.invest)}` : ""
+      }
+    </div>
+    ${
+      a.distance_mi != null
+        ? `<div class="hurr-card-dist">${escapeHtml(a.distance_mi)} mi ${escapeHtml(a.bearing_from_home)} of ${escapeHtml(homeName)}</div>`
+        : ""
+    }
   </div>`;
 }
 
 register({
   id: "hurricanes",
   renderStage(el, data) {
-    const storms: any[] = (data?.storms ?? []).map((s: any) => ({
-      ...s,
-      home_name: (data?.location_name ?? "home").split(",")[0],
-    }));
+    const homeName = (data?.location_name ?? "home").split(",")[0];
+    const storms: any[] = (data?.storms ?? []).map((s: any) => ({ ...s, home_name: homeName }));
+    const outlook: any[] = data?.outlook ?? [];
+    // Storms first: a named system outranks a disturbance for the card slots.
+    const cards = storms.map(stormCard).concat(outlook.map((a) => outlookCard(a, homeName)));
     el.innerHTML = `<div class="hurr-stage">
       <div class="radar-viewport"></div>
-      <div class="hurr-cards">${storms.map(stormCard).join("")}</div>
+      <div class="hurr-cards">${cards.join("")}</div>
       <div class="radar-attrib">${BASEMAP_ATTRIB} &middot; NOAA/NHC</div>
     </div>`;
     const stage = el.querySelector<HTMLElement>(".hurr-stage")!;
     requestAnimationFrame(() => {
       if (!el.isConnected) return;
-      buildMap(stage, { ...data, storms });
+      buildMap(stage, { ...data, storms, home_name: homeName });
     });
   },
 });

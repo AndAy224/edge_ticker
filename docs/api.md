@@ -61,7 +61,7 @@ to the mapped controls (see `POST /api/ha/action`).
   for. Everything else worth a look is summarised in `problems`.
 - Per collector: `overdue` = no fresh data for 3 intervals (+60 s);
   `degraded` = a partial failure the collector survives (some feeds, the sports
-  schedule window…); `state` is `running`, `dead`,
+  schedule window, the hurricane outlook…); `state` is `running`, `dead`,
   `disabled`, `missing env` or `error` (its constructor rejected the config).
 - `build` is the asset set of each built page (see "Deploys" under WebSockets).
 
