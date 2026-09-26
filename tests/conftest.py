@@ -12,6 +12,15 @@ Fixture provenance (tests/fixtures/, recorded once on 2026-09-25, trimmed):
   ll2_upcoming.json             Launch Library 2 launch/upcoming (one request), 4 launches, unused keys dropped
   bbc_world.xml                 feeds.bbci.co.uk/news/world/rss.xml, first 5 items
 
+  opnsense_*.json               OPNsense 26.7 API on the home firewall, 2026-09-26: routes/gateway/status,
+                                routing/settings/searchGateway, diagnostics/interface/getRoutes,
+                                diagnostics/traffic/interface (twice, ~16 s apart: _2),
+                                interfaces/overview/interfacesInfo (per-row config blobs dropped), and
+                                diagnostics/system/{systemTime,systemResources,systemInformation},
+                                diagnostics/firewall/pf_states. Public IPs rewritten to 203.0.113.x /
+                                198.51.100.x, MACs to 00:00:5e:00:53:xx. WAN up; Starlink port with no
+                                carrier (its gateway Offline, no address).
+
 Do not re-record casually: Launch Library 2 allows ~15 req/hr per IP and the
 production appliance shares that budget.
 """
@@ -37,6 +46,7 @@ SCRUBBED_ENV = (
     "FINNHUB_KEY", "PVE_URL", "PVE_TOKEN_ID", "PVE_TOKEN_SECRET", "PVE_VERIFY_SSL",
     "UNIFI_URL", "UNIFI_API_KEY", "UNIFI_VERIFY_SSL", "HA_URL", "HA_TOKEN",
     "ESPN_S2", "ESPN_SWID", "ADSB_URL",
+    "OPNSENSE_URL", "OPNSENSE_KEY", "OPNSENSE_SECRET", "OPNSENSE_VERIFY_SSL",
 )
 
 
@@ -97,3 +107,14 @@ def fresh_overlay_state(monkeypatch):
 
     monkeypatch.setattr(weather_alerts, "_fired_ids", {})
     monkeypatch.setattr(weather_alerts, "_event_fired_at", {})
+
+
+@pytest.fixture(autouse=True)
+def _fresh_opnsense_state(monkeypatch):
+    """opnsense keeps counters, sparkline history and the failover clock at
+    module level (they must survive collector restarts) — isolate per test."""
+    from backend.collectors import opnsense
+
+    monkeypatch.setattr(opnsense, "_counters", {})
+    monkeypatch.setattr(opnsense, "_history", {})
+    monkeypatch.setattr(opnsense, "_active", {"seen": False, "id": None, "since": None})

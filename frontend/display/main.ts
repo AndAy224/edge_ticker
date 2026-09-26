@@ -10,6 +10,7 @@ import { setFantasyLiveMode } from "./modules/fantasy";
 import "./modules/adsb";
 import "./modules/astro";
 import "./modules/proxmox";
+import "./modules/opnsense";
 import { setWeatherAlerts } from "./modules/weather";
 import "./modules/airquality";
 import { setRadarWarnings } from "./modules/weather_radar";
@@ -257,6 +258,8 @@ function handleMessage(msg: any): void {
         if (launches) autoFeatureLaunches(launches);
         const hurricanes = modules.get("hurricanes");
         if (hurricanes) autoFeatureHurricanes(hurricanes);
+        const network = modules.get("opnsense");
+        if (network) autoFeatureNetwork(network);
       }
       updateScoreChip();
       break;
@@ -285,6 +288,7 @@ function handleMessage(msg: any): void {
       if (payload.module === "fantasy") autoFeatureFantasy(payload);
       if (payload.module === "launches") autoFeatureLaunches(payload);
       if (payload.module === "hurricanes") autoFeatureHurricanes(payload);
+      if (payload.module === "opnsense") autoFeatureNetwork(payload);
       if (blanked) {
         // Nobody can see it: keep the data, skip the DOM work until wake().
         renderDeferred = true;
@@ -421,7 +425,8 @@ function applyConfig(): void {
   const featureOff =
     (autoPinnedFor === "sports" && config.modules?.sports?.auto_feature !== true) ||
     (autoPinnedFor === "fantasy" && (config.modules?.fantasy as any)?.auto_feature === false) ||
-    (autoPinnedFor === "hurricanes" && (config.modules?.hurricanes as any)?.auto_feature !== true);
+    (autoPinnedFor === "hurricanes" && (config.modules?.hurricanes as any)?.auto_feature !== true) ||
+    (autoPinnedFor === "opnsense" && (config.modules?.opnsense as any)?.auto_feature === false);
   if (featureOff) {
     // Feature toggled off mid-game: release our pin, keep a manual one.
     autoPinnedFor = null;
@@ -470,6 +475,7 @@ const MODULE_LABELS: Record<string, string> = {
   hurricanes: "TROPICS",
   marine: "TIDES",
   launches: "LAUNCHES",
+  opnsense: "NETWORK",
 };
 
 function paneLabel(id: string | undefined): string {
@@ -794,6 +800,20 @@ function autoFeatureHurricanes(payload: ModulePayload): void {
   }
 }
 
+let networkFailoverFeatured = false;
+/** Running on the backup WAN: pin the network page until the primary is back
+ *  (on unless modules.opnsense.auto_feature is false). */
+function autoFeatureNetwork(payload: ModulePayload): void {
+  const failover = Boolean((payload.stage as any)?.failover);
+  if (failover && !networkFailoverFeatured) {
+    networkFailoverFeatured = true;
+    applyAutoFeature("opnsense", (config.modules?.opnsense as any)?.auto_feature !== false);
+  } else if (!failover && networkFailoverFeatured) {
+    networkFailoverFeatured = false;
+    clearAutoFeature("opnsense");
+  }
+}
+
 function autoFeatureFantasy(payload: ModulePayload): void {
   const live = (payload.stage as any)?.matchup?.state === "in";
   if (live && !fantasyLiveFeatured) {
@@ -981,6 +1001,15 @@ function updateScoreChip(): void {
   const payload = { module: "launches", stage, tape: [] } as any;
   modules.set("launches", payload);
   autoFeatureLaunches(payload);
+  rebuildTape();
+  renderStage();
+};
+
+// Debug/test hook: replace the network payload and run its failover auto-pin.
+(window as any).__netfake = (stage: any) => {
+  const payload = { module: "opnsense", stage, tape: [] } as any;
+  modules.set("opnsense", payload);
+  autoFeatureNetwork(payload);
   rebuildTape();
   renderStage();
 };

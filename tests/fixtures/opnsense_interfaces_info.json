@@ -1,0 +1,397 @@
+{
+ "total": 14,
+ "rowCount": 14,
+ "current": 1,
+ "rows": [
+  {
+   "device": "ix0",
+   "identifier": "wan",
+   "description": "WAN",
+   "status": "up",
+   "enabled": true,
+   "addr4": "203.0.113.68/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "203.0.113.68/24"
+    }
+   ],
+   "ipv6": [
+    {
+     "ipaddr": "fe80::5eff:fe00:1/64"
+    }
+   ],
+   "gateways": [
+    "203.0.113.1"
+   ],
+   "routes": [
+    "default",
+    "1.1.1.1",
+    "203.0.113.0/24",
+    "198.51.100.40",
+    "198.51.100.41",
+    "fe80::%ix0/64"
+   ],
+   "media": "10Gbase-SR <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:01",
+   "is_physical": true,
+   "link_type": "dhcp",
+   "vlan_tag": null,
+   "mtu": "1500"
+  },
+  {
+   "device": "ix1",
+   "identifier": "lan",
+   "description": "LAN",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.0.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.0.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.0.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": true,
+   "link_type": "static",
+   "vlan_tag": null,
+   "mtu": "1500"
+  },
+  {
+   "device": "igc0",
+   "identifier": "opt9",
+   "description": "Starlink",
+   "status": "no carrier",
+   "enabled": true,
+   "addr4": "",
+   "addr6": "",
+   "ipv6": [
+    {
+     "ipaddr": "fe80::5eff:fe00:2/64"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "fe80::%igc0/64"
+   ],
+   "media": "Ethernet autoselect",
+   "macaddr": "00:00:5e:00:53:03",
+   "is_physical": true,
+   "link_type": "dhcp",
+   "vlan_tag": null,
+   "mtu": "1500"
+  },
+  {
+   "device": "lo0",
+   "identifier": "lo0",
+   "description": "Loopback",
+   "status": "up",
+   "enabled": true,
+   "addr4": "127.0.0.1/8",
+   "addr6": "::1/128",
+   "ipv4": [
+    {
+     "ipaddr": "127.0.0.1/8"
+    }
+   ],
+   "ipv6": [
+    {
+     "ipaddr": "::1/128"
+    },
+    {
+     "ipaddr": "fe80::1/64"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.0.0.1",
+    "10.3.0.1",
+    "10.6.0.1",
+    "10.10.0.1",
+    "10.20.0.1",
+    "10.50.0.1",
+    "10.90.0.1",
+    "203.0.113.68",
+    "127.0.0.1",
+    "172.0.0.1",
+    "192.168.10.1",
+    "::1",
+    "fe80::5eff:fe00:1%lo0",
+    "fe80::5eff:fe00:2%lo0",
+    "fe80::%lo0/64",
+    "fe80::1%lo0"
+   ],
+   "macaddr": "00:00:5e:00:53:04",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan_tag": null,
+   "mtu": "16384"
+  },
+  {
+   "device": "enc0",
+   "identifier": "enc0",
+   "description": "IPsec encapsulation",
+   "status": "up",
+   "enabled": true,
+   "addr4": "",
+   "addr6": "",
+   "gateways": [],
+   "macaddr": "00:00:5e:00:53:04",
+   "is_physical": false,
+   "link_type": "none",
+   "vlan_tag": null,
+   "mtu": "1536"
+  },
+  {
+   "device": "pflog0",
+   "identifier": "",
+   "description": "Unassigned Interface",
+   "status": "down",
+   "ipv4": [],
+   "ipv6": [],
+   "macaddr": "00:00:5e:00:53:04",
+   "is_physical": false,
+   "mtu": "33152"
+  },
+  {
+   "device": "vlan05",
+   "identifier": "opt4",
+   "description": "Backups",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.50.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.50.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.50.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "50",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "50",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan010",
+   "identifier": "opt8",
+   "description": "MGMT",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.90.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.90.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.90.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "90",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "90",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan04",
+   "identifier": "opt3",
+   "description": "OPT3",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.20.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.20.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.20.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "20",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "20",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan02",
+   "identifier": "opt1",
+   "description": "ProdServers",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.10.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.10.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.10.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "40",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "40",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan07",
+   "identifier": "opt6",
+   "description": "Security",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.6.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.6.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.6.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "60",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "60",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan06",
+   "identifier": "opt5",
+   "description": "SmartDevices",
+   "status": "up",
+   "enabled": true,
+   "addr4": "10.3.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "10.3.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "10.3.0.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "30",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "30",
+   "mtu": "1500"
+  },
+  {
+   "device": "vlan03",
+   "identifier": "opt2",
+   "description": "WebServers",
+   "status": "up",
+   "enabled": true,
+   "addr4": "192.168.10.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "192.168.10.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "192.168.10.0/24"
+   ],
+   "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+   "macaddr": "00:00:5e:00:53:02",
+   "is_physical": false,
+   "link_type": "static",
+   "vlan": {
+    "tag": "10",
+    "proto": "802.1q",
+    "pcp": "0",
+    "parent": "ix1"
+   },
+   "vlan_tag": "10",
+   "mtu": "1500"
+  },
+  {
+   "device": "wg0",
+   "identifier": "opt7",
+   "description": "WGProd",
+   "status": "up",
+   "enabled": true,
+   "addr4": "172.0.0.1/24",
+   "addr6": "",
+   "ipv4": [
+    {
+     "ipaddr": "172.0.0.1/24"
+    }
+   ],
+   "gateways": [],
+   "routes": [
+    "172.0.0.0/24",
+    "172.0.0.2"
+   ],
+   "macaddr": "00:00:5e:00:53:04",
+   "is_physical": false,
+   "link_type": "none",
+   "vlan_tag": null,
+   "mtu": "1420"
+  }
+ ]
+}

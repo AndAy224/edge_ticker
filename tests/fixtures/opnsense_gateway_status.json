@@ -1,0 +1,35 @@
+{
+ "items": [
+  {
+   "name": "WAN_GW",
+   "address": "203.0.113.1",
+   "status": "none",
+   "loss": "0.0 %",
+   "delay": "8.1 ms",
+   "stddev": "0.2 ms",
+   "monitor": "1.1.1.1",
+   "status_translated": "Online"
+  },
+  {
+   "name": "WAN_DHCP6",
+   "address": "~",
+   "status": "none",
+   "loss": "~",
+   "delay": "~",
+   "stddev": "~",
+   "monitor": "~",
+   "status_translated": "Online"
+  },
+  {
+   "name": "STARLINK_DHCP6",
+   "address": "~",
+   "status": "down",
+   "loss": "~",
+   "delay": "~",
+   "stddev": "~",
+   "monitor": "8.8.8.8",
+   "status_translated": "Offline"
+  }
+ ],
+ "status": "ok"
+}

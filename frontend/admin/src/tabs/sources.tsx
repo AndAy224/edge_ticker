@@ -132,6 +132,9 @@ export function SourcesTab() {
   const marine = cfg.modules?.marine ?? {};
   const patchMarine = (key: string, value: unknown) =>
     patch((c) => (c.modules.marine = { ...(c.modules.marine ?? {}), [key]: value }));
+  const network = cfg.modules?.opnsense ?? {};
+  const patchNetwork = (key: string, value: unknown) =>
+    patch((c) => (c.modules.opnsense = { ...(c.modules.opnsense ?? {}), [key]: value }));
   const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
@@ -536,6 +539,40 @@ export function SourcesTab() {
             value={marine.station ?? ""}
             placeholder="e.g. 8726724"
             onInput={(e) => patchMarine("station", e.currentTarget.value.trim() || null)}
+          />
+        </label>
+      </section>
+
+      <section>
+        <h2>Network — OPNsense</h2>
+        <p class="hint">
+          Which WAN is live, gateway latency and loss, throughput per network. Needs
+          <code>OPNSENSE_URL</code>, <code>OPNSENSE_KEY</code> and <code>OPNSENSE_SECRET</code>
+          in <code>.env</code>; enable <code>opnsense</code> in Modules and add it to the
+          rotation.
+        </p>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={network.auto_feature !== false}
+            onChange={(e) => patchNetwork("auto_feature", e.currentTarget.checked)}
+          />
+          Pin the network page while running on the backup WAN
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            checked={network.warn_backup_down !== false}
+            onChange={(e) => patchNetwork("warn_backup_down", e.currentTarget.checked)}
+          />
+          Warn on the tape while a backup WAN is down
+        </label>
+        <label class="field">
+          Primary WAN (OPNsense interface id; any other live WAN counts as failover)
+          <input
+            value={network.primary_interface ?? "wan"}
+            placeholder="wan"
+            onInput={(e) => patchNetwork("primary_interface", e.currentTarget.value.trim() || "wan")}
           />
         </label>
       </section>

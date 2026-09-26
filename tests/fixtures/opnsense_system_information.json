@@ -1,0 +1,9 @@
+{
+ "name": "OPNsense.localdomain",
+ "versions": [
+  "OPNsense 26.7.4_1-amd64",
+  "FreeBSD 15.1-RELEASE-p3",
+  "OpenSSL 3.5.8"
+ ],
+ "updates": "Click to check for updates."
+}

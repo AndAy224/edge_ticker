@@ -57,8 +57,26 @@ export function sportIcon(sport?: string | null, league?: string | null): string
   const key = sport ?? (league ? LEAGUE_SPORT[league.toUpperCase()] : undefined);
   // Tape items may carry non-sport icon keys (e.g. "warning") — resolve those
   // too instead of silently falling back to the generic trophy.
-  return SPORT_ICONS[key ?? ""] ?? WEATHER_ICONS[key ?? ""] ?? SPORT_ICONS.generic;
+  return (
+    SPORT_ICONS[key ?? ""] ?? WEATHER_ICONS[key ?? ""] ?? NET_ICONS[key ?? ""] ?? SPORT_ICONS.generic
+  );
 }
+
+/** WAN kinds (opnsense module): a wired ISP is the globe, Starlink the dish. */
+export const NET_ICONS: Record<string, string> = {
+  wired: wrap(
+    `<circle cx="12" cy="12" r="9"/>` +
+      `<path d="M3 12h18"/>` +
+      `<path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9s1.2-6.4 3.8-9z"/>`,
+  ),
+  satellite: wrap(
+    `<path d="M4 9.5a8 8 0 0 0 10.5 10.5z"/>` +
+      `<path d="M9.2 14.8l4.3-4.3"/>` +
+      `<circle cx="14.3" cy="9.7" r="1.1"/>` +
+      `<path d="M15.5 3.5a5 5 0 0 1 5 5M15.5 6.5a2 2 0 0 1 2 2"/>` +
+      `<path d="M7.5 18.5L6 21.5h5"/>`,
+  ),
+};
 
 export const WEATHER_ICONS: Record<string, string> = {
   sun: wrap(

@@ -41,9 +41,10 @@ sits stale, grab a free key at finnhub.io and set `FINNHUB_KEY` in `.env`;
 the collector switches to Finnhub REST quotes *and* streams real-time prices
 over the Finnhub WebSocket between polls.
 
-Stretch modules (Proxmox node stats, ADS-B overhead aircraft, astro
-conditions, beach & tides) ship disabled. Enable them in the admin Modules tab, add them to
-the rotation, and — for proxmox/adsb — set their env vars (see
+Stretch modules (Proxmox node stats, OPNsense WAN failover and network
+traffic, ADS-B overhead aircraft, astro conditions, beach & tides) ship
+disabled. Enable them in the admin Modules tab, add them to the rotation,
+and — for proxmox/opnsense/adsb — set their env vars (see
 [.env.example](.env.example)). Collectors missing required env are skipped
 at startup, never errored.
 

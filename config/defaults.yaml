@@ -115,6 +115,18 @@ modules:
         - outlet: 16
           label: PSU 2
 
+  # OPNsense firewall: which WAN is live (primary vs failover), gateway
+  # latency/loss, WAN + per-network throughput, firewall vitals. Needs
+  # OPNSENSE_URL + OPNSENSE_KEY + OPNSENSE_SECRET in .env (see .env.example).
+  opnsense:
+    enabled: false
+    poll_seconds: 15
+    primary_interface: wan   # OPNsense interface id of the main WAN; any other live WAN = failover
+    auto_feature: true       # pin the network page while failed over
+    warn_backup_down: true   # tape warning while a backup WAN is down
+    history_minutes: 60      # sparkline window
+    vlan_exclude: []         # interface descriptions to leave off the networks list
+
   adsb:
     enabled: false
     provider: adsblol   # adsblol | adsbfi | airplaneslive | local (local needs ADSB_URL)
