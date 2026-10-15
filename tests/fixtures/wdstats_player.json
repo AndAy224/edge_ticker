@@ -1,0 +1,276 @@
+{
+ "id": "76561197988260454",
+ "steamId": "76561197988260454",
+ "hideSteamId": false,
+ "name": "AndAy",
+ "avatarUrl": "https://avatars.steamstatic.com/5a0c6c5ee6de5101889b18ea3099c1faf24b3f9a_full.jpg",
+ "hidden": false,
+ "isOwner": false,
+ "privacyConfirmed": true,
+ "twitch": null,
+ "pending": false,
+ "stale": false,
+ "syncError": null,
+ "profileUpdatedAt": "2026-10-15T16:49:39.608146Z",
+ "firstSeenAt": "2026-10-15T02:11:05.426806Z",
+ "totalXp": 1697761,
+ "totalLevel": 120,
+ "unlocks": 75,
+ "cosmetics": 7,
+ "season": 1,
+ "currentSeason": 2,
+ "latestSeason": 1,
+ "seasons": [
+  {
+   "season": 1,
+   "totalXp": 1697761,
+   "totalLevel": 120,
+   "unlocks": 75,
+   "startedAt": "2026-10-15T02:11:05.524988Z",
+   "updatedAt": "2026-10-15T16:49:39.608146Z",
+   "current": false,
+   "roles": [
+    {
+     "role": "Infantry",
+     "label": "Assault",
+     "xp": 34665,
+     "level": 9
+    },
+    {
+     "role": "Medic",
+     "label": "Medic",
+     "xp": 478330,
+     "level": 29
+    },
+    {
+     "role": "Recon",
+     "label": "Recon",
+     "xp": 244337,
+     "level": 19
+    },
+    {
+     "role": "Support",
+     "label": "Support",
+     "xp": 300369,
+     "level": 22
+    },
+    {
+     "role": "Driver",
+     "label": "Driver",
+     "xp": 27208,
+     "level": 9
+    },
+    {
+     "role": "Pilot",
+     "label": "Pilot",
+     "xp": 612852,
+     "level": 32
+    }
+   ],
+   "money": {
+    "Cash": 1037538,
+    "GoldBars": 3
+   },
+   "ended": null
+  }
+ ],
+ "discord": null,
+ "ranks": {
+  "overall": {
+   "rank": 260,
+   "total": 893
+  },
+  "level": {
+   "rank": 255,
+   "total": 893
+  },
+  "unlocks": {
+   "rank": 417,
+   "total": 893
+  }
+ },
+ "roles": [
+  {
+   "role": "Pilot",
+   "label": "Pilot",
+   "boardId": "role-pilot",
+   "xp": 612852,
+   "level": 32,
+   "rank": 67,
+   "total": 808
+  },
+  {
+   "role": "Medic",
+   "label": "Medic",
+   "boardId": "role-medic",
+   "xp": 478330,
+   "level": 29,
+   "rank": 104,
+   "total": 893
+  },
+  {
+   "role": "Support",
+   "label": "Support",
+   "boardId": "role-support",
+   "xp": 300369,
+   "level": 22,
+   "rank": 312,
+   "total": 888
+  },
+  {
+   "role": "Recon",
+   "label": "Recon",
+   "boardId": "role-recon",
+   "xp": 244337,
+   "level": 19,
+   "rank": 286,
+   "total": 892
+  },
+  {
+   "role": "Infantry",
+   "label": "Assault",
+   "boardId": "role-infantry",
+   "xp": 34665,
+   "level": 9,
+   "rank": 782,
+   "total": 893
+  },
+  {
+   "role": "Driver",
+   "label": "Driver",
+   "boardId": "role-driver",
+   "xp": 27208,
+   "level": 9,
+   "rank": 649,
+   "total": 871
+  }
+ ],
+ "money": [
+  {
+   "currency": "Cash",
+   "label": "Cash",
+   "boardId": "money-cash",
+   "amount": 1037538,
+   "rank": 171,
+   "total": 893
+  },
+  {
+   "currency": "GoldBars",
+   "label": "Gold Bars",
+   "boardId": "money-goldbars",
+   "amount": 3,
+   "rank": 140,
+   "total": 893
+  }
+ ],
+ "trackedPlayers": 893,
+ "rarityNeeds": null,
+ "items": [
+  {
+   "id": "Vehicle.Variant.Air.Rotary.ROT_04.MountedMachineGuns",
+   "name": "Z20 Lakota [Miniguns]",
+   "category": "Vehicles",
+   "icon": "t_ui_vendoricon_rot_4_minigun",
+   "level": 1,
+   "owners": 59
+  },
+  {
+   "id": "Id.Item.MusicTape.06",
+   "name": "Tianqi Xu - Vodka Bomb",
+   "category": "Equipment",
+   "icon": "t_ui_musictape_06",
+   "level": 1,
+   "owners": 68
+  },
+  {
+   "id": "Id.Item.MAGZ_004",
+   "name": "MP5 30 RND Magazine",
+   "category": "Attachments",
+   "icon": "t_ui_vendor_magz_004",
+   "level": 1,
+   "owners": 88
+  },
+  {
+   "id": "ID.Item.SmokeGrenade.Black",
+   "name": "M18 Smoke Grenade: Black",
+   "category": "Equipment",
+   "icon": "t_ui_icon_utility_smoke_textured_black_512x512",
+   "level": 1,
+   "owners": 98
+  },
+  {
+   "id": "Vehicle.Variant.Air.Rotary.Littlebird.RocketPods",
+   "name": "AH-6R [Rockets]",
+   "category": "Vehicles",
+   "icon": "t_ui_vendor_littlebird_3",
+   "level": 1,
+   "owners": 115
+  },
+  {
+   "id": "ID.Item.VehicleSupplyCrate.Large.Armoured",
+   "name": "Large Armored Crate",
+   "category": "Equipment",
+   "icon": "id_item_vehiclesupplycrate_large_armoured",
+   "level": 1,
+   "owners": 121
+  },
+  {
+   "id": "Id.Item.MAGZ_066",
+   "name": "AMP-9 50 RND Drum Magazine",
+   "category": "Attachments",
+   "icon": "t_ui_vendor_magz_066",
+   "level": 1,
+   "owners": 179
+  },
+  {
+   "id": "Id.Item.MUZL_058",
+   "name": "QD-5 Suppressor",
+   "category": "Attachments",
+   "icon": "t_ui_vendor_muzl_058",
+   "level": 1,
+   "owners": 182
+  },
+  {
+   "id": "Id.Item.AK74M",
+   "name": "AK74",
+   "category": "Weapons",
+   "icon": "t_ui_vendor_wepn_001v2",
+   "level": 1,
+   "owners": 855
+  },
+  {
+   "id": "Id.Item.LightArmor",
+   "name": "Level 1 Armor",
+   "category": "Gear",
+   "icon": "t_ui_vendor_armor_001a",
+   "level": 1,
+   "owners": 875
+  },
+  {
+   "id": "Id.Item.LightHelmet",
+   "name": "Level 1 Helmet",
+   "category": "Gear",
+   "icon": "t_ui_vendor_helmet_001a",
+   "level": 1,
+   "owners": 878
+  },
+  {
+   "id": "Meta.Cosmetic.Bobblehead.Grenade",
+   "name": "Bobblehead · Grenade",
+   "category": "Cosmetics",
+   "icon": null,
+   "level": 1,
+   "owners": 277
+  }
+ ],
+ "history": [
+  {
+   "t": "2026-10-15T02:11:05.524988Z",
+   "xp": 1697761,
+   "level": 120
+  }
+ ],
+ "milestones": [],
+ "showKit": false,
+ "kit": null
+}

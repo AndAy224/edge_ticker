@@ -3073,6 +3073,582 @@ html[data-idle] *::after {
   font-size: 19px;
 }
 
+/* ---- wardogs ---- */
+
+/* player hero, the six classes, then gold price + wallet. Sized by the stage's
+   own width (container wd), not data-panes: focus's second pane is panes=2 at
+   ~740px. Below ~1300px the side column folds into the hero's mini row. */
+.wd-stage {
+  width: 100%;
+  container: wd / inline-size;
+  --wd-gold: #e2b440;
+}
+
+/* the only light theme: the panel gold washes out on white */
+[data-theme="daylight"] .wd-stage {
+  --wd-gold: #a87a00;
+}
+
+.wd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+/* bottom-aligned like the stage: without a gold price the wallet sits low */
+.wd-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 18px;
+  min-width: 0;
+}
+
+.wd-card {
+  background: var(--panel-raised);
+  border-radius: 16px;
+  padding: 14px 22px;
+  min-width: 0;
+}
+
+.wd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.wd-title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--wd-gold);
+}
+
+.wd-rank,
+.wd-class-rank,
+.wd-stat-r {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wd-rank i,
+.wd-stat-v i,
+.wd-pct i {
+  font-style: normal;
+  color: var(--text-dim);
+}
+
+/* hero: inset ring for a level-up — theme card rules own the borders */
+.wd-hero {
+  display: flex;
+  flex-direction: column;
+}
+
+.wd-hero.up {
+  box-shadow: inset 0 0 0 2px var(--up);
+}
+
+.wd-who {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.wd-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex: none;
+}
+
+.wd-who-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.wd-name {
+  max-width: 100%;
+  font-size: 34px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-chip {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.wd-chip.final {
+  background: var(--muted);
+  color: var(--text);
+}
+
+.wd-level-label {
+  margin-top: 14px;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* the rank wraps under the number rather than spilling out of a narrow card */
+.wd-level-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 18px;
+}
+
+.wd-level {
+  font-size: 104px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-hero.up .wd-level {
+  color: var(--up);
+}
+
+.wd-level-row .wd-rank {
+  font-size: 24px;
+}
+
+.wd-xp {
+  font-size: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-xp b {
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-mini {
+  display: none;
+  gap: 18px;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.wd-mini-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wd-mini-gold svg {
+  width: 20px;
+  height: 20px;
+  color: var(--wd-gold);
+}
+
+.wd-note {
+  margin-top: 6px;
+  font-size: 17px;
+  color: var(--alert);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-synced {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* classes: bars scaled to the top class */
+.wd-class-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wd-class {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 92px minmax(120px, 1.6fr) 76px 64px;
+  align-items: center;
+  gap: 14px;
+  height: 46px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 24px;
+}
+
+.wd-class.up {
+  background: color-mix(in srgb, var(--up) 16%, transparent);
+}
+
+.wd-class-icon {
+  display: flex;
+  color: var(--text-dim);
+}
+
+.wd-class.up .wd-class-icon,
+.wd-class.up .wd-class-level {
+  color: var(--up);
+}
+
+.wd-class-icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.wd-class-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-class-level {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wd-class-level i {
+  font-style: normal;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.wd-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.wd-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.wd-class-xp {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-class-rank {
+  font-size: 19px;
+  text-align: right;
+}
+
+/* gold price */
+.wd-gold-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.wd-gold-price {
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--wd-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wd-pct {
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-pct.up {
+  color: var(--up);
+}
+
+.wd-pct.down {
+  color: var(--down);
+}
+
+.wd-spark {
+  display: block;
+  width: 100%;
+  height: 50px;
+  margin-top: 4px;
+}
+
+.wd-line {
+  fill: none;
+  stroke: var(--wd-gold);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.wd-fill-top {
+  stop-color: var(--wd-gold);
+  stop-opacity: 0.35;
+}
+
+.wd-fill-bottom {
+  stop-color: var(--wd-gold);
+  stop-opacity: 0;
+}
+
+.wd-gold-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.wd-gold-foot .wd-pct {
+  font-size: 17px;
+}
+
+.wd-range {
+  margin-left: auto;
+  font-size: 15px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* wallet */
+.wd-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wd-stat {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 24px;
+}
+
+.wd-stat-k {
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.wd-stat-v {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-stat-v i {
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.wd-stat-r {
+  font-size: 19px;
+}
+
+.wd-gain {
+  font-size: 18px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-gain b {
+  color: var(--up);
+}
+
+/* tap detail: rarest unlocks */
+.wd-rare-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* capped tracks, packed left: a full-width grid strands the columns apart */
+.wd-rare {
+  display: grid;
+  grid-template-columns: minmax(0, 620px) minmax(0, 220px) minmax(0, 320px) 80px;
+  justify-content: start;
+  align-items: baseline;
+  gap: 28px;
+  font-size: 30px;
+}
+
+.wd-rare-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-rare-cat,
+.wd-rare-own {
+  font-size: 22px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-rare-own b {
+  color: var(--text);
+}
+
+.wd-rare-pct {
+  text-align: right;
+  font-weight: 700;
+  color: var(--wd-gold);
+}
+
+/* ~986px (2 panes): hero + classes; gold and cash ride in the hero */
+@container wd (max-width: 1300px) {
+  .wd-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+    gap: 16px;
+  }
+
+  .wd-side {
+    display: none;
+  }
+
+  .wd-mini {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 2px;
+    margin-top: 6px;
+  }
+
+  .wd-card {
+    padding: 12px 16px;
+  }
+
+  .wd-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .wd-name {
+    font-size: 28px;
+  }
+
+  .wd-level {
+    font-size: 84px;
+  }
+
+  .wd-class {
+    grid-template-columns: 28px minmax(0, 1fr) 80px minmax(60px, 1fr) 64px 52px;
+    gap: 10px;
+    font-size: 21px;
+  }
+
+  .wd-class-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .wd-class-rank {
+    font-size: 17px;
+  }
+}
+
+/* ~741px (3 panes): drop the class XP column and shrink the hero */
+@container wd (max-width: 860px) {
+  .wd-layout {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 12px;
+  }
+
+  .wd-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .wd-who {
+    gap: 12px;
+  }
+
+  .wd-name {
+    font-size: 24px;
+  }
+
+  .wd-level {
+    font-size: 72px;
+  }
+
+  .wd-level-row .wd-rank {
+    font-size: 19px;
+  }
+
+  .wd-xp,
+  .wd-mini {
+    font-size: 17px;
+  }
+
+  .wd-class {
+    grid-template-columns: 24px minmax(0, 1fr) 70px minmax(40px, 0.8fr) 46px;
+    gap: 8px;
+    height: 42px;
+    padding: 0 6px;
+    font-size: 19px;
+  }
+
+  .wd-class-xp {
+    display: none;
+  }
+
+  .wd-class-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .wd-class-level i {
+    font-size: 13px;
+  }
+
+  .wd-class-rank {
+    font-size: 15px;
+  }
+}
+
+[data-panes="3"] .wd-rare {
+  grid-template-columns: minmax(0, 1fr) 70px;
+  font-size: 24px;
+}
+
+[data-panes="3"] .wd-rare-cat,
+[data-panes="3"] .wd-rare-own {
+  display: none;
+}
+
 /* ---- adsb ---- */
 
 /* radar layout: square polar scope on the left, live flight list on the right */
@@ -4057,6 +4633,7 @@ html[data-idle] *::after {
 [data-theme="glance"] .sb-row,
 [data-theme="glance"] .pve-card,
 [data-theme="glance"] .opn-card,
+[data-theme="glance"] .wd-card,
 [data-theme="glance"] .adsb-row,
 [data-theme="glance"] .astro-moon,
 [data-theme="glance"] .astro-targets {
@@ -4779,6 +5356,7 @@ html[data-idle] *::after {
 [data-theme="lcars"] .news-lead,
 [data-theme="lcars"] .pve-card,
 [data-theme="lcars"] .opn-card,
+[data-theme="lcars"] .wd-card,
 [data-theme="lcars"] .astro-moon,
 [data-theme="lcars"] .astro-targets {
   border-radius: 0 18px 18px 0;
@@ -5565,6 +6143,7 @@ html[data-idle] *::after {
 [data-theme="sovereign"] .news-lead,
 [data-theme="sovereign"] .pve-card,
 [data-theme="sovereign"] .opn-card,
+[data-theme="sovereign"] .wd-card,
 [data-theme="sovereign"] .astro-moon,
 [data-theme="sovereign"] .astro-targets {
   border-radius: 0 18px 18px 0;

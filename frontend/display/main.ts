@@ -17,6 +17,7 @@ import { setRadarWarnings } from "./modules/weather_radar";
 import "./modules/hurricanes";
 import "./modules/marine";
 import { setLaunchSun } from "./modules/launches";
+import "./modules/wardogs";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { CameraAlertOverlay } from "./camera-alert";
@@ -476,6 +477,7 @@ const MODULE_LABELS: Record<string, string> = {
   marine: "TIDES",
   launches: "LAUNCHES",
   opnsense: "NETWORK",
+  wardogs: "WARDOGS",
 };
 
 function paneLabel(id: string | undefined): string {

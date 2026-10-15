@@ -58,7 +58,11 @@ export function sportIcon(sport?: string | null, league?: string | null): string
   // Tape items may carry non-sport icon keys (e.g. "warning") — resolve those
   // too instead of silently falling back to the generic trophy.
   return (
-    SPORT_ICONS[key ?? ""] ?? WEATHER_ICONS[key ?? ""] ?? NET_ICONS[key ?? ""] ?? SPORT_ICONS.generic
+    SPORT_ICONS[key ?? ""] ??
+    WEATHER_ICONS[key ?? ""] ??
+    NET_ICONS[key ?? ""] ??
+    GAME_ICONS[key ?? ""] ??
+    SPORT_ICONS.generic
   );
 }
 
@@ -75,6 +79,48 @@ export const NET_ICONS: Record<string, string> = {
       `<circle cx="14.3" cy="9.7" r="1.1"/>` +
       `<path d="M15.5 3.5a5 5 0 0 1 5 5M15.5 6.5a2 2 0 0 1 2 2"/>` +
       `<path d="M7.5 18.5L6 21.5h5"/>`,
+  ),
+};
+
+/** WARDOGS (wardogs module): the dog tag is the module, the rest are its
+ *  classes plus the gold bar — keys prefixed so tape icons can't collide. */
+export const GAME_ICONS: Record<string, string> = {
+  wardogs: wrap(
+    `<path d="M8 8.5A3.5 3.5 0 0 1 11.5 5h1A3.5 3.5 0 0 1 16 8.5v8a3.5 3.5 0 0 1-3.5 3.5h-1A3.5 3.5 0 0 1 8 16.5z"/>` +
+      `<circle cx="12" cy="8" r="1"/>` +
+      `<path d="M10.5 12h3M10.5 15h3"/>` +
+      `<path d="M11.3 7.3C9.5 3.6 5.6 3.2 4 6.5"/>`,
+  ),
+  "wd-gold": wrap(
+    `<path d="M2.5 20h9l-1.4-4.5H3.9z"/>` +
+      `<path d="M12.5 20h9l-1.4-4.5h-6.2z"/>` +
+      `<path d="M7.5 13.5h9L15.1 9H8.9z"/>`,
+  ),
+  "wd-assault": wrap(
+    `<path d="M2.5 9.5H15L16.5 8h5v3.5H15l-1.5 1.5h-3l-1 4.5h-3l1-4.5h-5z"/>` +
+      `<path d="M12 13l.8 3"/>`,
+  ),
+  "wd-medic": wrap(`<path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z"/>`),
+  "wd-recon": wrap(
+    `<circle cx="12" cy="12" r="7.5"/>` +
+      `<path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/>` +
+      `<circle cx="12" cy="12" r="1"/>`,
+  ),
+  "wd-support": wrap(
+    `<rect x="3.5" y="9" width="17" height="11" rx="1.5"/>` +
+      `<path d="M3.5 13.5h17"/>` +
+      `<path d="M8.5 9V5.2a1.2 1.2 0 0 1 2.4 0V9M13.1 9V5.2a1.2 1.2 0 0 1 2.4 0V9"/>`,
+  ),
+  "wd-driver": wrap(
+    `<circle cx="12" cy="12" r="9"/>` +
+      `<circle cx="12" cy="12" r="2.2"/>` +
+      `<path d="M3.3 10.6l6.6.8M20.7 10.6l-6.6.8M12 14.2V21"/>`,
+  ),
+  "wd-pilot": wrap(
+    `<path d="M3 4.5h18M12 4.5V8"/>` +
+      `<path d="M7 12.5A4.5 4.5 0 0 1 11.5 8H14a4.5 4.5 0 0 1 0 9h-2.5A4.5 4.5 0 0 1 7 12.5z"/>` +
+      `<path d="M7 12.5H2.5M2.5 10.5v4"/>` +
+      `<path d="M8.5 20.5h9M11 17v3.5M15.5 17v3.5"/>`,
   ),
 };
 

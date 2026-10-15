@@ -6,7 +6,8 @@ from backend.collectors import Discovery, collector_classes, discover_collectors
 # Modules known when this suite was written; new ones may be added freely.
 KNOWN_MODULES = {
     "adsb", "airquality", "astro", "fantasy", "hurricanes", "launches", "markets",
-    "news", "opnsense", "proxmox", "sports", "weather", "weather_alerts", "weather_radar",
+    "news", "opnsense", "proxmox", "sports", "wardogs", "weather", "weather_alerts",
+    "weather_radar",
 }
 PVE_ENV = {"PVE_URL": "https://pve.invalid:8006", "PVE_TOKEN_ID": "t@pam!x", "PVE_TOKEN_SECRET": "s"}
 
@@ -30,7 +31,7 @@ def test_shipped_defaults(defaults_config):
     for stretch in ("proxmox", "adsb", "astro", "opnsense"):
         assert found.skipped[stretch] == "disabled"
     v1 = {"markets", "sports", "news", "weather", "weather_alerts", "weather_radar",
-          "hurricanes", "launches", "airquality", "fantasy"}
+          "hurricanes", "launches", "airquality", "fantasy", "wardogs"}
     assert v1 <= names(found)
 
 

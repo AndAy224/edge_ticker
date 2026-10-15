@@ -5239,6 +5239,214 @@
      "icon": null
     }
    ]
+  },
+  "wardogs": {
+   "module": "wardogs",
+   "updated_at": "2026-10-15T20:00:00Z",
+   "stale": false,
+   "stage": {
+    "player": {
+     "id": "76561197988260454",
+     "name": "AndAy",
+     "avatar": "https://avatars.steamstatic.com/5a0c6c5ee6de5101889b18ea3099c1faf24b3f9a_full.jpg",
+     "url": "https://wdstats.co.uk/player/76561197988260454"
+    },
+    "season": 1,
+    "current_season": 2,
+    "season_final": true,
+    "level": 120,
+    "level_up": true,
+    "xp": 1697761,
+    "unlocks": 75,
+    "cosmetics": 7,
+    "ranks": {
+     "level": {
+      "rank": 255,
+      "total": 893
+     },
+     "xp": {
+      "rank": 260,
+      "total": 893
+     },
+     "unlocks": {
+      "rank": 417,
+      "total": 893
+     }
+    },
+    "classes": [
+     {
+      "key": "Pilot",
+      "label": "Pilot",
+      "icon": "wd-pilot",
+      "level": 32,
+      "xp": 612852,
+      "rank": 67,
+      "total": 808,
+      "up": true
+     },
+     {
+      "key": "Medic",
+      "label": "Medic",
+      "icon": "wd-medic",
+      "level": 29,
+      "xp": 478330,
+      "rank": 104,
+      "total": 893,
+      "up": false
+     },
+     {
+      "key": "Support",
+      "label": "Support",
+      "icon": "wd-support",
+      "level": 22,
+      "xp": 300369,
+      "rank": 312,
+      "total": 888,
+      "up": false
+     },
+     {
+      "key": "Recon",
+      "label": "Recon",
+      "icon": "wd-recon",
+      "level": 19,
+      "xp": 244337,
+      "rank": 286,
+      "total": 892,
+      "up": false
+     },
+     {
+      "key": "Infantry",
+      "label": "Assault",
+      "icon": "wd-assault",
+      "level": 9,
+      "xp": 34665,
+      "rank": 782,
+      "total": 893,
+      "up": false
+     },
+     {
+      "key": "Driver",
+      "label": "Driver",
+      "icon": "wd-driver",
+      "level": 9,
+      "xp": 27208,
+      "rank": 649,
+      "total": 871,
+      "up": false
+     }
+    ],
+    "cash": {
+     "amount": 1037538,
+     "rank": 171,
+     "total": 893
+    },
+    "gold_bars": {
+     "count": 3,
+     "rank": 140,
+     "total": 893,
+     "value": 761841
+    },
+    "gold": {
+     "price": 253947,
+     "day": "2026-10-15",
+     "change_1d": -27933,
+     "pct_1d": -9.91,
+     "pct_7d": -43.28,
+     "pct_30d": -87.98,
+     "high30": 2113114,
+     "low30": 166000,
+     "spark": [
+      1774565,
+      1547240,
+      1470113,
+      1558250,
+      1558250,
+      1672688,
+      1797600,
+      1685515,
+      1691553,
+      1510085,
+      1568628,
+      1568628,
+      1627740,
+      1418305,
+      812640,
+      694217,
+      331582,
+      166000,
+      166000,
+      492453,
+      459112,
+      326749,
+      447691,
+      407388,
+      272761,
+      272761,
+      345880,
+      229361,
+      281880,
+      253947
+     ],
+     "checked_at": "2026-10-15T19:54:37Z"
+    },
+    "gain": {
+     "week": 48213,
+     "today": 9749
+    },
+    "rarest": [
+     {
+      "name": "Z20 Lakota [Miniguns]",
+      "category": "Vehicles",
+      "owners": 59
+     },
+     {
+      "name": "Tianqi Xu - Vodka Bomb",
+      "category": "Equipment",
+      "owners": 68
+     },
+     {
+      "name": "MP5 30 RND Magazine",
+      "category": "Attachments",
+      "owners": 88
+     },
+     {
+      "name": "M18 Smoke Grenade: Black",
+      "category": "Equipment",
+      "owners": 98
+     },
+     {
+      "name": "AH-6R [Rockets]",
+      "category": "Vehicles",
+      "owners": 115
+     }
+    ],
+    "tracked": 893,
+    "synced_at": "2026-10-15T16:49:39Z",
+    "sync_stale": false,
+    "sync_error": null,
+    "hidden": false,
+    "pending": false
+   },
+   "tape": [
+    {
+     "text": "AndAy \u00b7 Pilot \u2192 LVL 32",
+     "accent": "up",
+     "priority": 1,
+     "icon": "wd-pilot"
+    },
+    {
+     "text": "AndAy \u00b7 Wardog LVL 120 \u00b7 1.70M XP \u00b7 #260/893 \u00b7 +48.2K XP this week \u00b7 S1 final",
+     "accent": "neutral",
+     "priority": 0,
+     "icon": "wardogs"
+    },
+    {
+     "text": "Gold bar $253,947 \u25bc 9.9%",
+     "accent": "down",
+     "priority": 0,
+     "icon": "wd-gold"
+    }
+   ]
   }
  }
 }

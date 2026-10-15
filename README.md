@@ -2,8 +2,9 @@
 
 A Glance-LED-style smart ticker for the Corsair Xeneon Edge (2560x720
 touchscreen), running as a dedicated Linux kiosk appliance. Live markets,
-sports, news, and weather; swipe-up Home Assistant control surface; web admin
-GUI on the LAN. See [PLAN.md](PLAN.md) for the full design.
+sports, news, and weather; WARDOGS player stats and the gold bar price (from
+wdstats.co.uk); swipe-up Home Assistant control surface; web admin GUI on the
+LAN. See [PLAN.md](PLAN.md) for the full design.
 
 ## Development (any machine)
 

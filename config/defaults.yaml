@@ -95,6 +95,12 @@ modules:
     # Has a stage page — add `fantasy` to rotation.order above to show it.
     # Private leagues need ESPN_S2 + ESPN_SWID cookies in .env.
 
+  wardogs:               # WARDOGS player stats + gold bar price from wdstats.co.uk (keyless)
+    enabled: true
+    player_id: "76561197988260454"  # Steam64 id, or the id in wdstats.co.uk/player/<id>
+    poll_seconds: 900    # wdstats re-syncs a player about hourly; floored at 300
+    # Has a stage page — add `wardogs` to rotation.order above to show it.
+
   # Stretch modules — flip enabled and add to rotation.order to use.
   # proxmox needs its env vars in .env (see .env.example). adsb defaults to a
   # free hosted API — no env needed unless provider: local.

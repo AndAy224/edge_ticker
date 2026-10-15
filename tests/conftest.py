@@ -21,6 +21,11 @@ Fixture provenance (tests/fixtures/, recorded once on 2026-09-25, trimmed):
                                 198.51.100.x, MACs to 00:00:5e:00:53:xx. WAN up; Starlink port with no
                                 carrier (its gateway Offline, no address).
 
+  wdstats_player.json           wdstats.co.uk/api/players/76561197988260454, 2026-10-15 (the user's own
+                                profile: Season 1 final figures the day Season 2 began; items trimmed to
+                                the 8 rarest + 3 commonest + the rarest cosmetic)
+  wdstats_gold.json             wdstats.co.uk/api/gold, 2026-10-15, series trimmed to the last 40 days
+
 Do not re-record casually: Launch Library 2 allows ~15 req/hr per IP and the
 production appliance shares that budget.
 """
@@ -118,3 +123,13 @@ def _fresh_opnsense_state(monkeypatch):
     monkeypatch.setattr(opnsense, "_counters", {})
     monkeypatch.setattr(opnsense, "_history", {})
     monkeypatch.setattr(opnsense, "_active", {"seen": False, "id": None, "since": None})
+
+
+@pytest.fixture(autouse=True)
+def _fresh_wardogs_state(monkeypatch):
+    """wardogs keeps the last gold price and the level-up baseline at module
+    level (they must survive collector restarts) — isolate per test."""
+    from backend.collectors import wardogs
+
+    monkeypatch.setattr(wardogs, "_gold", {"payload": None})
+    monkeypatch.setattr(wardogs, "_levels", {})

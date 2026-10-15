@@ -135,6 +135,10 @@ export function SourcesTab() {
   const network = cfg.modules?.opnsense ?? {};
   const patchNetwork = (key: string, value: unknown) =>
     patch((c) => (c.modules.opnsense = { ...(c.modules.opnsense ?? {}), [key]: value }));
+  const wardogs = cfg.modules?.wardogs ?? {};
+  const patchWardogs = (key: string, value: unknown) =>
+    patch((c) => (c.modules.wardogs = { ...(c.modules.wardogs ?? {}), [key]: value }));
+  const wardogsHealth = collectorStatus("wardogs");
   const fantasyHealth = collectorStatus("fantasy");
   const weatherAlertsHealth = collectorStatus("weather_alerts");
   const newsHealth = collectorStatus("news");
@@ -575,6 +579,31 @@ export function SourcesTab() {
             onInput={(e) => patchNetwork("primary_interface", e.currentTarget.value.trim() || "wan")}
           />
         </label>
+      </section>
+
+      <section>
+        <h2>WARDOGS — wdstats.co.uk</h2>
+        <p class="hint">
+          Wardog level, career XP, class levels and ranks, cash and the gold bar price, from the
+          fan-run tracker at wdstats.co.uk (keyless; the player has to have signed in there once
+          with Steam). Add <code>wardogs</code> to the rotation to show it.
+        </p>
+        <label class="field">
+          Player (Steam64 id, or the id in wdstats.co.uk/player/&lt;id&gt;)
+          <input
+            value={wardogs.player_id ?? ""}
+            placeholder="e.g. 76561197988260454"
+            onInput={(e) => patchWardogs("player_id", e.currentTarget.value.trim())}
+          />
+        </label>
+        <NumberField
+          label="Poll every (seconds; wdstats re-syncs a player about hourly, minimum 300)"
+          value={wardogs.poll_seconds ?? 900}
+          min={300}
+          step={60}
+          onChange={(v) => patchWardogs("poll_seconds", v)}
+        />
+        {wardogsHealth?.last_error && <p class="hint error">{wardogsHealth.last_error}</p>}
       </section>
     </div>
   );
