@@ -24,16 +24,36 @@ function compact(n: number): string {
   return String(n);
 }
 
-/** "for 2h 14m" from the collector's ISO switch time. Refreshed on every
+/** "2h 14m" since one of the collector's ISO times. Refreshed on every
  *  poll's re-render (15 s), which is plenty at minute resolution. */
-function elapsed(iso: string | null | undefined): string {
+function duration(iso: string | null | undefined): string {
   if (!iso) return "";
   const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60000));
   if (Number.isNaN(minutes)) return "";
-  if (minutes < 60) return `for ${minutes}m`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 48) return `for ${hours}h ${minutes % 60}m`;
-  return `for ${Math.floor(hours / 24)}d ${hours % 24}h`;
+  if (hours < 48) return `${hours}h ${minutes % 60}m`;
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
+function elapsed(iso: string | null | undefined): string {
+  const d = duration(iso);
+  return d ? `for ${d}` : "";
+}
+
+/** "since Fri 10:05 PM · 18h 2m" — when a dead WAN went down. */
+function downSince(iso: string | null | undefined): string {
+  const d = duration(iso);
+  if (!d) return "";
+  const start = new Date(iso!);
+  const time = start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const when =
+    start.toDateString() === new Date().toDateString()
+      ? time
+      : Date.now() - start.getTime() < 6 * 86_400_000
+        ? `${start.toLocaleDateString([], { weekday: "short" })} ${time}`
+        : start.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `since ${when} · ${d}`;
 }
 
 let gradSeq = 0;
@@ -86,6 +106,7 @@ function lineRate(bps: number | null | undefined): string {
 function wanCard(w: any, minutes: number): string {
   const history = w.history ?? {};
   const alive = w.health === "up" || w.health === "warn";
+  const since = downSince(w.down_since);
   const meta = [
     w.ip,
     lineRate(w.line_bps),
@@ -111,6 +132,7 @@ function wanCard(w: any, minutes: number): string {
             ? `port ${w.device ?? "?"} · ${w.link}`
             : `${w.gateway ?? "gateway"} ${String(w.status_text ?? "offline").toLowerCase()}`,
         )}</span>
+        ${since ? `<span class="opn-since">${escapeHtml(since)}</span>` : ""}
       </div>`;
   return `<div class="opn-card opn-wan ${w.active ? "active" : ""} ${escapeHtml(w.health)}">
     <div class="opn-card-head">

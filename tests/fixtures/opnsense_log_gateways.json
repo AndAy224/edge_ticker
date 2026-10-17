@@ -1,0 +1,60 @@
+{
+ "filters": "ALERT: STARLINK_DHCP6 (",
+ "rows": [
+  {
+   "timestamp": "2026-10-17T02:05:16",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 20,
+   "severity": "Notice",
+   "process_name": "dpinger",
+   "pid": "37023",
+   "rnum": 300,
+   "line": " ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: loss -> down RTT: 38.7 ms RTTd: 38.7 ms Loss: 51.0 %)"
+  },
+  {
+   "timestamp": "2026-10-17T02:05:04",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 20,
+   "severity": "Notice",
+   "process_name": "dpinger",
+   "pid": "37023",
+   "rnum": 301,
+   "line": " ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: none -> loss RTT: 31.5 ms RTTd: 8.8 ms Loss: 21.0 %)"
+  },
+  {
+   "timestamp": "2026-10-16T09:21:40",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 20,
+   "severity": "Notice",
+   "process_name": "dpinger",
+   "pid": "37023",
+   "rnum": 310,
+   "line": " ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: loss -> none RTT: 84.8 ms RTTd: 44.4 ms Loss: 0.0 %)"
+  },
+  {
+   "timestamp": "2026-10-16T09:21:29",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 20,
+   "severity": "Notice",
+   "process_name": "dpinger",
+   "pid": "37023",
+   "rnum": 311,
+   "line": " ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: down -> loss RTT: 65.4 ms RTTd: 29.5 ms Loss: 37.0 %)"
+  },
+  {
+   "timestamp": "2026-10-16T09:20:22",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 20,
+   "severity": "Notice",
+   "process_name": "dpinger",
+   "pid": "37023",
+   "rnum": 315,
+   "line": " ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: loss -> down RTT: 56.8 ms RTTd: 15.2 ms Loss: 62.0 %)"
+  }
+ ],
+ "total_rows": 6,
+ "origin": "gateways",
+ "rowCount": 5,
+ "total": 6,
+ "current": 1
+}

@@ -16,6 +16,12 @@ Throughput comes from the interface byte counters, differenced between polls
 against the firewall's own clock. A VLAN parent's counters include every tagged
 VLAN riding it (ix1 "LAN" ≈ the sum of its VLANs), so parents report only
 what is left after their children — otherwise LAN double-counts the house.
+
+When a WAN went down comes from the firewall's own logs — the dpinger alarm
+that took its gateway down, or the kernel's link-down line for a port without
+carrier — looked up once per outage. The logs date outages that began before
+this collector was watching, and a restart (every deploy) doesn't forget them.
+Without log access, the poll that first saw the WAN go down dates it instead.
 """
 from __future__ import annotations
 
@@ -25,7 +31,7 @@ import os
 import re
 import time
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -50,12 +56,19 @@ HEALTH_ENDPOINTS = {
 }
 VERSION_ENDPOINT = "diagnostics/system/systemInformation"
 VERSION_REFRESH_SECONDS = 3600.0
+LOG_ENDPOINT = "diagnostics/log/core/{}"
+# An outage the logs couldn't date (no alarm logged, or no log access) is
+# looked up again this often while it lasts.
+OUTAGE_RECHECK_SECONDS = 600.0
 SPARK_POINTS = 48
 # Tunnels and pseudo-interfaces: not networks anyone lives on.
 NOT_A_NETWORK = re.compile(r"^(lo|enc|ipsec|wg|wireguard|pflog|pfsync|ovpn|tun|gif|gre)")
 # dpinger status codes: "none" is healthy; these are up-but-suffering.
 WARN_STATUSES = {"loss", "delay", "delay+loss"}
 DOWN_STATUSES = {"down", "force_down"}
+OFFLINE = {"down", "nolink"}
+# dpinger: "ALERT: STARLINK_DHCP6 (Addr: 208.67.220.220 Alarm: loss -> down RTT: …)"
+ALARM = re.compile(r"ALERT: (?P<gateway>\S+) \(.*?Alarm: (?P<old>[\w+]+) -> (?P<new>[\w+]+)")
 
 # Module-level on purpose (the weather_alerts._fired_ids precedent): a config
 # save restarts the collector, and instance state would blank the rates, drop
@@ -63,6 +76,8 @@ DOWN_STATUSES = {"down", "force_down"}
 _counters: dict[str, tuple[float, int, int]] = {}  # device -> (fw time, rx, tx)
 _history: dict[str, deque] = {}  # "<wan id>:<series>" -> deque[(fw time, value)]
 _active: dict = {"seen": False, "id": None, "since": None}
+_online: set[str] = set()  # gateway names up (or degraded) at the last poll
+_outages: dict[str, dict] = {}  # gateway name -> {since, dated, checked, error} while down
 
 
 def _num(value: object) -> float | None:
@@ -88,6 +103,62 @@ def fmt_rate(bps: float | None) -> str:
     if bps >= 1e6:
         return f"{bps / 1e6:.1f} Mb/s" if bps < 1e8 else f"{bps / 1e6:.0f} Mb/s"
     return f"{bps / 1e3:.0f} kb/s"
+
+
+def _for(since: str | None) -> str:
+    """ISO start -> ' for 2h 14m' (the display's elapsed()); '' if unknown.
+    Fine in tape text: the collector republishes every poll."""
+    try:
+        start = datetime.fromisoformat(since or "")
+    except ValueError:
+        return ""
+    minutes = max(0, int((datetime.now(timezone.utc) - start).total_seconds() // 60))
+    hours = minutes // 60
+    if minutes < 60:
+        return f" for {minutes}m"
+    if hours < 48:
+        return f" for {hours}h {minutes % 60}m"
+    return f" for {hours // 24}d {hours % 24}h"
+
+
+def _utc_offset(system_time: dict, epoch: object) -> timedelta | None:
+    """The firewall's UTC offset: its wall clock ('Sat Oct 17 16:04:14 EDT
+    2026') against its own epoch. Log timestamps are wall clock, no zone."""
+    match = re.match(r"(.+\d:\d\d:\d\d)\s+\S+\s+(\d{4})$", str(system_time.get("datetime") or "").strip())
+    seconds = _num(epoch)
+    if not match or seconds is None:
+        return None
+    try:
+        wall = datetime.strptime(f"{match[1]} {match[2]}", "%a %b %d %H:%M:%S %Y")
+    except ValueError:
+        return None
+    utc = datetime.fromtimestamp(seconds, timezone.utc).replace(tzinfo=None)
+    return timedelta(minutes=15 * round((wall - utc).total_seconds() / 900))
+
+
+def _ipv4_gateways(searched: dict) -> list[dict]:
+    """Enabled IPv4 gateways, each with its failover priority as `_priority`."""
+    out = []
+    for gw in (searched or {}).get("rows", []):
+        if gw.get("ipprotocol") != "inet" or gw.get("disabled") in (True, "1"):
+            continue
+        priority = _int(gw.get("priority"))
+        gw["_priority"] = 255 if priority is None else priority
+        out.append(gw)
+    return out
+
+
+def _device(gw: dict, traffic_by_id: dict) -> str | None:
+    return gw.get("if") or (traffic_by_id.get(gw.get("interface")) or {}).get("device")
+
+
+def _health(link: str, live: dict, gw: dict) -> str:
+    code = str(live.get("status") or gw.get("status") or "").lower()
+    if link != "up":
+        return "nolink"
+    if code in DOWN_STATUSES or str(live.get("status_translated")).lower() == "offline":
+        return "down"
+    return "warn" if code in WARN_STATUSES else "up"
 
 
 def _uptime(text: str | None) -> str | None:
@@ -137,6 +208,7 @@ class OpnsenseCollector(Collector):
         self._health: dict[str, dict] = {}  # last good response per health endpoint
         self._version: str | None = None
         self._version_at = 0.0
+        self._utc_offset: timedelta | None = None  # the firewall's; dates its logs
 
     # ---- fetch ---------------------------------------------------------
     async def _get(self, client: httpx.AsyncClient, endpoint: str):
@@ -157,9 +229,13 @@ class OpnsenseCollector(Collector):
                     *(self._get(client, ep) for ep in jobs.values()), return_exceptions=True
                 ))
             )
-        for key in CORE_ENDPOINTS:
-            if isinstance(results[key], BaseException):
-                raise results[key]
+            for key in CORE_ENDPOINTS:
+                if isinstance(results[key], BaseException):
+                    raise results[key]
+            if not isinstance(results["system_time"], BaseException):
+                offset = _utc_offset(results["system_time"], results["traffic"].get("time"))
+                self._utc_offset = self._utc_offset if offset is None else offset
+            await self._date_outages(client, results)
         failed = []
         for key in health:
             result = results[key]
@@ -173,11 +249,86 @@ class OpnsenseCollector(Collector):
                 self._version_at = time.monotonic()
             else:
                 self._health[key] = result
+        if any(outage["error"] for outage in _outages.values()):
+            failed.append("logs")
         self.degraded = f"firewall stats unavailable: {', '.join(failed)}" if failed else None
         raw = {key: results[key] for key in CORE_ENDPOINTS}
         raw["health"] = dict(self._health)
         raw["version"] = self._version
         return raw
+
+    async def _date_outages(self, client: httpx.AsyncClient, raw: dict) -> None:
+        """Keep `_outages` to the gateways down right now, each dated once."""
+        links = {r.get("device"): r.get("status") or "unknown"
+                 for r in (raw["interfaces"] or {}).get("rows", [])}
+        traffic_by_id = (raw["traffic"] or {}).get("interfaces") or {}
+        status = {g.get("name"): g for g in (raw["gateway_status"] or {}).get("items", [])}
+        down = {}
+        for gw in _ipv4_gateways(raw["gateways"]):
+            device = _device(gw, traffic_by_id)
+            link = links.get(device, "unknown")
+            if _health(link, status.get(gw.get("name")) or {}, gw) in OFFLINE:
+                down[gw.get("name")] = (device, link != "up")
+        for name in set(_outages) - set(down):
+            del _outages[name]
+        for name, (device, nolink) in down.items():
+            outage = _outages.setdefault(name, {
+                # Seen going down (it was up last poll), else unknown until the logs say.
+                "since": (
+                    datetime.now(timezone.utc).isoformat(timespec="seconds")
+                    if name in _online else None
+                ),
+                "dated": False,
+                "checked": None,
+                "error": None,
+            })
+            if outage["dated"] or self._utc_offset is None:
+                continue
+            if (outage["checked"] is not None
+                    and time.monotonic() - outage["checked"] < OUTAGE_RECHECK_SECONDS):
+                continue
+            outage["checked"] = time.monotonic()
+            try:
+                since = await self._logged_start(client, name, device, nolink)
+            except (httpx.HTTPError, ValueError) as exc:
+                outage["error"] = str(exc)
+                log.debug("opnsense: dating the %s outage failed: %s", name, exc)
+                continue
+            outage["error"] = None
+            if since:
+                outage.update(since=since, dated=True)
+
+    async def _logged_start(
+        self, client: httpx.AsyncClient, gateway: str, device: str | None, nolink: bool
+    ) -> str | None:
+        """When this outage began per the firewall's logs, or None. A dead port
+        whose gateway was already down dates from the gateway."""
+        stamps = []
+        for row in await self._log(client, "gateways", f"ALERT: {gateway} (", 5):  # newest first
+            alarm = ALARM.search(row.get("line") or "")
+            if alarm and alarm["gateway"] == gateway:
+                # Only the latest transition says how this outage began.
+                if alarm["new"] in DOWN_STATUSES:
+                    stamps.append(row.get("timestamp"))
+                break
+        if nolink and device:
+            rows = await self._log(client, "system", f"{device}: link state changed to DOWN", 1)
+            stamps += [row.get("timestamp") for row in rows[:1]]
+        starts = [
+            (datetime.fromisoformat(stamp) - self._utc_offset).replace(tzinfo=timezone.utc)
+            for stamp in stamps
+            if stamp
+        ]
+        return min(starts).isoformat(timespec="seconds") if starts else None
+
+    async def _log(self, client: httpx.AsyncClient, origin: str, phrase: str, rows: int) -> list:
+        response = await client.post(
+            f"{self.base_url}/api/{LOG_ENDPOINT.format(origin)}",
+            json={"current": 1, "rowCount": rows, "searchPhrase": phrase},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return (data.get("rows") or []) if isinstance(data, dict) else []
 
     # ---- shape ---------------------------------------------------------
     def _rates(self, traffic: dict) -> dict[str, tuple[float | None, float | None]]:
@@ -222,30 +373,19 @@ class OpnsenseCollector(Collector):
 
         # One card per WAN interface: its best IPv4 gateway.
         gateways: dict[str, dict] = {}
-        for gw in (raw.get("gateways") or {}).get("rows", []):
-            if gw.get("ipprotocol") != "inet" or gw.get("disabled") in (True, "1"):
-                continue
+        for gw in _ipv4_gateways(raw.get("gateways")):
             iface = gw.get("interface")
-            priority = _int(gw.get("priority"))
-            gw["_priority"] = 255 if priority is None else priority
             if iface and (iface not in gateways or gw["_priority"] < gateways[iface]["_priority"]):
                 gateways[iface] = gw
 
         wans = []
         for iface, gw in gateways.items():
-            device = gw.get("if") or (traffic_by_id.get(iface) or {}).get("device")
+            device = _device(gw, traffic_by_id)
             row = info.get(device) or {}
             live = status_by_name.get(gw.get("name")) or {}
-            code = str(live.get("status") or gw.get("status") or "").lower()
             link = row.get("status") or "unknown"
-            if link != "up":
-                health = "nolink"
-            elif code in DOWN_STATUSES or str(live.get("status_translated")).lower() == "offline":
-                health = "down"
-            elif code in WARN_STATUSES:
-                health = "warn"
-            else:
-                health = "up"
+            health = _health(link, live, gw)
+            outage = _outages.get(gw.get("name")) if health in OFFLINE else None
             name = gw.get("interface_descr") or row.get("description") or iface.upper()
             rx_bps, tx_bps = rates.get(device, (None, None))
             # A port without carrier still reports its autoselect default.
@@ -260,6 +400,7 @@ class OpnsenseCollector(Collector):
                 "gateway_ip": address,
                 "monitor": live.get("monitor") if live.get("monitor") not in (None, "~") else None,
                 "health": health,
+                "down_since": outage["since"] if outage else None,
                 "status_text": live.get("status_translated") or gw.get("status"),
                 "link": link,
                 "media": row.get("media"),
@@ -276,6 +417,8 @@ class OpnsenseCollector(Collector):
             })
         # Primary first, then by failover priority.
         wans.sort(key=lambda w: (not w["primary"], w["priority"], w["name"]))
+        _online.clear()
+        _online.update(w["gateway"] for w in wans if w["health"] not in OFFLINE)
 
         # ---- which WAN is carrying traffic
         online = [w for w in wans if w["health"] in ("up", "warn")]
@@ -418,7 +561,8 @@ class OpnsenseCollector(Collector):
                 if wan["active"] or wan["primary"] or wan["health"] in ("up", "warn"):
                     continue
                 tape.append(TapeItem(
-                    text=f"{wan['name']} backup offline · {self._down_reason(wan)}",
+                    text=f"{wan['name']} backup offline · {self._down_reason(wan)}"
+                         f"{_for(wan['down_since'])}",
                     accent="down",
                     priority=0,
                     icon=wan["kind"],

@@ -2891,6 +2891,10 @@ html[data-idle] *::after {
   color: var(--text-dim);
 }
 
+.opn-dead .opn-since {
+  color: var(--text);
+}
+
 .opn-side-title {
   font-size: 16px;
   font-weight: 600;

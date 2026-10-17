@@ -1,0 +1,20 @@
+{
+ "filters": "igc0: link state changed to DOWN",
+ "rows": [
+  {
+   "timestamp": "2026-10-17T16:13:58",
+   "parser": "SysLogFormatRFC5424",
+   "facility": 1,
+   "severity": "Notice",
+   "process_name": "kernel",
+   "pid": "-",
+   "rnum": 224,
+   "line": " <6>[1898161] igc0: link state changed to DOWN"
+  }
+ ],
+ "total_rows": 2,
+ "origin": "system",
+ "rowCount": 1,
+ "total": 2,
+ "current": 1
+}

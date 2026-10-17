@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import base64
+import json
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
 
-from backend.collectors.opnsense import OpnsenseCollector, _uptime, fmt_rate
+from backend.collectors import opnsense
+from backend.collectors.opnsense import OpnsenseCollector, _for, _uptime, fmt_rate
 from helpers import json_response, load_json
 
 ENDPOINT_FIXTURES = {
@@ -19,7 +22,10 @@ ENDPOINT_FIXTURES = {
     "/api/diagnostics/system/systemResources": "opnsense_system_resources.json",
     "/api/diagnostics/firewall/pf_states": "opnsense_pf_states.json",
     "/api/diagnostics/system/systemInformation": "opnsense_system_information.json",
+    "/api/diagnostics/log/core/gateways": "opnsense_log_gateways.json",
+    "/api/diagnostics/log/core/system": "opnsense_log_system.json",
 }
+LOG_PATHS = {"/api/diagnostics/log/core/gateways", "/api/diagnostics/log/core/system"}
 
 
 @pytest.fixture
@@ -34,13 +40,34 @@ def collector(opn_env, defaults_config):
     return OpnsenseCollector(defaults_config)
 
 
-def recorded_handler(failing: set[str] = frozenset()):
+def recorded_handler(failing: set[str] = frozenset(), edit=None):
+    """`edit(path, data)` may change a recorded response before it is served."""
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path in failing:
             return httpx.Response(500)
-        return json_response(load_json(ENDPOINT_FIXTURES[request.url.path]))
+        data = load_json(ENDPOINT_FIXTURES[request.url.path])
+        if edit:
+            edit(request.url.path, data)
+        return json_response(data)
 
     return handler
+
+
+def starlink(gateway: str = "none", link: str = "up"):
+    """An edit putting Starlink's gateway (dpinger code) and port in a state."""
+    def edit(path: str, data) -> None:
+        if path == "/api/routes/gateway/status":
+            for gw in data["items"]:
+                if gw["name"] == "STARLINK_DHCP6":
+                    gw.update(status=gateway, address="100.64.0.1", delay="31.5 ms",
+                              loss="0.0 %" if gateway == "none" else "100.0 %",
+                              status_translated="Online" if gateway == "none" else "Offline")
+        if path == "/api/interfaces/overview/interfacesInfo":
+            for row in data["rows"]:
+                if row["device"] == "igc0":
+                    row.update(status=link, addr4="100.64.12.34/10")
+
+    return edit
 
 
 def raw(traffic: str = "opnsense_traffic.json") -> dict:
@@ -160,6 +187,8 @@ def test_recorded_firewall_is_on_the_primary_with_the_backup_unplugged(collector
     assert texts[0][0].startswith("WAN 8 ms · 0% loss")
     assert texts[0][1:] == ("neutral", 1, "wired")
     assert texts[1] == ("Starlink backup offline · no carrier", "down", 0, "satellite")
+    # Never fetched, so nobody looked up when it went down.
+    assert starlink["down_since"] is None and primary["down_since"] is None
 
 
 def test_backup_warning_can_be_turned_off(opn_env, defaults_config):
@@ -275,6 +304,107 @@ def test_primary_interface_is_configurable(opn_env, defaults_config):
     assert [w["id"] for w in payload.stage["wans"]] == ["opt9", "wan"]
 
 
+# ---- when a WAN went down -----------------------------------------------------
+
+
+def log_requests(http) -> list[tuple[str, str]]:
+    return [
+        (r.url.path.rsplit("/", 1)[-1], json.loads(r.content)["searchPhrase"])
+        for r in http.requests
+        if r.url.path in LOG_PATHS
+    ]
+
+
+async def test_outage_is_dated_from_the_firewall_logs_once(http, collector):
+    http.handler = recorded_handler()
+    payload = collector.shape(await collector.fetch())
+    # The dead port's gateway was already down before the link dropped: the
+    # outage dates from the dpinger alarm, not the later link bounce.
+    assert log_requests(http) == [
+        ("gateways", "ALERT: STARLINK_DHCP6 ("),
+        ("system", "igc0: link state changed to DOWN"),
+    ]
+    assert wan(payload, "opt9")["down_since"] == "2026-10-17T02:05:16+00:00"
+    assert wan(payload, "wan")["down_since"] is None
+    backup = next(t.text for t in payload.tape if "backup" in t.text)
+    assert backup.startswith("Starlink backup offline · no carrier for ")
+    assert collector.degraded is None
+    # Dated once per outage — later polls (and a restarted collector) reuse it.
+    http.requests.clear()
+    payload = OpnsenseCollector(collector.config).shape(await collector.fetch())
+    assert log_requests(http) == []
+    assert wan(payload, "opt9")["down_since"] == "2026-10-17T02:05:16+00:00"
+
+
+async def test_log_times_are_the_firewalls_wall_clock(http, collector):
+    def edt(path, data):
+        if path == "/api/diagnostics/system/systemTime":  # same instant, firewall on EDT
+            data["datetime"] = "Sat Sep 26  9:39:49 EDT 2026"
+
+    http.handler = recorded_handler(edit=edt)
+    payload = collector.shape(await collector.fetch())
+    assert wan(payload, "opt9")["down_since"] == "2026-10-17T06:05:16+00:00"
+
+
+async def test_link_drop_dates_an_outage_the_gateway_log_doesnt(http, collector):
+    """Latest alarm is a recovery: the gateway was fine until the port died."""
+    def recovered(path, data):
+        if path == "/api/diagnostics/log/core/gateways":
+            data["rows"] = data["rows"][2:]  # newest is now "loss -> none"
+
+    http.handler = recorded_handler(edit=recovered)
+    payload = collector.shape(await collector.fetch())
+    assert wan(payload, "opt9")["down_since"] == "2026-10-17T16:13:58+00:00"
+
+
+async def test_outage_seen_happening_is_dated_without_the_logs(http, collector):
+    http.handler = recorded_handler(edit=starlink("none", "up"))
+    payload = collector.shape(await collector.fetch())
+    assert wan(payload, "opt9")["health"] == "up"
+    assert log_requests(http) == []  # nothing down, nothing to look up
+
+    # Starlink's gateway dies; the log API is unreachable.
+    http.requests.clear()
+    http.handler = recorded_handler(LOG_PATHS, edit=starlink("down", "up"))
+    before = datetime.now(timezone.utc).replace(microsecond=0)
+    payload = collector.shape(await collector.fetch())
+    since = datetime.fromisoformat(wan(payload, "opt9")["down_since"])
+    assert before <= since <= datetime.now(timezone.utc)
+    assert log_requests(http) == [("gateways", "ALERT: STARLINK_DHCP6 (")]  # link is up
+    assert collector.degraded == "firewall stats unavailable: logs"
+
+    # Not retried every poll.
+    http.requests.clear()
+    http.handler = recorded_handler(edit=starlink("down", "up"))
+    await collector.fetch()
+    assert log_requests(http) == []
+
+    # Back up: the outage is over and forgotten.
+    http.handler = recorded_handler(edit=starlink("none", "up"))
+    payload = collector.shape(await collector.fetch())
+    assert wan(payload, "opt9")["down_since"] is None
+    assert opnsense._outages == {}
+    assert collector.degraded is None
+
+
+async def test_outage_found_down_and_not_in_the_logs_stays_undated(http, collector):
+    def no_logs(path, data):
+        if path in LOG_PATHS:
+            data["rows"] = []
+
+    http.handler = recorded_handler(edit=no_logs)
+    payload = collector.shape(await collector.fetch())
+    assert wan(payload, "opt9")["down_since"] is None
+    assert next(t.text for t in payload.tape if "backup" in t.text) == (
+        "Starlink backup offline · no carrier"
+    )
+    # Retried later, not every poll.
+    assert opnsense._outages["STARLINK_DHCP6"]["checked"] is not None
+    http.requests.clear()
+    await collector.fetch()
+    assert log_requests(http) == []
+
+
 # ---- formatting ------------------------------------------------------------
 
 
@@ -288,3 +418,9 @@ def test_formatters():
     assert fmt_rate(42_100_000) == "42.1 Mb/s"
     assert fmt_rate(940_000_000) == "940 Mb/s"
     assert fmt_rate(2_350_000_000) == "2.35 Gb/s"
+    now = datetime.now(timezone.utc)
+    ago = lambda **kw: (now - timedelta(**kw)).isoformat(timespec="seconds")  # noqa: E731
+    assert _for(ago(minutes=7, seconds=30)) == " for 7m"
+    assert _for(ago(hours=18, minutes=2, seconds=30)) == " for 18h 2m"
+    assert _for(ago(days=3, hours=5, minutes=1)) == " for 3d 5h"
+    assert _for(None) == "" and _for("garbage") == ""

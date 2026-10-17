@@ -20,6 +20,11 @@ Fixture provenance (tests/fixtures/, recorded once on 2026-09-25, trimmed):
                                 diagnostics/firewall/pf_states. Public IPs rewritten to 203.0.113.x /
                                 198.51.100.x, MACs to 00:00:5e:00:53:xx. WAN up; Starlink port with no
                                 carrier (its gateway Offline, no address).
+  opnsense_log_{gateways,system}.json
+                                Same firewall, 2026-10-17: diagnostics/log/core/gateways searched for
+                                "ALERT: STARLINK_DHCP6 (" (5 rows) and core/system for "igc0: link state
+                                changed to DOWN" (1 row). Starlink down since its 02:05:16 dpinger alarm
+                                (the firewall runs on UTC); its port bounced at 16:13 while still down.
 
   wdstats_player.json           wdstats.co.uk/api/players/76561197988260454, 2026-10-15 (the user's own
                                 profile: Season 1 final figures the day Season 2 began; items trimmed to
@@ -123,6 +128,8 @@ def _fresh_opnsense_state(monkeypatch):
     monkeypatch.setattr(opnsense, "_counters", {})
     monkeypatch.setattr(opnsense, "_history", {})
     monkeypatch.setattr(opnsense, "_active", {"seen": False, "id": None, "since": None})
+    monkeypatch.setattr(opnsense, "_online", set())
+    monkeypatch.setattr(opnsense, "_outages", {})
 
 
 @pytest.fixture(autouse=True)
