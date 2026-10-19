@@ -1,7 +1,7 @@
 import { config, patch } from "../state";
 
 // Modules that have a stage renderer and can be in the rotation.
-const STAGE_MODULES = ["markets", "sports", "news", "weather", "weather_radar", "hurricanes", "marine", "launches", "airquality", "fantasy", "wardogs", "proxmox", "opnsense", "adsb", "astro"];
+const STAGE_MODULES = ["markets", "sports", "news", "weather", "weather_radar", "hurricanes", "marine", "launches", "airquality", "fantasy", "wardogs", "proxmox", "opnsense", "adsb", "ships", "astro"];
 
 export function ModulesTab() {
   const cfg = config.value;
@@ -88,7 +88,7 @@ export function ModulesTab() {
         <h2>Enabled modules</h2>
         <p class="hint">
           Disabled modules stop collecting and drop off the tape. proxmox, opnsense
-          and adsb also need their env vars in <code>.env</code> on the appliance.
+          and ships also need their env vars in <code>.env</code> on the appliance.
         </p>
         <div class="toggle-grid">
           {moduleIds.map((id) => (

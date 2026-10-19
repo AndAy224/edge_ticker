@@ -6,6 +6,10 @@ Fixture provenance (tests/fixtures/, recorded once on 2026-09-25, trimmed):
   rainviewer_weather_maps.json  api.rainviewer.com/public/weather-maps.json
   nhc_current_storms.json       www.nhc.noaa.gov/CurrentStorms.json (2 Atlantic + 3 East Pacific)
   adsblol_clearwater.json       api.adsb.lol/v2/lat/27.9659/lon/-82.8001/dist/22
+  aisstream_tampabay.jsonl      wss://stream.aisstream.io/v0/stream, 2026-10-19 13:45-13:48 UTC: every
+                                frame of 3 min (one JSON per line) for a ~100 km box over the
+                                Tampa Bay area — the confirmation, then 103 messages from 71 vessels
+                                (Class A/B positions, ShipStaticData, StaticDataReport)
   nws_alerts_point.json         api.weather.gov/alerts/active?point=27.9659,-82.8001 (no alerts)
   nws_alerts_tx.json            api.weather.gov/alerts/active?area=TX, trimmed to 3 features
   espn_{nfl,mlb}_YYYYMMDD.json  ESPN site scoreboard ?dates=YYYYMMDD, 1-3 events, unused keys dropped
@@ -57,6 +61,7 @@ SCRUBBED_ENV = (
     "UNIFI_URL", "UNIFI_API_KEY", "UNIFI_VERIFY_SSL", "HA_URL", "HA_TOKEN",
     "ESPN_S2", "ESPN_SWID", "ADSB_URL",
     "OPNSENSE_URL", "OPNSENSE_KEY", "OPNSENSE_SECRET", "OPNSENSE_VERIFY_SSL",
+    "AISSTREAM_API_KEY",
 )
 
 
@@ -126,6 +131,18 @@ def _fresh_adsb_skips(monkeypatch):
     from backend.collectors import adsb
 
     monkeypatch.setattr(adsb, "_skip", {})
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ships_state(monkeypatch):
+    """ships keeps its vessel table and stream status at module level (they
+    must survive collector restarts) — isolate per test."""
+    from backend.collectors import ships
+
+    monkeypatch.setattr(ships, "_vessels", {})
+    monkeypatch.setattr(ships, "_stream", {
+        "last_message": None, "listening_since": None, "compression": None, "error": None,
+    })
 
 
 @pytest.fixture(autouse=True)

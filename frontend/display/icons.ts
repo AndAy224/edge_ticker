@@ -62,6 +62,7 @@ export function sportIcon(sport?: string | null, league?: string | null): string
     WEATHER_ICONS[key ?? ""] ??
     NET_ICONS[key ?? ""] ??
     GAME_ICONS[key ?? ""] ??
+    VESSEL_ICONS[key ?? ""] ??
     SPORT_ICONS.generic
   );
 }
@@ -199,6 +200,24 @@ export const AIRCRAFT_PATH =
 export const AIRCRAFT_ICON =
   `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">` +
   `<path d="${AIRCRAFT_PATH}"/></svg>`;
+
+/** Ships module: a side-on freighter for headers and tape items. */
+export const VESSEL_ICONS: Record<string, string> = {
+  ship: wrap(
+    `<path d="M3 13.5h18l-2.6 5H5.6z"/>` +
+      `<path d="M6.5 13.5V10h8l2.5 3.5"/>` +
+      `<path d="M9 10V6.5h3V10"/>` +
+      `<path d="M2.5 21.5c1.6 0 1.6-.9 3.2-.9s1.6.9 3.2.9 1.6-.9 3.2-.9 1.6.9 3.2.9 1.6-.9 3.2-.9 1.6.9 2.5.9"/>`,
+  ),
+};
+
+// Top-down hull, bow pointing up (north) and centred on (12,12) so a
+// `rotate(heading)` aims it — the ships map's marker, like AIRCRAFT_PATH.
+export const HULL_PATH = "M12 2.5C14.3 5 15.2 8 15.2 11.2V20.5H8.8V11.2C8.8 8 9.7 5 12 2.5Z";
+
+export const HULL_ICON =
+  `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">` +
+  `<path d="${HULL_PATH}"/></svg>`;
 
 /** WMO weather-code groups → icon key (Open-Meteo `weather_code`). */
 export function weatherIcon(code?: number | null): string {

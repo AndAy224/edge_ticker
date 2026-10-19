@@ -18,6 +18,7 @@ import "./modules/hurricanes";
 import "./modules/marine";
 import { setLaunchSun } from "./modules/launches";
 import "./modules/wardogs";
+import "./modules/ships";
 import { Celebration } from "./celebrate";
 import { WeatherAlertOverlay } from "./weather-alert";
 import { CameraAlertOverlay } from "./camera-alert";
@@ -475,6 +476,7 @@ const MODULE_LABELS: Record<string, string> = {
   weather_radar: "RADAR",
   hurricanes: "TROPICS",
   marine: "TIDES",
+  ships: "SHIPS",
   launches: "LAUNCHES",
   opnsense: "NETWORK",
   wardogs: "WARDOGS",

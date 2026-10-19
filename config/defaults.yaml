@@ -139,6 +139,12 @@ modules:
     poll_seconds: 15
     radius_km: 40
 
+  ships:               # live AIS vessel traffic from aisstream.io (needs AISSTREAM_API_KEY in .env)
+    enabled: false
+    poll_seconds: 15   # how often the vessel table is published; the stream itself is live
+    radius_km: 50      # from the Clearwater area, enough to reach the Tampa Bay shipping channel
+    stale_minutes: 15  # drop a vessel not heard from in this long
+
   astro:
     enabled: false
     poll_seconds: 1800

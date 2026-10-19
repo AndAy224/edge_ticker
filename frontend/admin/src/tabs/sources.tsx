@@ -110,6 +110,7 @@ export function SourcesTab() {
   const weather = cfg.modules?.weather ?? {};
   const weatherAlerts = cfg.modules?.weather_alerts ?? {};
   const adsb = cfg.modules?.adsb ?? {};
+  const ships = cfg.modules?.ships ?? {};
   const fantasy = cfg.modules?.fantasy ?? {};
   const weatherRadar = cfg.modules?.weather_radar ?? {};
   // Existing DBs predate these modules — their config keys may not exist yet.
@@ -446,7 +447,7 @@ export function SourcesTab() {
 
       <section>
         <h2>Weather / location</h2>
-        <p class="hint">Also used as the receiver position for adsb and astro.</p>
+        <p class="hint">Also used as the receiver position for adsb, ships and astro.</p>
         <label class="field">
           Location name
           <input
@@ -472,6 +473,13 @@ export function SourcesTab() {
           label="ADS-B radius (km)"
           value={adsb.radius_km ?? 40}
           onChange={(v) => patch((c) => (c.modules.adsb.radius_km = v))}
+        />
+        <NumberField
+          label="Ships radius (km)"
+          value={ships.radius_km ?? 50}
+          onChange={(v) =>
+            patch((c) => (c.modules.ships = { ...(c.modules.ships ?? {}), radius_km: v }))
+          }
         />
         <label class="field">
           Radar zoom ({(weatherRadar.zoom ?? 7.5).toFixed(1)}) — regional ↔ metro

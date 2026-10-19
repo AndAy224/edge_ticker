@@ -5407,7 +5407,8 @@ html[data-idle] *::after {
    padding with its own, so the reserved band never reaches it and the first
    flight row would sit under the bar. The full-bleed map and launch backdrop
    need no equivalent — those are meant to run edge to edge beneath the frame. */
-[data-theme="lcars"] .adsb-radar {
+[data-theme="lcars"] .adsb-radar,
+[data-theme="lcars"] .ships-side {
   padding-top: var(--lc-band);
 }
 
@@ -6191,7 +6192,8 @@ html[data-idle] *::after {
 /* .adsb-radar is absolute inset:0 and replaces .stage-layer's padding with its
    own, so the reserved band never reaches it and the first flight row would sit
    under the bar. */
-[data-theme="sovereign"] .adsb-radar {
+[data-theme="sovereign"] .adsb-radar,
+[data-theme="sovereign"] .ships-side {
   padding-top: var(--sv-band);
 }
 
@@ -9259,6 +9261,250 @@ html[data-idle] *::after {
   font-size: 19px;
   padding: 5px 14px;
   white-space: nowrap;
+}
+
+/* ---- ships (AIS via aisstream.io) ----
+   Map plumbing is the radar's (.radar-viewport/.radar-map/.radar-basemap/
+   .radar-home/.radar-attrib), the warming chip is .hurr-quiet (themes already
+   place it clear of their chrome), and the list and detail card are the ADS-B
+   ones (.adsb-list/.adsb-row/.adsb-detail*), so every theme dresses them alike. */
+
+/* Vessel colours by AIS type — the MarineTraffic convention people know:
+   cargo green, tanker red, passenger blue, tugs and service cyan, fishing
+   orange, leisure magenta, high-speed yellow, government white. Fixed (not
+   theme vars) like the hurricane categories: they sit on the dark basemap. */
+.k-cargo { --kc: #6ccf7a; }
+.k-tanker { --kc: #ff6b5e; }
+.k-passenger { --kc: #5aa9ff; }
+.k-highspeed { --kc: #ffd24d; }
+.k-tug { --kc: #3fd0d0; }
+.k-fishing { --kc: #ff9f5a; }
+.k-sailing,
+.k-pleasure { --kc: #d18cff; }
+.k-patrol,
+.k-military { --kc: #f2f5fa; }
+.k-other,
+.k-unknown { --kc: #9aa4b2; }
+
+.ships-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.ships-map {
+  position: relative;
+  flex: 0 0 46%;
+  overflow: hidden;
+}
+
+/* Post-scale overlay (outside .radar-map): hulls and the ring keep their size
+   at fractional zooms. */
+.ships-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.ships-ring {
+  fill: none;
+  stroke: rgba(190, 200, 214, 0.35);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+}
+
+.ships-marker {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.ships-marker path,
+.ships-marker .ships-dot-mark {
+  fill: var(--kc);
+  stroke: rgba(6, 9, 14, 0.9);
+  stroke-width: 1.2;
+}
+
+.ships-marker .ships-dot-mark {
+  fill-opacity: 0.75;
+}
+
+.ships-chip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 2px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--kc);
+  background: rgba(6, 9, 14, 0.78);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Only a pane too narrow for the list needs the counts on the map. */
+.ships-count-chip {
+  display: none;
+  position: absolute;
+  left: 12px;
+  bottom: 34px; /* clear of the attribution line */
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: rgba(6, 9, 14, 0.72);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.ships-side {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 28px 48px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ships-row {
+  gap: 20px;
+}
+
+.ships-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kc);
+}
+
+.ships-mark svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.ships-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--kc);
+  opacity: 0.8;
+}
+
+.ships-name {
+  flex: 0 0 340px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ships-kind {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-dim);
+  font-size: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ships-speed {
+  flex: 0 0 130px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.ships-dist {
+  flex: 0 0 140px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ships-hero {
+  color: var(--kc);
+}
+
+.ships-voyage {
+  margin-top: 14px;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+/* Narrow panes, by the pane's own width (the wd/opn container precedent)
+   rather than [data-panes]: focus's 30% pane is narrower than split's halves.
+   A mid-width pane (split) keeps a trimmed list beside the map; anything
+   narrower (focus's preview, mosaic's thirds) is all map plus the count chip.
+   Only padding-inline here — the themes' top bands set .ships-side's top. */
+.ships-stage {
+  container: ships / inline-size;
+}
+
+@container ships (max-width: 1400px) {
+  .ships-side {
+    padding-inline: 20px 24px;
+  }
+
+  /* the header keeps its icon and one line of counts */
+  .ships-side .adsb-title span {
+    display: none;
+  }
+
+  .ships-side .adsb-count {
+    font-size: 17px;
+    white-space: nowrap;
+  }
+
+  .ships-row {
+    padding: 8px 14px;
+    font-size: 22px;
+    gap: 12px;
+  }
+
+  .ships-mark,
+  .ships-mark svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ships-name {
+    flex-basis: 220px;
+  }
+
+  .ships-kind {
+    display: none;
+  }
+
+  .ships-speed {
+    flex-basis: 96px;
+  }
+
+  .ships-dist {
+    flex: 1 0 auto;
+  }
+
+  /* .adsb-header is the list's first child, so child 8 is the 7th row */
+  .ships-row:nth-child(n + 8) {
+    display: none;
+  }
+}
+
+@container ships (max-width: 950px) {
+  .ships-map {
+    flex-basis: 100%;
+  }
+
+  .ships-side {
+    display: none;
+  }
+
+  .ships-count-chip {
+    display: block;
+  }
 }
 
 /* ---- launches (Launch Library 2) ---- */
