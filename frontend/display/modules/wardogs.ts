@@ -77,7 +77,7 @@ function note(data: any): string {
   if (data.hidden) return "Profile hidden on wdstats";
   if (data.pending) return "First wdstats sync pending";
   if (data.sync_error) return `wdstats: ${data.sync_error}`;
-  if (data.sync_stale) return "wdstats can't refresh this profile";
+  if (data.sync_stale) return "wdstats tracking paused — sign in there again";
   if (data.season_final && data.current_season)
     return `Season ${data.current_season} started — no S${data.current_season} XP yet`;
   return "";

@@ -135,7 +135,7 @@ modules:
 
   adsb:
     enabled: false
-    provider: adsblol   # adsblol | adsbfi | airplaneslive | local (local needs ADSB_URL)
+    provider: adsbfi    # adsbfi | adsblol | airplaneslive | local (local needs ADSB_URL); a failing hosted provider falls back to the others
     poll_seconds: 15
     radius_km: 40
 

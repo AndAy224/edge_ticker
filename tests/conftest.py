@@ -120,6 +120,15 @@ def fresh_overlay_state(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _fresh_adsb_skips(monkeypatch):
+    """adsb keeps provider skip windows at module level (a 429 lockout must
+    survive collector restarts) — isolate per test."""
+    from backend.collectors import adsb
+
+    monkeypatch.setattr(adsb, "_skip", {})
+
+
+@pytest.fixture(autouse=True)
 def _fresh_opnsense_state(monkeypatch):
     """opnsense keeps counters, sparkline history and the failover clock at
     module level (they must survive collector restarts) — isolate per test."""

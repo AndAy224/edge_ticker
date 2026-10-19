@@ -203,7 +203,9 @@ class WardogsCollector(Collector):
         if player.get("syncError"):
             problems.append(f"wdstats sync: {player['syncError']}")
         elif player.get("stale"):
-            problems.append("wdstats marks the profile stale")
+            # wdstats' own wording: "Tracking is paused for this player" / "Your game
+            # session expired. Sign in again to resume tracking."
+            problems.append("wdstats paused tracking (session expired) — sign in again at wdstats.co.uk")
         self.degraded = "; ".join(problems) or None
         return {"player": player, "gold": _gold["payload"]}
 

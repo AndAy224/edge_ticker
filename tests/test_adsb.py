@@ -1,10 +1,23 @@
 """backend/collectors/adsb.py against a recorded adsb.lol response near Clearwater."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
+import httpx
 import pytest
 
+from backend.collectors import adsb
 from backend.collectors.adsb import AdsbCollector, haversine_km
 from helpers import json_response, load_json
+
+# adsb.lol's envoy, out of its 500/day budget at 11:08 UTC (recorded 2026-10-19).
+LOL_429_HEADERS = {
+    "x-envoy-ratelimited": "true",
+    "x-ratelimit-limit": "500, 4;w=1, 60;w=60, 500;w=86400",
+    "x-ratelimit-remaining": "0",
+    "x-ratelimit-reset": "46330",
+}
+NOW = datetime(2026, 10, 19, 11, 8, 30, tzinfo=timezone.utc)
 
 HOME = (27.9659, -82.8001)
 
@@ -83,10 +96,10 @@ def test_local_receiver_shape_and_fallbacks(collector):
 def test_provider_urls(defaults_config, monkeypatch):
     module = defaults_config["modules"]["adsb"]
     assert AdsbCollector(defaults_config)._url() == (
-        "https://api.adsb.lol/v2/lat/27.9659/lon/-82.8001/dist/22"
+        "https://opendata.adsb.fi/api/v3/lat/27.9659/lon/-82.8001/dist/22"
     )
-    module["provider"] = "adsbfi"
-    assert AdsbCollector(defaults_config)._url().startswith("https://opendata.adsb.fi/api/v3/")
+    module["provider"] = "adsblol"
+    assert AdsbCollector(defaults_config)._url().startswith("https://api.adsb.lol/v2/")
     module["provider"] = "nope"
     with pytest.raises(RuntimeError, match="unknown adsb provider"):
         AdsbCollector(defaults_config)._url()
@@ -103,3 +116,106 @@ async def test_fetch(http, collector):
     assert raw["total"] == 17
     assert http.requests[0].headers["user-agent"].startswith("edge-ticker/")
     assert http.client_kwargs[0]["timeout"] == 10
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    now = {"t": NOW}
+    monkeypatch.setattr(adsb, "_now", lambda: now["t"])
+    return now
+
+
+def _by_host(responses: dict):
+    def handler(request: httpx.Request) -> httpx.Response:
+        result = responses[request.url.host]
+        if isinstance(result, Exception):
+            raise result
+        return result
+    return handler
+
+
+async def test_rate_limited_provider_falls_back_until_reset(http, defaults_config, clock):
+    defaults_config["modules"]["adsb"]["provider"] = "adsblol"
+    collector = AdsbCollector(defaults_config)
+    traffic = load_json("adsblol_clearwater.json")
+    http.handler = _by_host({
+        "api.adsb.lol": json_response({"error": "rate limited"}, 429, LOL_429_HEADERS),
+        "opendata.adsb.fi": json_response(traffic),
+    })
+
+    assert (await collector.fetch())["total"] == 17
+    assert [r.url.host for r in http.requests] == ["api.adsb.lol", "opendata.adsb.fi"]
+    # x-ratelimit-reset is seconds from now: the daily window ends at 00:00 UTC.
+    assert collector.degraded == "adsb.lol rate-limited until 00:00 UTC — using adsb.fi"
+
+    # Inside the window adsb.lol isn't asked again, even by a restarted collector.
+    collector = AdsbCollector(defaults_config)
+    clock["t"] = NOW + timedelta(hours=12)
+    await collector.fetch()
+    assert [r.url.host for r in http.requests[2:]] == ["opendata.adsb.fi"]
+    assert collector.degraded.startswith("adsb.lol rate-limited until 00:00 UTC")
+
+    # After the reset it is the primary again, and the module is healthy.
+    http.handler = lambda request: json_response(traffic)
+    clock["t"] = NOW + timedelta(hours=13)
+    await collector.fetch()
+    assert http.requests[-1].url.host == "api.adsb.lol"
+    assert collector.degraded is None
+
+
+async def test_transient_failure_skips_provider_briefly(http, collector, clock):
+    traffic = load_json("adsblol_clearwater.json")
+    http.handler = _by_host({
+        "opendata.adsb.fi": httpx.ReadTimeout("slow"),
+        "api.adsb.lol": json_response(traffic),
+    })
+    await collector.fetch()
+    assert collector.degraded == "adsb.fi failed: ReadTimeout — using adsb.lol"
+
+    clock["t"] = NOW + timedelta(minutes=1)
+    await collector.fetch()
+    assert [r.url.host for r in http.requests] == ["opendata.adsb.fi", "api.adsb.lol", "api.adsb.lol"]
+
+    http.handler = lambda request: json_response(traffic)
+    clock["t"] = NOW + timedelta(minutes=3)
+    await collector.fetch()
+    assert http.requests[-1].url.host == "opendata.adsb.fi" and collector.degraded is None
+
+
+async def test_every_provider_down_raises_with_each_reason(http, collector, clock):
+    http.handler = _by_host({
+        "opendata.adsb.fi": json_response({}, 503),
+        "api.adsb.lol": json_response({}, 429, {"retry-after": "120"}),
+    })
+    with pytest.raises(RuntimeError, match=r"adsb.fi failed: HTTPStatusError; "
+                                           r"adsb.lol rate-limited until 11:10 UTC"):
+        await collector.fetch()
+    assert collector.degraded is None
+
+    # Both still skipped: no request at all, same story.
+    with pytest.raises(RuntimeError, match="adsb.lol rate-limited"):
+        await collector.fetch()
+    assert len(http.requests) == 2
+
+
+def test_rate_limit_reset_headers():
+    def reset(headers):
+        return adsb._rate_limit_reset(httpx.Response(429, headers=headers), NOW) - NOW
+
+    assert reset({"retry-after": "90"}) == timedelta(seconds=90)
+    assert reset({"retry-after": "Mon, 19 Oct 2026 11:38:30 GMT"}) == timedelta(minutes=30)
+    assert reset({"x-ratelimit-reset": str(NOW.timestamp() + 600)}) == timedelta(minutes=10)
+    assert reset({}) == adsb.RATE_LIMIT_DEFAULT
+    assert reset({"retry-after": "1"}) == timedelta(minutes=1)
+    assert reset({"x-ratelimit-reset": "999999"}) == adsb.RATE_LIMIT_MAX
+
+
+async def test_local_receiver_has_no_fallback(http, defaults_config, monkeypatch):
+    monkeypatch.setenv("ADSB_URL", "http://pi-adsb.invalid/data/aircraft.json")
+    defaults_config["modules"]["adsb"]["provider"] = "local"
+    collector = AdsbCollector(defaults_config)
+    http.handler = lambda request: (_ for _ in ()).throw(httpx.ConnectError("down"))
+    for _ in range(2):  # no skip window either: every poll retries the receiver
+        with pytest.raises(httpx.ConnectError):
+            await collector.fetch()
+    assert [r.url.host for r in http.requests] == ["pi-adsb.invalid"] * 2
