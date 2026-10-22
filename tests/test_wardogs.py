@@ -290,6 +290,26 @@ async def test_untracked_player_is_a_clear_error(http, defaults_config):
         await WardogsCollector(defaults_config).fetch()
 
 
+async def test_refusal_holds_off_for_a_day(http, defaults_config, clock):
+    http.handler = handler_for(player_response=httpx.Response(403))
+    collector = WardogsCollector(defaults_config)
+    with pytest.raises(RuntimeError, match=r"refused this client \(403\).*until 2026-10-16 20:00 UTC"):
+        await collector.fetch()
+    assert len(http.requests) == 1
+    # Retries inside the hold fail without a request — also from the fresh
+    # collector a config save builds.
+    http.handler = handler_for()
+    clock["now"] = NOW + timedelta(hours=23)
+    for retry in (collector, WardogsCollector(defaults_config)):
+        with pytest.raises(RuntimeError, match="refused this client"):
+            await retry.fetch()
+    assert len(http.requests) == 1
+    clock["now"] = NOW + timedelta(hours=24)
+    data = await collector.fetch()
+    assert data["player"]["name"] == "AndAy"
+    assert len(http.requests) == 3
+
+
 async def test_player_server_error_raises(http, defaults_config):
     http.handler = handler_for(player_response=httpx.Response(503))
     with pytest.raises(httpx.HTTPStatusError):

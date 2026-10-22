@@ -15,6 +15,10 @@ A hobby site with nothing newer than its hourly sync: the poll defaults to
 15 min and is floored at 300 s, and failures back off slowly. /combat is not
 fetched — combat stats only come from tracked community servers.
 
+A 403 is a refusal, not an outage: since 2026-10-21 wdstats answers 403 to this
+client's User-Agent by name. It holds the collector off for a day, retries
+failing without a request, rather than knocking every half hour.
+
 Seasons: the player payload carries the latest season the player has data for.
 At a rollover it stays on the previous season's final figures until the
 player's first sync in the new one, so the page labels which season it shows.
@@ -40,6 +44,7 @@ DEFAULT_PLAYER = "76561197988260454"
 PLAYER_ID = re.compile(r"7656\d{13}|[0-9a-f]{12}")
 MIN_POLL_SECONDS = 300.0
 LEVEL_UP_TTL = timedelta(hours=1)
+FORBIDDEN_HOLD = timedelta(hours=24)
 RAREST = 5
 SPARK_DAYS = 30
 AVATAR_HOSTS = ("steamstatic.com", "steamcdn-a.akamaihd.net")
@@ -49,10 +54,11 @@ ROLE_ICONS = {
 }
 
 # Module-level on purpose (the opnsense precedent): a config save restarts the
-# collector, and instance state would drop the gold price on the next failure
-# and forget the levels a level-up is measured against.
+# collector, and instance state would drop the gold price on the next failure,
+# forget the levels a level-up is measured against, and end a refusal's hold.
 _gold: dict = {"payload": None}
 _levels: dict[str, dict] = {}  # player id -> {"season", "levels": {key: lvl}, "ups": [...]}
+_refused: dict = {"until": None}  # no requests before this, after a 403
 
 
 def _now() -> datetime:
@@ -75,6 +81,10 @@ def _iso(dt: datetime | None) -> str | None:
 
 def _int(value: object) -> int | None:
     return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _refusal(until: datetime) -> str:
+    return f"wdstats.co.uk refused this client (403) — not asking again until {until:%Y-%m-%d %H:%M} UTC"
 
 
 def compact(n: int | float | None) -> str:
@@ -178,9 +188,15 @@ class WardogsCollector(Collector):
 
     # ---- fetch ---------------------------------------------------------
     async def fetch(self) -> dict:
+        until = _refused["until"]
+        if until is not None and _now() < until:
+            raise RuntimeError(_refusal(until))
         problems: list[str] = []
         async with httpx.AsyncClient(timeout=15, headers=HEADERS) as client:
             response = await client.get(f"{BASE_URL}/api/players/{self.player_id}")
+            if response.status_code == 403:
+                _refused["until"] = until = _now() + FORBIDDEN_HOLD
+                raise RuntimeError(_refusal(until))
             if response.status_code == 404:
                 raise RuntimeError(
                     f"player {self.player_id} isn't tracked on wdstats.co.uk "

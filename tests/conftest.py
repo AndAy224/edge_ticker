@@ -160,9 +160,11 @@ def _fresh_opnsense_state(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _fresh_wardogs_state(monkeypatch):
-    """wardogs keeps the last gold price and the level-up baseline at module
-    level (they must survive collector restarts) — isolate per test."""
+    """wardogs keeps the last gold price, the level-up baseline and a refusal's
+    hold-off at module level (they must survive collector restarts) — isolate
+    per test."""
     from backend.collectors import wardogs
 
     monkeypatch.setattr(wardogs, "_gold", {"payload": None})
     monkeypatch.setattr(wardogs, "_levels", {})
+    monkeypatch.setattr(wardogs, "_refused", {"until": None})
