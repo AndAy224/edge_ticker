@@ -6,6 +6,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from . import db
 from .build import builds
 from .origin import cross_site
 from .sysinfo import lan_ip
@@ -32,6 +33,8 @@ async def _serve(websocket: WebSocket) -> None:
                 "type": "snapshot",
                 "modules": bus.snapshot(),
                 "config": app.state.config,
+                # what the admin sends back in If-Match (PUT /api/config)
+                "config_version": db.config_version(app.state.config),
                 "ha": {"status": bridge.status, "states": bridge.mapped_states()},
                 "display_state": bus.display_state,
                 # Current night state, so a display that (re)connects inside the

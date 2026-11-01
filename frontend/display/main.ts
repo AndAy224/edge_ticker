@@ -232,6 +232,9 @@ function handleMessage(msg: any): void {
       // Every (re)connect after a deploy lands here: move onto the new bundle
       // rather than run old JS against the new backend.
       if (isOutdated(msg.build?.display) && reloadOnto(msg.build.display)) return;
+      // A preview running across a reconnect would restore its stale copies
+      // over the snapshot's; end it first.
+      starshipPreviewCleanup?.();
       modules.clear();
       for (const [name, payload] of Object.entries(msg.modules ?? {})) {
         modules.set(name, payload as ModulePayload);
@@ -250,25 +253,27 @@ function handleMessage(msg: any): void {
       renderWeather();
       // Re-evaluate auto-feature from the snapshot so a mid-game reload
       // (nightly reload, self-heal) features immediately instead of waiting
-      // for the next sports poll. `liveFeatured` is in-memory, so a reload
-      // after a manual unpin mid-game re-features once — accepted.
-      {
-        const sports = modules.get("sports");
-        if (sports) autoFeatureSports(sports);
-        const fantasy = modules.get("fantasy");
-        if (fantasy) autoFeatureFantasy(fantasy);
-        const launches = modules.get("launches");
-        if (launches) autoFeatureLaunches(launches);
-        const hurricanes = modules.get("hurricanes");
-        if (hurricanes) autoFeatureHurricanes(hurricanes);
-        const network = modules.get("opnsense");
-        if (network) autoFeatureNetwork(network);
+      // for the next sports poll. Dismissals are in-memory, so a reload after
+      // a manual unpin mid-game re-features once — accepted.
+      for (const rule of AUTO_RULES) {
+        const payload = modules.get(rule.id);
+        if (payload) noteAutoFeature(payload, false);
+        else forgetAutoFeature(rule.id, false);
       }
+      reconcileAutoFeature();
       updateScoreChip();
       applyCondition();
       break;
     case "module": {
       const payload: ModulePayload = msg.payload;
+      if (payload.module === "launches" && starshipPreviewCleanup) {
+        // The Starship preview owns the launches slot for its 20 s: hold the
+        // real payload for it to put back, rather than flashing it mid-preview
+        // and then restoring an older one over it.
+        starshipPreviewReal = payload;
+        noteAutoFeature(payload, false);
+        break;
+      }
       modules.set(payload.module, payload);
       applyCondition();
       if (payload.module === "weather") {
@@ -286,14 +291,8 @@ function handleMessage(msg: any): void {
           if ((id === "weather" || id === "weather_radar") && !paneDetailTimers.has(i)) renderPane(i);
         }
       }
-      if (payload.module === "sports") {
-        autoFeatureSports(payload);
-        updateScoreChip();
-      }
-      if (payload.module === "fantasy") autoFeatureFantasy(payload);
-      if (payload.module === "launches") autoFeatureLaunches(payload);
-      if (payload.module === "hurricanes") autoFeatureHurricanes(payload);
-      if (payload.module === "opnsense") autoFeatureNetwork(payload);
+      if (payload.module === "sports") updateScoreChip();
+      noteAutoFeature(payload);
       if (blanked) {
         // Nobody can see it: keep the data, skip the DOM work until wake().
         renderDeferred = true;
@@ -311,6 +310,7 @@ function handleMessage(msg: any): void {
       // The collector stopped (module disabled): drop its data rather than
       // leave e.g. an expired warning on the tape until the next reload.
       modules.delete(msg.module);
+      forgetAutoFeature(msg.module);
       applyCondition();
       if (msg.module === "weather_alerts") {
         setWeatherAlerts([]);
@@ -433,10 +433,10 @@ const rotation = {
     reportDisplayState();
   },
   togglePin(): void {
-    this.pinned = !this.pinned;
-    autoPinnedFor = null; // manual pin/unpin takes ownership from auto-feature
-    pinBadge.classList.toggle("hidden", !this.pinned);
-    reportDisplayState();
+    // The user's call from here on: whatever is live doesn't get to take the
+    // stage back until it ends.
+    dismissLiveFeatures();
+    setPinned(!this.pinned);
   },
 };
 
@@ -473,35 +473,38 @@ function syncCountdown(restart = false): void {
     stageSection.dataset.rotCounting = "";
   });
 }
-// Pin, details, overlays, takeovers and blanking all stop the clock; they are
-// set from a dozen places, so the countdown catches up with them here instead.
-setInterval(() => syncCountdown(), 1000);
+// Pin, details, overlays, takeovers and blanking all stop the clock — and hold
+// off an auto-pin; they are set from a dozen places, so both catch up here.
+setInterval(() => {
+  reconcileAutoFeature();
+  syncCountdown();
+}, 1000);
 
 function applyConfig(): void {
   applyAppearance();
   setSportsLiveMode((config.modules?.sports as any)?.live_mode !== false);
   setFantasyLiveMode((config.modules?.fantasy as any)?.live_mode !== false);
-  const featureOff =
-    (autoPinnedFor === "sports" && config.modules?.sports?.auto_feature !== true) ||
-    (autoPinnedFor === "fantasy" && (config.modules?.fantasy as any)?.auto_feature === false) ||
-    (autoPinnedFor === "hurricanes" && (config.modules?.hurricanes as any)?.auto_feature !== true) ||
-    (autoPinnedFor === "opnsense" && (config.modules?.opnsense as any)?.auto_feature === false);
-  if (featureOff) {
-    // Feature toggled off mid-game: release our pin, keep a manual one.
-    autoPinnedFor = null;
-    rotation.pinned = false;
-    pinBadge.classList.add("hidden");
-    reportDisplayState();
-  }
+  // Keep showing the same module across a save: an index into the old order
+  // pointed at whatever moved into its slot — under a pin, the wrong module.
+  const showing = rotation.current();
   rotation.order = (config.rotation?.order ?? []).filter(
     (id) => hasRenderer(id) && config.modules?.[id]?.enabled !== false,
   );
-  if (rotation.index >= rotation.order.length) rotation.index = 0;
+  const kept = showing === undefined ? -1 : rotation.order.indexOf(showing);
+  if (kept >= 0) rotation.index = kept;
+  else if (rotation.index >= rotation.order.length) rotation.index = 0;
+  // A manual pin whose module left the rotation pins nothing; let it go. (An
+  // auto-pin is released by reconcileAutoFeature below, for the same reason
+  // and for its feature being switched off.)
+  if (rotation.pinned && !autoPinnedFor && kept < 0 && !starshipPreviewCleanup) {
+    setPinned(false);
+  }
   closeAllDetails(); // pane→module mapping may have changed under open details
   syncPanes();
   rotation.schedule();
   rebuildTape();
   renderStage();
+  reconcileAutoFeature();
 }
 
 /** (Re)build the .stage-pane containers when the effective count changes. */
@@ -783,120 +786,112 @@ function closeAllDetails(): void {
 
 // ---- Tape ----------------------------------------------------------------------
 
-// ---- Live-game auto-pin ----------------------------------------------------------
-// When a followed team's game goes live (and the toggle is on), jump to sports
-// and pin. Edge-triggered: a manual unpin or swipe-away isn't fought until the
-// next game starts; when no followed game is live anymore, auto-unpin.
-// `autoPinned` marks a pin *we* created — a user's manual pin is never removed.
-let liveFeatured = false; // sports: a followed game is live (edge tracker)
-let fantasyLiveFeatured = false; // fantasy: my matchup is live (edge tracker)
-let autoPinnedFor: string | null = null; // module id we auto-pinned for (null = none)
-
-/** Pin to `id` on the not-live→live edge (only if its feature is enabled). */
-function applyAutoFeature(id: string, enabled: boolean): void {
-  if (
-    enabled &&
-    !blanked &&
-    !takeoverOpen() && // don't yank+pin the stage under a full-screen takeover
-    !overlay.isOpen() &&
-    !anyDetailOpen() &&
-    !rotation.pinned
-  ) {
-    const target = rotation.order.indexOf(id);
-    if (target >= 0) {
-      // Multi-pane: if the module is already on screen, pin in place without a
-      // gratuitous full-stage crossfade.
-      if (!paneEls.some((_, i) => paneModule(i) === id)) {
-        rotation.index = target;
-        renderStage();
-      }
-      rotation.pinned = true;
-      autoPinnedFor = id;
-      pinBadge.classList.remove("hidden");
-      reportDisplayState();
-    }
-  }
+// ---- Auto-feature -----------------------------------------------------------------
+// Some modules ask for the stage while something is happening: home inside a
+// hurricane cone, the network on its backup WAN, a launch window, a followed
+// game, my fantasy matchup. One table drives them all, level-triggered: each
+// payload records whether its event is live, and reconcileAutoFeature() — run
+// after payloads and config changes, and once a second — makes the pin match.
+//   - The first live, enabled, not-dismissed event in table order takes the
+//     stage as soon as nothing is in the way (blanked, a takeover, the HA
+//     overlay, an open detail, any pin). An event that starts while the panel
+//     is blanked or a detail is open pins once that ends, instead of being
+//     lost for the whole event as an edge trigger was.
+//   - Our pin goes when its event ends, its module leaves the rotation
+//     (disabled, removed) or its auto_feature is switched off.
+//   - A manual swipe or pin/unpin dismisses every live event until it ends, so
+//     the display never fights the user. A user's own pin is never removed.
+interface AutoRule {
+  id: string;
+  /** Whether the payload says the event is on. */
+  live: (stage: any) => boolean;
+  /** modules.<id>.auto_feature, with this module's default. */
+  enabled: (moduleConfig: any) => boolean;
 }
 
-/** Release the auto-pin on the live→not-live edge (manual pins are untouched). */
-function clearAutoFeature(id: string): void {
-  if (autoPinnedFor === id) {
-    autoPinnedFor = null;
-    rotation.pinned = false;
-    pinBadge.classList.add("hidden");
-    reportDisplayState();
-  }
+const AUTO_RULES: AutoRule[] = [
+  { id: "hurricanes", live: (s) => Boolean(s?.threat), enabled: (m) => m?.auto_feature === true },
+  { id: "opnsense", live: (s) => Boolean(s?.failover), enabled: (m) => m?.auto_feature !== false },
+  { id: "launches", live: (s) => s?.live === true, enabled: (m) => m?.auto_feature === true },
+  {
+    id: "sports",
+    live: (s) => (s?.games ?? []).some((g: any) => g.followed && g.state === "in"),
+    enabled: (m) => m?.auto_feature === true,
+  },
+  {
+    id: "fantasy",
+    live: (s) => s?.matchup?.state === "in",
+    enabled: (m) => m?.auto_feature !== false,
+  },
+];
+
+const autoLive = new Set<string>(); // modules whose event is on right now
+const autoDismissed = new Set<string>(); // live events the user moved away from
+let autoPinnedFor: string | null = null; // the module our pin is for (null = none, or the user's)
+
+/** The one place the pin changes: state, owner, badge and the admin preview. */
+function setPinned(on: boolean, autoFor: string | null = null): void {
+  rotation.pinned = on;
+  autoPinnedFor = on ? autoFor : null;
+  pinBadge.classList.toggle("hidden", !on);
+  reportDisplayState();
 }
 
-function autoFeatureSports(payload: ModulePayload): void {
-  const games: any[] = payload.stage?.games ?? [];
-  const liveFollowed = games.some((g) => g.followed && g.state === "in");
-  if (liveFollowed && !liveFeatured) {
-    liveFeatured = true;
-    applyAutoFeature("sports", config.modules?.sports?.auto_feature === true);
-  } else if (!liveFollowed && liveFeatured) {
-    liveFeatured = false;
-    clearAutoFeature("sports");
-  }
+/** Record whether `payload`'s event is live (no-op for modules without a rule). */
+function noteAutoFeature(payload: ModulePayload, reconcile = true): void {
+  const rule = AUTO_RULES.find((r) => r.id === payload.module);
+  if (!rule) return;
+  if (rule.live(payload.stage)) autoLive.add(rule.id);
+  else forgetAutoFeature(rule.id, false);
+  if (reconcile) reconcileAutoFeature();
 }
 
-let launchLiveFeatured = false;
-function autoFeatureLaunches(payload: ModulePayload): void {
-  const live = (payload.stage as any)?.live === true;
-  if (live && !launchLiveFeatured) {
-    launchLiveFeatured = true;
-    applyAutoFeature("launches", (config.modules?.launches as any)?.auto_feature === true);
-  } else if (!live && launchLiveFeatured) {
-    launchLiveFeatured = false;
-    clearAutoFeature("launches");
-  }
+/** The event is over (or its module stopped): forget it, dismissal included. */
+function forgetAutoFeature(id: string, reconcile = true): void {
+  autoLive.delete(id);
+  autoDismissed.delete(id);
+  if (reconcile) reconcileAutoFeature();
 }
 
-let hurricaneThreatFeatured = false;
-/** Home inside a forecast cone: pin the tropics page (opt-in). */
-function autoFeatureHurricanes(payload: ModulePayload): void {
-  const threat = Boolean((payload.stage as any)?.threat);
-  if (threat && !hurricaneThreatFeatured) {
-    hurricaneThreatFeatured = true;
-    applyAutoFeature("hurricanes", (config.modules?.hurricanes as any)?.auto_feature === true);
-  } else if (!threat && hurricaneThreatFeatured) {
-    hurricaneThreatFeatured = false;
-    clearAutoFeature("hurricanes");
-  }
+function dismissLiveFeatures(): void {
+  for (const id of autoLive) autoDismissed.add(id);
 }
 
-let networkFailoverFeatured = false;
-/** Running on the backup WAN: pin the network page until the primary is back
- *  (on unless modules.opnsense.auto_feature is false). */
-function autoFeatureNetwork(payload: ModulePayload): void {
-  const failover = Boolean((payload.stage as any)?.failover);
-  if (failover && !networkFailoverFeatured) {
-    networkFailoverFeatured = true;
-    applyAutoFeature("opnsense", (config.modules?.opnsense as any)?.auto_feature !== false);
-  } else if (!failover && networkFailoverFeatured) {
-    networkFailoverFeatured = false;
-    clearAutoFeature("opnsense");
-  }
+function wantsStage(rule: AutoRule): boolean {
+  return (
+    autoLive.has(rule.id) &&
+    !autoDismissed.has(rule.id) &&
+    rule.enabled(config.modules?.[rule.id]) &&
+    rotation.order.includes(rule.id)
+  );
 }
 
-function autoFeatureFantasy(payload: ModulePayload): void {
-  const live = (payload.stage as any)?.matchup?.state === "in";
-  if (live && !fantasyLiveFeatured) {
-    fantasyLiveFeatured = true;
-    applyAutoFeature("fantasy", (config.modules?.fantasy as any)?.auto_feature !== false);
-  } else if (!live && fantasyLiveFeatured) {
-    fantasyLiveFeatured = false;
-    clearAutoFeature("fantasy");
+function reconcileAutoFeature(): void {
+  if (starshipPreviewCleanup) return; // the preview holds the stage for its 20 s
+  if (autoPinnedFor) {
+    const rule = AUTO_RULES.find((r) => r.id === autoPinnedFor);
+    if (rule && wantsStage(rule)) return; // still holding it for a live event
+    setPinned(false);
   }
+  if (rotation.pinned || blanked || takeoverOpen() || overlay.isOpen() || anyDetailOpen()) {
+    return;
+  }
+  const rule = AUTO_RULES.find(wantsStage);
+  if (!rule) return;
+  // Multi-pane: if the module is already on screen, pin in place without a
+  // gratuitous full-stage crossfade.
+  if (!paneEls.some((_, i) => paneModule(i) === rule.id)) {
+    rotation.index = rotation.order.indexOf(rule.id);
+    renderStage();
+  }
+  setPinned(true, rule.id);
 }
 
-/** A manual swipe while auto-pinned releases the pin (but not `liveFeatured`,
- *  so the display won't yank back until the next game-start edge). */
+/** A manual swipe while auto-pinned releases the pin and dismisses the event
+ *  (and anything else live), so the display won't yank back until it ends. */
 function releaseAutoPin(): void {
-  if (!autoPinnedFor) return;
-  autoPinnedFor = null;
-  rotation.pinned = false;
-  pinBadge.classList.add("hidden");
+  dismissLiveFeatures();
+  if (autoPinnedFor) setPinned(false);
 }
 
 // ---- HA transition toast --------------------------------------------------------
@@ -926,6 +921,19 @@ function showToast(text: string, isAlert: boolean, ms = 8000, critical = false):
     toastTimer = window.setTimeout(() => toastEl.classList.add("hidden"), 400);
   }, ms);
 }
+
+// Debug/test hook: feed any server message through the real handler.
+(window as any).__wsmsg = (msg: any) => handleMessage(msg);
+
+// Debug/test hook: the pin and auto-feature state, for scripted checks.
+(window as any).__pinstate = () => ({
+  pinned: rotation.pinned,
+  auto: autoPinnedFor,
+  module: rotation.current() ?? null,
+  badge: !pinBadge.classList.contains("hidden"),
+  live: [...autoLive],
+  dismissed: [...autoDismissed],
+});
 
 // Debug/test hook: a notify toast without the backend (same shape as the WS message).
 (window as any).__notify = (notice: any) =>
@@ -1018,7 +1026,7 @@ function updateScoreChip(): void {
 (window as any).__sportsfake = (games: any[]) => {
   const payload = { module: "sports", stage: { games }, tape: [] } as any;
   modules.set("sports", payload);
-  autoFeatureSports(payload);
+  noteAutoFeature(payload);
   rebuildTape();
   renderStage();
   updateScoreChip();
@@ -1060,7 +1068,7 @@ function updateScoreChip(): void {
 (window as any).__fantasyfake = (stage: any) => {
   const payload = { module: "fantasy", stage, tape: [] } as any;
   modules.set("fantasy", payload);
-  autoFeatureFantasy(payload);
+  noteAutoFeature(payload);
   rebuildTape();
   renderStage();
 };
@@ -1070,7 +1078,7 @@ function updateScoreChip(): void {
 (window as any).__launchfake = (stage: any) => {
   const payload = { module: "launches", stage, tape: [] } as any;
   modules.set("launches", payload);
-  autoFeatureLaunches(payload);
+  noteAutoFeature(payload);
   rebuildTape();
   renderStage();
 };
@@ -1079,7 +1087,7 @@ function updateScoreChip(): void {
 (window as any).__netfake = (stage: any) => {
   const payload = { module: "opnsense", stage, tape: [] } as any;
   modules.set("opnsense", payload);
-  autoFeatureNetwork(payload);
+  noteAutoFeature(payload);
   rebuildTape();
   renderStage();
 };
@@ -1261,10 +1269,13 @@ function wake(): void {
 
 function handleControl(action: string): void {
   switch (action) {
+    // The admin's next/prev is a user moving the stage, same as a swipe.
     case "next":
+      releaseAutoPin();
       rotation.next();
       break;
     case "prev":
+      releaseAutoPin();
       rotation.prev();
       break;
     case "pin":
@@ -1292,6 +1303,9 @@ function handleControl(action: string): void {
 
 let starshipPreviewTimers: number[] = [];
 let starshipPreviewCleanup: (() => void) | null = null;
+// The real launches payload to put back when the preview ends: the one on
+// screen when it started, or a newer one that arrived during it.
+let starshipPreviewReal: ModulePayload | undefined;
 
 function starshipPreviewStage(minutesToNet: number): any {
   const live = minutesToNet <= 45;
@@ -1334,10 +1348,11 @@ function starshipPreviewStage(minutesToNet: number): any {
 
 function startStarshipPreview(): void {
   starshipPreviewCleanup?.(); // restart cleanly on a second button press
-  const real = modules.get("launches");
+  starshipPreviewReal = modules.get("launches");
   const inserted = !rotation.order.includes("launches");
   if (inserted) rotation.order.push("launches");
   const wasPinned = rotation.pinned;
+  const wasAutoFor = autoPinnedFor;
   const wasIndex = rotation.index;
   rotation.index = rotation.order.indexOf("launches");
   rotation.pinned = true; // hold the preview on screen; badge untouched
@@ -1350,12 +1365,17 @@ function startStarshipPreview(): void {
     for (const t of starshipPreviewTimers) clearTimeout(t);
     starshipPreviewTimers = [];
     starshipPreviewCleanup = null;
-    if (real) modules.set("launches", real);
+    if (starshipPreviewReal) modules.set("launches", starshipPreviewReal);
     else modules.delete("launches");
+    starshipPreviewReal = undefined;
     if (inserted) rotation.order = rotation.order.filter((id) => id !== "launches");
-    rotation.pinned = wasPinned;
     rotation.index = Math.min(wasIndex, Math.max(0, rotation.order.length - 1));
+    // Put the pin back as it was — unless the user unpinned during the
+    // preview, which is theirs to keep. An auto-pin whose event ended in the
+    // meantime is released by the reconcile below.
+    if (rotation.pinned) setPinned(wasPinned, wasAutoFor);
     renderStage();
+    reconcileAutoFeature();
   };
 
   show(starshipPreviewStage(6 * 60)); // flight-day card, T−6h

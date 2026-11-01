@@ -78,7 +78,16 @@ by constructing every enabled collector from the new config. On any problem it
 answers `400 {"error": "…", "errors": [...]}` and **nothing is saved**. On
 success it persists, restarts only the collectors whose inputs changed (their
 module config, or the shared location for location-based modules), and
-broadcasts `config` + `ha_states`. Reply: `{"ok": true, "restarted": [names]}`.
+broadcasts `config` + `ha_states`. Reply: `{"ok": true, "restarted": [names],
+"version": "…", "config": {…}}` — the stored document, defaults merged in.
+
+Saves are version-checked. `GET` answers with `ETag: "<version>"` (a content
+hash of the document; the `config` broadcast carries it as `version`, the
+connect snapshot as `config_version`). A `PUT` with `If-Match: "<version>"`
+whose version is no longer current answers `409 {"error", "version",
+"config"}` with the current document and saves nothing — the admin then
+replays its unsaved edits onto that and asks for another save. A `PUT`
+without `If-Match` (curl, `scripts/layout_audit.py`) overwrites as before.
 
 ### `GET /api/config/history` · `GET /api/config/history/{id}` · `POST /api/config/restore`
 
@@ -201,10 +210,10 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `snapshot` | `modules` (name → payload), `config`, `ha.status`, `ha.states`, `display_state`, `night`, `system.ip`, `build` | Full state on connect (`system.ip` = LAN address, `null` if unresolvable; refreshed per connect). `night` is the current dim state, so a display connecting mid-window (the 04:00 nightly reload lands in it) dims at once |
+| `snapshot` | `modules` (name → payload), `config`, `config_version`, `ha.status`, `ha.states`, `display_state`, `night`, `system.ip`, `build` | Full state on connect (`system.ip` = LAN address, `null` if unresolvable; refreshed per connect). `night` is the current dim state, so a display connecting mid-window (the 04:00 nightly reload lands in it) dims at once |
 | `module` | `payload` | One module's latest payload |
 | `module_removed` | `module` | A module's collector stopped (disabled): drop its payload and tape items |
-| `config` | `config` | Config changed (re-apply rotation, HA mapping) |
+| `config` | `config`, `version` | Config changed (re-apply rotation, HA mapping); `version` is what a later `PUT` sends as `If-Match` |
 | `control` | `action` | Remote control command |
 | `night` | `mode` (`dim`\|`wake`), `level`, `software` | Sent on every brightness change. `software: true` = DDC/CI unavailable, the display draws the dim; `false` = the panel dims itself (clears any software overlay) |
 | `display_state` | `state` | What the display is showing (admin live preview) |

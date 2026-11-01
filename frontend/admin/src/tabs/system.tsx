@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { config, control, displayState, health, livePayloads, loadConfig } from "../state";
+import { config, control, dirty, displayState, health, livePayloads, loadConfig } from "../state";
 
 type Version = { id: number; saved_at: string; current: boolean; changed: string[] };
 const versions = signal<Version[]>([]);
@@ -15,16 +15,25 @@ async function loadHistory(): Promise<void> {
 }
 
 async function restoreVersion(v: Version): Promise<void> {
-  if (!confirm(`Restore the config saved ${new Date(v.saved_at).toLocaleString()}?`)) return;
+  const when = new Date(v.saved_at).toLocaleString();
+  // A restore replaces the whole draft, so say so when there is one to lose.
+  const question = dirty.value
+    ? `Restore the config saved ${when}? Your unsaved edits will be discarded.`
+    : `Restore the config saved ${when}?`;
+  if (!confirm(question)) return;
   historyStatus.value = "restoring…";
-  const res = await fetch("/api/config/restore", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: v.id }),
-  });
-  const reply = await res.json().catch(() => null);
-  historyStatus.value = res.ok ? "restored ✓" : `not restored: ${reply?.error ?? res.status}`;
-  if (res.ok) await loadConfig();
+  try {
+    const res = await fetch("/api/config/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: v.id }),
+    });
+    const reply = await res.json().catch(() => null);
+    historyStatus.value = res.ok ? "restored ✓" : `not restored: ${reply?.error ?? res.status}`;
+    if (res.ok) await loadConfig();
+  } catch {
+    historyStatus.value = "not restored: the backend didn't answer";
+  }
   await loadHistory();
 }
 

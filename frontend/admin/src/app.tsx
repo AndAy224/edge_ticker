@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { config, dirty, discardConfig, health, saveConfig, saveStatus } from "./state";
+import { config, dirty, discardConfig, health, loadError, saveConfig, saveStatus, saving } from "./state";
 import { AppearanceTab } from "./tabs/appearance";
 import { HATab } from "./tabs/ha";
 import { ModulesTab } from "./tabs/modules";
@@ -20,7 +20,7 @@ const activeTab = signal("modules");
 
 export function App() {
   if (!config.value) {
-    return <div class="loading">loading config…</div>;
+    return <div class="loading">{loadError.value || "loading config…"}</div>;
   }
   const Active = TABS.find((t) => t.id === activeTab.value)!.component;
   const h = health.value;
@@ -41,11 +41,11 @@ export function App() {
         <div class="save-bar">
           <span class="save-status">{saveStatus.value}</span>
           {dirty.value && (
-            <button class="ghost" onClick={discardConfig}>
+            <button class="ghost" disabled={saving.value} onClick={discardConfig}>
               Discard
             </button>
           )}
-          <button class="primary" disabled={!dirty.value} onClick={saveConfig}>
+          <button class="primary" disabled={!dirty.value || saving.value} onClick={saveConfig}>
             Save & apply
           </button>
         </div>

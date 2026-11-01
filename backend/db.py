@@ -2,6 +2,7 @@
 plus a short history of saved versions for one-click rollback."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -69,6 +70,15 @@ async def close() -> None:
     if _conn is not None:
         await _conn.close()
         _conn = None
+
+
+def config_version(config) -> str:
+    """Content hash of a config document. The admin sends it back in If-Match,
+    so a save made from a stale copy is refused instead of silently reverting
+    whatever another tab (or a restore) saved in between. Content, not a
+    counter: two identical documents are the same version."""
+    blob = json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
 async def get_config() -> dict | None:
