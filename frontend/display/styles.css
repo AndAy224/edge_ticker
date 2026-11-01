@@ -10149,6 +10149,21 @@ html[data-idle] *::after {
   font-size: 15px;
 }
 
+/* Banner's stage is the shortest single pane: 394px of content under a block
+   theme's band (418 in the default themes), where the card, four rows and the
+   recent strip need 485 — the overflow ran up under the bar and out of the
+   pane. Same order of sacrifice as the narrow panes: the trivia goes first,
+   then the list keeps three launches. */
+[data-layout="banner"] .launch-desc,
+[data-layout="banner"] .launch-streak,
+[data-layout="banner"] .launch-recent {
+  display: none;
+}
+
+[data-layout="banner"] .launch-row:nth-child(n + 4) {
+  display: none;
+}
+
 [data-panes="2"] .launch-live,
 [data-panes="3"] .launch-live {
   padding: 16px 20px;
