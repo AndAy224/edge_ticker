@@ -32,6 +32,47 @@ def _object(config: dict, key: str, errors: list[str]) -> dict:
     return value
 
 
+def _entity_list(value: Any, *, objects: bool = False) -> bool:
+    """A list of entity_id strings — or, where `objects`, {entity, label} dicts too."""
+    if value is None:
+        return True
+    if not isinstance(value, list):
+        return False
+    return all(
+        isinstance(item, str)
+        or (objects and isinstance(item, dict) and isinstance(item.get("entity"), str))
+        for item in value
+    )
+
+
+def _check_ha(ha: dict, errors: list[str]) -> None:
+    """The HA mapping feeds set()s and string comparisons on every state change
+    and every WS snapshot, so a wrong shape here (a {entity} dict in `lights`,
+    say) didn't fail the save — it failed every display connect afterwards."""
+    for key in ("scenes", "lights", "fans"):
+        if not _entity_list(ha.get(key)):
+            errors.append(f"ha.{key} must be a list of entity ids")
+    if not _entity_list(ha.get("cameras"), objects=True):
+        errors.append("ha.cameras must be a list of camera entity ids")
+    for key in ("climate", "media"):
+        if ha.get(key) is not None and not isinstance(ha[key], str):
+            errors.append(f"ha.{key} must be one entity id or null")
+    alerts = ha.get("alerts")
+    if alerts is None:
+        return
+    if not isinstance(alerts, list):
+        errors.append("ha.alerts must be a list")
+        return
+    for i, alert in enumerate(alerts):
+        if not isinstance(alert, dict):
+            errors.append(f"ha.alerts[{i}] must be an object")
+            continue
+        if alert.get("entity") is not None and not isinstance(alert["entity"], str):
+            errors.append(f"ha.alerts[{i}].entity must be an entity id")
+        if not _entity_list(alert.get("cameras"), objects=True):
+            errors.append(f"ha.alerts[{i}].cameras must be a list of camera entity ids")
+
+
 def validate(config: Any) -> list[str]:
     """Human-readable problems with `config`; empty when it is safe to save."""
     if not isinstance(config, dict):
@@ -71,7 +112,7 @@ def validate(config: Any) -> list[str]:
         errors.append("night.method must be ddc or software")
 
     _object(config, "appearance", errors)
-    _object(config, "ha", errors)
+    _check_ha(_object(config, "ha", errors), errors)
 
     if not errors:  # constructing collectors from a malformed shape just repeats the above
         for name, reason in discover_collectors(config).errors.items():

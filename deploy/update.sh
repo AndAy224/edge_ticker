@@ -14,7 +14,7 @@
 # `git reset` below rewrites this very file — bash must have parsed all of it
 # before that happens.
 {
-set -euo pipefail
+set -Eeuo pipefail  # -E: the ERR trap below must also fire inside functions (python_deps)
 
 # The overrides exist to exercise this script in a sandbox checkout.
 APP_DIR=${EDGE_TICKER_DIR:-/opt/edge-ticker}

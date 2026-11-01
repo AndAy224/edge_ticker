@@ -61,6 +61,8 @@ export class WeatherAlertOverlay {
     this.active = true;
     this.onOpenChange(true);
     const until = untilTime(alert.ends);
+    // NWS severity (Extreme/Severe), for themes that pace the card by it
+    this.el.dataset.severity = String(alert.severity ?? "");
     this.el.classList.remove("hidden");
     this.el.innerHTML = `<div class="wxalert-card">
       <div class="wxalert-icon">${WEATHER_ICONS.warning}</div>

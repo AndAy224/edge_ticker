@@ -86,7 +86,7 @@ modules:
     league_id: ""         # ESPN league id (from the league URL); required to run
     team_id: null         # your team id (int); or set team_name for a fuzzy match
     team_name: ""
-    season: null          # defaults to the current year
+    season: null          # null: the NFL season in play (Aug–Jul), not the calendar year
     poll_seconds_live: 30
     poll_seconds_idle: 1800
     auto_feature: true    # full-screen takeover + pin while my matchup is live

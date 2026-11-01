@@ -212,3 +212,35 @@ def test_changed_paths_root_and_limit():
     new = {f"k{i:02}": -i - 1 for i in range(20)}
     assert changed_paths(old, new) == [f"k{i:02}" for i in range(8)]
     assert len(changed_paths(old, new, limit=3)) == 3
+
+
+@pytest.mark.parametrize(
+    "key, value, message",
+    [
+        ("lights", [{"entity": "light.porch"}], "ha.lights must be a list of entity ids"),
+        ("scenes", "scene.movie", "ha.scenes must be a list of entity ids"),
+        ("climate", ["climate.home"], "ha.climate must be one entity id or null"),
+        ("cameras", [42], "ha.cameras must be a list of camera entity ids"),
+        ("alerts", {"entity": "lock.front"}, "ha.alerts must be a list"),
+        ("alerts", ["lock.front"], "ha.alerts[0] must be an object"),
+        ("alerts", [{"entity": ["lock.front"]}], "ha.alerts[0].entity must be an entity id"),
+        ("alerts", [{"entity": "lock.front", "cameras": "camera.porch"}],
+         "ha.alerts[0].cameras must be a list of camera entity ids"),
+    ],
+)
+def test_ha_shapes_that_would_break_every_snapshot(defaults_config, key, value, message):
+    # each of these used to save fine and then raise in HABridge._mapped_ids()
+    # (or the takeover matcher) on every WS connect and every state change
+    defaults_config["ha"][key] = value
+    assert validate(defaults_config) == [message]
+
+
+def test_ha_shapes_the_admin_writes(defaults_config):
+    defaults_config["ha"].update(
+        lights=["light.porch"], climate="climate.home", media=None,
+        cameras=["camera.porch", {"entity": "camera.drive", "label": "Drive"}],
+        alerts=[{"entity": "lock.front", "state": "unlocked", "takeover": True,
+                 "cameras": ["camera.porch"]},
+                {"entity": "", "state": ""}],  # a freshly added, still-empty row
+    )
+    assert validate(defaults_config) == []

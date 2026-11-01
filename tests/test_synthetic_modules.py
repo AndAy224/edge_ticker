@@ -243,3 +243,39 @@ def test_moon_phase_reference_dates():
     assert name == "New moon" and illum < 5
     name, illum = moon_phase(datetime(2000, 1, 21, 4, 40, tzinfo=timezone.utc))
     assert name == "Full moon" and illum > 95
+
+
+@pytest.mark.parametrize(
+    "now, season",
+    [
+        (datetime(2026, 12, 31, 23, 0), 2026),
+        (datetime(2027, 1, 2, 9, 0), 2026),  # championship week
+        (datetime(2027, 7, 31, 23, 0), 2026),
+        (datetime(2027, 8, 1, 0, 30), 2027),
+    ],
+)
+def test_fantasy_season_follows_the_nfl_calendar(now, season):
+    from backend.collectors.fantasy import current_season
+
+    assert current_season(now) == season
+
+
+async def test_fantasy_falls_back_a_season_before_the_league_renews(
+    defaults_config, http, monkeypatch
+):
+    from backend.collectors import fantasy as fantasy_module
+
+    monkeypatch.setattr(fantasy_module, "_now", lambda: datetime(2027, 8, 3, 12, 0))
+    defaults_config["modules"]["fantasy"].update(league_id="12345", team_id=1)
+    collector = FantasyCollector(defaults_config)
+    assert collector.season == 2027
+
+    def handler(request):
+        if "/seasons/2027/" in request.url.path:
+            return httpx.Response(404)
+        return httpx.Response(200, json=LEAGUE if "/segments/" in request.url.path else {})
+
+    http.handler = handler
+    await collector.fetch()
+    assert collector.season == 2026
+    assert any("/seasons/2026/segments/" in r.url.path for r in http.requests)

@@ -1,7 +1,9 @@
 // Full-screen camera takeover: a theme-aware alert entrance, then a wall of
 // live camera tiles, a pulsing banner with a countdown, and auto-dismiss.
 // Reusable for any `camera_alert` producer (HA doors, motion, doorbell) —
-// everything alert-specific arrives in the event.
+// everything alert-specific arrives in the event. An event with no cameras but
+// a `message` (POST /api/notify, kind "takeover") shows that text in place of
+// the wall, with the same entrance, banner, countdown and priority rules.
 //
 // Each tile shows one still snapshot at once, then plays WebRTC from Home
 // Assistant's go2rtc over it (the camera's own H.264 at 20-30 fps; signalling
@@ -109,7 +111,7 @@ export class CameraAlertOverlay {
   }
 
   show(event: CameraAlertEvent): void {
-    if (!event?.cameras?.length) return;
+    if (!event?.cameras?.length && !event?.message) return;
     if (this.isBlanked()) {
       // Waking is a per-event decision, not a display policy: a quiet
       // "package delivered" sets wake:false and stays suppressed.
@@ -162,10 +164,8 @@ export class CameraAlertOverlay {
     this.endsAt = Date.now() + seconds * 1000;
 
     this.el.dataset.severity = event.severity ?? "alert";
-    this.el.style.setProperty(
-      "--calert-cols",
-      String(Math.min(event.cameras.length, 4)),
-    );
+    const cameras = event.cameras ?? [];
+    this.el.style.setProperty("--calert-cols", String(Math.max(1, Math.min(cameras.length, 4))));
     this.el.classList.remove("hidden");
     this.el.classList.add("alert-takeover", "alert-entering");
     this.el.innerHTML = `<div class="alert-flash" aria-hidden="true"></div>
@@ -175,17 +175,23 @@ export class CameraAlertOverlay {
         ${event.subtitle ? `<span class="calert-sub">${esc(event.subtitle)}</span>` : ""}
         <span class="calert-count">${seconds}</span>
       </div>
-      <div class="calert-wall">${event.cameras
-        .slice(0, 4)
-        .map(
-          (c) => `<div class="calert-tile" data-cam="${esc(c.id)}">
+      ${
+        cameras.length
+          ? `<div class="calert-wall">${cameras
+              .slice(0, 4)
+              .map(
+                (c) => `<div class="calert-tile" data-cam="${esc(c.id)}">
           <video class="calert-feed calert-video" muted autoplay playsinline></video>
           <img class="calert-feed" alt="">
           <div class="calert-tile-label">${esc(c.label)}</div>
           <div class="calert-tile-state">connecting…</div>
         </div>`,
-        )
-        .join("")}</div>
+              )
+              .join("")}</div>`
+          : `<div class="calert-wall calert-notice"><div class="calert-notice-text">${esc(
+              event.message,
+            )}</div></div>`
+      }
       <div class="calert-progress"></div>`;
 
     // Feeds start now, not after the entrance — otherwise the first second of

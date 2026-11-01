@@ -135,7 +135,10 @@ export const THEMES: Record<string, Theme> = {
       // colour: rust is a frame colour here, so a loss cannot read as rust
       "--up": "#5fc79a",
       "--down": "#e0596b",
-      "--alert": "#d9a441",
+      // yellow alert, not the gold block (#d9a441, which this used to equal):
+      // ΔE 16 from the gold and 21 from the khaki pill, so a live row, a stale
+      // dot or a warning on the tape no longer matches the chrome around it
+      "--alert": "#f5dc5a",
       "--accent": "#7fa8d8",
       // same reason as lcars: chart gridlines stroke with it
       "--line": "#2c3a4d",

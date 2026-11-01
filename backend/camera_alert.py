@@ -43,8 +43,8 @@ def camera_token(entity_id: str) -> str:
 def _camera_entity(item) -> str | None:
     """Accept either a bare entity_id or a {entity, label} dict.
 
-    Config is authored by hand and by the admin GUI, and `PUT /api/config`
-    validates nothing — so tolerate both shapes and reject everything else.
+    Config is authored by hand and by the admin GUI, and both shapes are in
+    use (`config_check` accepts either) — so tolerate both, reject the rest.
     """
     eid = item.get("entity") if isinstance(item, dict) else item
     if isinstance(eid, str) and eid.startswith("camera."):
@@ -112,8 +112,12 @@ class CameraAlertHub:
         wake: bool = True,
         transport: str = "stream",
         cooldown_seconds: float = DEFAULT_COOLDOWN_SECONDS,
+        message: str | None = None,
     ) -> dict | None:
-        """Broadcast a takeover. Returns None (never raises) if suppressed."""
+        """Broadcast a takeover. Returns None (never raises) if suppressed.
+
+        Camera-less takeovers (POST /api/notify) carry a `message` instead,
+        which the display shows where the camera wall would be."""
         now = time.monotonic()
         if cooldown_seconds > 0:
             last = self._fired_at.get(key)
@@ -131,7 +135,7 @@ class CameraAlertHub:
             tiles.append({"id": camera_token(eid), "label": label or self.friendly_name(eid)})
             if len(tiles) >= MAX_CAMERAS:
                 break
-        if not tiles:
+        if not tiles and not message:
             log.info("camera alert %s has no usable cameras — not firing", key)
             return None
 
@@ -150,6 +154,8 @@ class CameraAlertHub:
             "issued_at": datetime.now(timezone.utc).isoformat(),
             "cameras": tiles,
         }
+        if message:
+            event["message"] = str(message)
         await self.bus.broadcast({"type": "camera_alert", "event": event})
         log.info(
             "camera alert: %s (%d cameras, %ds)",
@@ -182,8 +188,10 @@ class CameraAlertHub:
         for alert in ha.get("alerts") or []:
             if not isinstance(alert, dict) or alert.get("entity") != entity_id:
                 continue
+            # continue, not return: one entity can carry several alerts (a
+            # jammed-lock tape item next to an unlocked takeover), in any order
             if not alert.get("takeover") or new != alert.get("state"):
-                return
+                continue
             name = self.friendly_name(entity_id)
             await self.fire(
                 key=f"ha:{entity_id}",

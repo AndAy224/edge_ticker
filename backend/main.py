@@ -43,6 +43,7 @@ from .api.control import router as control_router  # noqa: E402
 from .api.fantasy import router as fantasy_router  # noqa: E402
 from .api.ha import router as ha_router  # noqa: E402
 from .api.markets import router as markets_router  # noqa: E402
+from .api.notify import router as notify_router  # noqa: E402
 from .api.sports import router as sports_router  # noqa: E402
 from .camera_alert import CameraAlertHub  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
@@ -138,6 +139,7 @@ app.include_router(control_router, prefix="/api")
 app.include_router(fantasy_router, prefix="/api")
 app.include_router(ha_router, prefix="/api")
 app.include_router(markets_router, prefix="/api")
+app.include_router(notify_router, prefix="/api")
 app.include_router(sports_router, prefix="/api")
 app.include_router(ws_router)
 

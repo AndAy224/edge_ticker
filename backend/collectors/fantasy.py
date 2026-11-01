@@ -15,7 +15,7 @@ import logging
 import math
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import httpx
 
@@ -67,6 +67,20 @@ UNAVAILABLE = {"OUT", "D", "SUS", "IR"}
 # auth-free, changes rarely → cached. Shared by the collector and the API.
 _PRO_TTL_SECONDS = 6 * 3600.0
 _pro_cache: dict[int, tuple[float, dict]] = {}
+
+
+def _now() -> datetime:
+    return datetime.now()  # host-local: only the month matters below
+
+
+def current_season(now: datetime | None = None) -> int:
+    """The season ESPN files a league under is the year its NFL season kicks
+    off — and the fantasy playoffs run into January. Taking the calendar year
+    sent every restart after New Year's Eve to a league that doesn't exist yet,
+    through championship week. January–July still show the season just played;
+    August is when leagues renew and draft."""
+    now = now or _now()
+    return now.year if now.month >= 8 else now.year - 1
 
 
 async def pro_teams(season: int) -> dict:
@@ -158,9 +172,8 @@ class FantasyCollector(Collector):
         self.league_id = str(self.module_config.get("league_id", "") or "").strip()
         self.team_id = self.module_config.get("team_id")
         self.team_name = str(self.module_config.get("team_name", "") or "").strip().lower()
-        self.season = int(
-            self.module_config.get("season") or datetime.now(timezone.utc).year
-        )
+        self._season_pinned = self.module_config.get("season")  # null: follow the calendar
+        self.season = int(self._season_pinned or current_season())
         self.live_interval = float(self.module_config.get("poll_seconds_live", 30))
         self.idle_interval = float(self.module_config.get("poll_seconds_idle", 1800))
         self.interval = self.idle_interval
@@ -192,9 +205,20 @@ class FantasyCollector(Collector):
             raise RuntimeError("fantasy: league_id is not configured")
         client = self._get_client()
         params = [("view", v) for v in VIEWS]
+        # Re-derived every poll, so a long-running collector rolls over in August.
+        self.season = int(self._season_pinned or current_season())
         response = await client.get(
             LEAGUE_URL.format(season=self.season, league_id=self.league_id), params=params
         )
+        if response.status_code == 404 and not self._season_pinned:
+            # Early August, before the league manager renews: last season's
+            # final standings beat a stale module.
+            response = await client.get(
+                LEAGUE_URL.format(season=self.season - 1, league_id=self.league_id),
+                params=params,
+            )
+            if response.status_code != 404:
+                self.season -= 1
         if response.status_code == 401:
             raise RuntimeError("fantasy: 401 — private league needs ESPN_S2/ESPN_SWID cookies")
         response.raise_for_status()

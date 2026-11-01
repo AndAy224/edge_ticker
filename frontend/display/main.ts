@@ -29,6 +29,7 @@ import { WEATHER_ICONS, weatherIcon } from "./icons";
 import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
 import { isOutdated, reloadOnto } from "../shared/build";
 
+const stageSection = document.getElementById("stage")!;
 const stageEl = document.getElementById("stage-content")!;
 const dotsEl = document.getElementById("page-dots")!;
 const pinBadge = document.getElementById("pin-badge")!;
@@ -264,10 +265,12 @@ function handleMessage(msg: any): void {
         if (network) autoFeatureNetwork(network);
       }
       updateScoreChip();
+      applyCondition();
       break;
     case "module": {
       const payload: ModulePayload = msg.payload;
       modules.set(payload.module, payload);
+      applyCondition();
       if (payload.module === "weather") {
         renderWeather();
         setLaunchSun((payload.stage as any)?.sun ?? null);
@@ -308,6 +311,7 @@ function handleMessage(msg: any): void {
       // The collector stopped (module disabled): drop its data rather than
       // leave e.g. an expired warning on the tape until the next reload.
       modules.delete(msg.module);
+      applyCondition();
       if (msg.module === "weather_alerts") {
         setWeatherAlerts([]);
         setRadarWarnings([]);
@@ -333,6 +337,16 @@ function handleMessage(msg: any): void {
     case "weather_alert":
       weatherAlert.show(msg.alert);
       break;
+    case "notify": {
+      // POST /api/notify with kind "toast" (takeovers arrive as camera_alert).
+      const n = msg.notice ?? {};
+      const text = n.message ? `${n.title} · ${n.message}` : String(n.title ?? "");
+      if (text) {
+        showToast(text, n.severity !== "info", (Number(n.duration_seconds) || 8) * 1000,
+          n.severity === "critical");
+      }
+      break;
+    }
     case "webrtc":
       cameraAlert.onWebrtc(msg);
       break;
@@ -376,25 +390,31 @@ const rotation = {
   index: 0,
   pinned: false,
   timer: 0,
+  tickAt: 0, // performance.now() of the last interval tick (or reschedule)
 
   current(): string | undefined {
     return this.order[this.index];
   },
   schedule(): void {
     clearInterval(this.timer);
-    // Floored: a 0 here (a cleared admin field) rotated as fast as setInterval allows.
-    const seconds = Math.max(5, Number(config.rotation?.interval_seconds) || 25);
+    this.tickAt = performance.now();
     this.timer = window.setInterval(() => {
-      if (
-        !this.pinned &&
-        !overlay.isOpen() &&
-        !blanked &&
-        !anyDetailOpen() &&
-        !takeoverOpen()
-      ) {
-        this.next();
-      }
-    }, seconds * 1000);
+      this.tickAt = performance.now();
+      if (this.advancing()) this.next();
+      syncCountdown(true);
+    }, rotationSeconds() * 1000);
+    syncCountdown(true);
+  },
+  /** Whether the next tick will move the stage on. */
+  advancing(): boolean {
+    return (
+      !this.pinned &&
+      !overlay.isOpen() &&
+      !blanked &&
+      !anyDetailOpen() &&
+      !takeoverOpen() &&
+      this.order.length > effectivePaneCount()
+    );
   },
   next(): void {
     // No-op when every module is already visible; re-evaluated per tick so
@@ -419,6 +439,43 @@ const rotation = {
     reportDisplayState();
   },
 };
+
+function rotationSeconds(): number {
+  // Floored: a 0 here (a cleared admin field) rotated as fast as setInterval allows.
+  return Math.max(5, Number(config.rotation?.interval_seconds) || 25);
+}
+
+// ---- Rotation countdown ---------------------------------------------------------
+// Themes that draw the time left until the next rotation (sovereign lights its
+// bar ladder) read three things off #stage: data-rot-counting while the next
+// tick will actually advance, and --rot-ms / --rot-delay for one CSS animation
+// over the interval (the delay is negative: how far into it we already are).
+// Nothing here is per-frame — the animation is the theme's. The restart drops
+// the attribute and puts it back a frame later rather than forcing a style
+// recalc: the tick has just appended `.enter` layers that must never be
+// observed in computed style (see crossfade).
+let countdownFrame = 0;
+function syncCountdown(restart = false): void {
+  const counting = rotation.advancing();
+  const on = stageSection.dataset.rotCounting !== undefined;
+  cancelAnimationFrame(countdownFrame);
+  if (!counting) {
+    if (on) delete stageSection.dataset.rotCounting;
+    return;
+  }
+  if (on && !restart) return;
+  if (on) delete stageSection.dataset.rotCounting;
+  countdownFrame = requestAnimationFrame(() => {
+    if (!rotation.advancing()) return;
+    const elapsed = Math.max(0, performance.now() - rotation.tickAt);
+    stageSection.style.setProperty("--rot-ms", `${rotationSeconds() * 1000}ms`);
+    stageSection.style.setProperty("--rot-delay", `${-Math.round(elapsed)}ms`);
+    stageSection.dataset.rotCounting = "";
+  });
+}
+// Pin, details, overlays, takeovers and blanking all stop the clock; they are
+// set from a dozen places, so the countdown catches up with them here instead.
+setInterval(() => syncCountdown(), 1000);
 
 function applyConfig(): void {
   applyAppearance();
@@ -658,7 +715,11 @@ function quietRefresh(
 
 function renderDots(): void {
   // Hidden when rotation can't advance (everything is already visible).
-  dotsEl.classList.toggle("hidden", rotation.order.length <= effectivePaneCount());
+  const hidden = rotation.order.length <= effectivePaneCount();
+  dotsEl.classList.toggle("hidden", hidden);
+  // For themes that lay chrome out around the dots (sovereign's bar keeps its
+  // ladder clear of the plinth, which grows 20px per module).
+  stageSection.style.setProperty("--dot-count", String(hidden ? 0 : rotation.order.length));
   dotsEl.innerHTML = rotation.order
     .map((_, i) => `<span class="dot ${i === rotation.index ? "active" : ""}"></span>`)
     .join("");
@@ -855,16 +916,20 @@ const STATE_VERBS: Record<string, string> = {
   locked: "locked",
 };
 
-function showToast(text: string, isAlert: boolean): void {
+function showToast(text: string, isAlert: boolean, ms = 8000, critical = false): void {
   if (blanked) return;
   clearTimeout(toastTimer);
-  toastEl.className = `toast-show ${isAlert ? "toast-alert" : ""}`;
+  toastEl.className = `toast-show ${isAlert ? "toast-alert" : ""} ${critical ? "toast-critical" : ""}`;
   toastEl.textContent = text;
   toastTimer = window.setTimeout(() => {
     toastEl.classList.remove("toast-show");
     toastTimer = window.setTimeout(() => toastEl.classList.add("hidden"), 400);
-  }, 8000);
+  }, ms);
 }
+
+// Debug/test hook: a notify toast without the backend (same shape as the WS message).
+(window as any).__notify = (notice: any) =>
+  handleMessage({ type: "notify", notice });
 
 function haTransitionToast(entityId: string, previous: string | undefined, state: string): void {
   if (previous === undefined || previous === state) return; // first sighting / no change
@@ -984,7 +1049,8 @@ function updateScoreChip(): void {
 // screenshotting stress payloads). Modules with auto-feature side effects
 // (sports, fantasy) have dedicated hooks below.
 (window as any).__modfake = (id: string, stage: any) => {
-  modules.set(id, { module: id, stage, tape: [] } as any);
+  modules.set(id, { module: id, stage, tape: [], updated_at: new Date().toISOString() } as any);
+  applyCondition();
   rebuildTape();
   renderStage();
 };
@@ -1047,9 +1113,89 @@ function tickClock(): void {
     month: "long",
     day: "numeric",
   });
+  dateEl.dataset.stardate = stardate(now);
+  applyCondition(); // stale data ages into a yellow alert without a new message
 }
+
+/** TNG's own real-world mapping: season one (1987) is stardate 41xxx and every
+ *  year adds a thousand, which puts First Contact's 50893.5 within days of the
+ *  film's November 1996 premiere. Themes may show it (sovereign's rail does). */
+function stardate(now: Date): string {
+  const year = now.getFullYear();
+  const start = new Date(year, 0, 1).getTime();
+  const end = new Date(year + 1, 0, 1).getTime();
+  return ((year - 1946) * 1000 + ((now.getTime() - start) / (end - start)) * 1000).toFixed(1);
+}
+
+/** How old the data behind each pane is, on its header as data-age (themes that
+ *  show pane headers may print it). Two digits and a unit, so the label's width
+ *  only changes when the unit does. */
+function dataAge(updatedAt: string | undefined, now: number): string {
+  const t = updatedAt ? Date.parse(updatedAt) : NaN;
+  if (Number.isNaN(t)) return "";
+  const s = Math.max(0, Math.floor((now - t) / 1000));
+  const two = (n: number) => String(Math.min(n, 99)).padStart(2, "0");
+  if (s < 60) return `${two(s)}S`;
+  if (s < 3600) return `${two(Math.floor(s / 60))}M`;
+  if (s < 172_800) return `${two(Math.floor(s / 3600))}H`;
+  return `${two(Math.floor(s / 86_400))}D`;
+}
+
+function tickAges(): void {
+  const now = Date.now();
+  for (let i = 0; i < paneEls.length; i++) {
+    const header = paneEls[i].querySelector<HTMLElement>(".pane-header");
+    if (!header) continue;
+    const id = paneModule(i);
+    const age = dataAge(id ? modules.get(id)?.updated_at : undefined, now);
+    if (header.dataset.age !== age) header.dataset.age = age;
+  }
+}
+
+// ---- Alert condition ------------------------------------------------------------
+// One word for "is something wrong", on <html> as data-condition, for themes
+// that dress the frame for it (sovereign's yellow and red alert). Red is the
+// bar the weather takeover uses: a severe or extreme NWS warning for home.
+// Yellow: a lesser warning or any watch, home inside a forecast cone, the
+// network on its backup WAN (or down), or a rotation module whose data has
+// been stale for ten minutes — long enough that one failed poll doesn't count.
+const STALE_CONDITION_MS = 10 * 60_000;
+
+function alertCondition(): "red" | "yellow" | null {
+  let level: "yellow" | null = null;
+  for (const a of ((modules.get("weather_alerts")?.stage as any)?.alerts ?? []) as any[]) {
+    const event = String(a?.event ?? "").toLowerCase();
+    const warning = event.includes("warning");
+    if (warning && (a.severity === "Extreme" || a.severity === "Severe")) return "red";
+    if (warning || event.includes("watch")) level = "yellow";
+  }
+  if (level) return level;
+  const net = modules.get("opnsense")?.stage as any;
+  if (net?.failover || net?.offline) return "yellow";
+  if ((modules.get("hurricanes")?.stage as any)?.threat) return "yellow";
+  const now = Date.now();
+  for (const id of rotation.order) {
+    const p = modules.get(id);
+    if (p?.stale && now - Date.parse(p.updated_at) > STALE_CONDITION_MS) return "yellow";
+  }
+  return null;
+}
+
+function applyCondition(): void {
+  const root = document.documentElement;
+  const level = alertCondition();
+  if (level) {
+    if (root.dataset.condition !== level) root.dataset.condition = level;
+  } else if (root.dataset.condition !== undefined) {
+    delete root.dataset.condition;
+  }
+}
+
 tickClock();
-setInterval(tickClock, 1000);
+setInterval(() => {
+  tickClock();
+  if (!blanked) tickAges();
+}, 1000);
 
 // Burn-in mitigation: nudge the rail content a few px every few minutes.
 setInterval(() => {

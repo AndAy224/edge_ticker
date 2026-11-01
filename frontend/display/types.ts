@@ -45,6 +45,8 @@ export interface CameraAlertEvent {
   severity: "info" | "alert" | "critical";
   transport?: "stream" | "snapshot";
   cameras: { id: string; label: string }[];
+  /** A camera-less takeover (POST /api/notify) shows this instead of the wall. */
+  message?: string | null;
   duration_seconds: number;
   wake?: boolean;
   issued_at?: string;

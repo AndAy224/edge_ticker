@@ -3816,7 +3816,9 @@ html[data-idle] *::after {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* safe: a list taller than the side keeps its header and loses the tail,
+     instead of being cut at both ends */
+  justify-content: safe center;
   overflow: hidden;
 }
 
@@ -3952,6 +3954,12 @@ html[data-idle] *::after {
 /* .adsb-header is the list's first child, so child 8 is the 7th row */
 [data-panes="2"] .adsb-row:nth-child(n + 8),
 [data-panes="3"] .adsb-row:nth-child(n + 8) {
+  display: none;
+}
+
+/* Banner's stage is the shortest single pane: the header and seven rows need
+   445px and the side gets 434 in every theme (459 in glance), so it shows six. */
+[data-layout="banner"] .adsb-row:nth-child(n + 8) {
   display: none;
 }
 
@@ -5287,6 +5295,15 @@ html[data-idle] *::after {
   padding-top: 56px;
 }
 
+/* .adsb-radar reserves the full band (it replaces the layer padding), and in
+   banner's short stage that cut the flight list at both ends: take banner's
+   56px instead and give back the bottom padding, which is the room the
+   default themes have. */
+[data-theme="lcars"][data-layout="banner"] .adsb-radar {
+  padding-top: 56px;
+  padding-bottom: 0;
+}
+
 [data-theme="lcars"][data-layout="banner"] .pane-header {
   top: 12px;
   box-shadow: none; /* free-floating pill — there is no bar to sit on */
@@ -5313,9 +5330,15 @@ html[data-idle] *::after {
   width: 760px; /* no rail-width to track — the rail is the whole screen */
 }
 
-/* same specificity tie as banner above — restore zen's giant readout */
+/* same specificity tie as banner above — restore zen's giant readout, and
+   the date beside it: the base [data-theme] #date rule beats the layout's 34px
+   on order too */
 [data-theme="lcars"][data-layout="zen"] #clock {
   font-size: 190px;
+}
+
+[data-theme="lcars"][data-layout="zen"] #date {
+  font-size: 34px;
 }
 
 [data-theme="lcars"][data-layout="zen"] #rail {
@@ -5490,6 +5513,9 @@ html[data-idle] *::after {
   --sv-gold: #d9a441;
   --sv-ice: #a8c8e8;
   --sv-shadow: #2a3a52;
+  /* the signal red of red alert (camera and weather takeovers, condition red);
+     yellow alert is --alert itself, which themes.ts keeps clear of the gold */
+  --sv-red: #c8452f;
   --sv-font: "Antonio", "Inter", "Segoe UI", system-ui, sans-serif;
 
   --sv-col: 112px; /* sidebar column = the elbow's vertical arm */
@@ -5504,6 +5530,7 @@ html[data-idle] *::after {
      two together are the only numbers that set its rhythm. */
   --sv-seg: 6px;
   --sv-seg-gap: 11px;
+  --sv-ladder-n: 24; /* segments in a pane ladder: its width is n periods */
 
   /* module swap: the same hard wipe as lcars, led by a gold band instead of an
      orange one. --stage-exit-ms must exceed --sv-swap or main.ts pulls the
@@ -5596,9 +5623,11 @@ html[data-idle] *::after {
   color: var(--sv-khaki);
 }
 
-/* registry plus block code — movie panels group their numbers */
+/* registry plus the stardate (main.ts, TNG's own mapping of the calendar:
+   First Contact's 50893.5 lands within days of its 1996 premiere). The short
+   "SD" is what fits the 380px split rail. */
 [data-theme="sovereign"] #date::after {
-  content: "NCC-1701-E · LCARS 47-2311";
+  content: "NCC-1701-E · SD " attr(data-stardate);
   display: block;
   margin-top: 4px;
   font-size: 0.7em;
@@ -5633,13 +5662,21 @@ html[data-idle] *::after {
   border-left: var(--sv-gap) solid var(--bg);
 }
 
+/* How far #page-dots' plinth reaches past the 280px deep block it sits on. The
+   plinth is 20px per module plus 34px of padding and inset (main.ts publishes
+   --dot-count on #stage, 0 while the dots are hidden), and 6px of air. Every
+   stop right of the pill moves left by this much, so the ladder can never run
+   under the plinth: up to 12 modules it is 0 and nothing moves. */
+[data-theme="sovereign"] #stage {
+  --sv-o: max(0px, calc(var(--dot-count, 0) * 20px + 40px - 280px));
+}
+
 /* Right-anchored stops, same reasoning as lcars: the label pill is left-anchored
    and its width varies with the module name, so the fixed run stays at the RIGHT
    and the pill always lands on one uniform steel block.
    The 280..572 window is deliberately left as ground — that is where ::after
    paints the ladder, and the deep block outboard of it is what #page-dots sits
-   on (a 12-module rotation's plinth reaches ~254px, so it never touches the
-   segments). */
+   on. */
 [data-theme="sovereign"] .stage-pane::before {
   content: "";
   position: absolute;
@@ -5653,43 +5690,73 @@ html[data-idle] *::after {
   z-index: 3; /* under .pane-header (4), dots/pin/chip (5), score-chip (6) */
   background: linear-gradient(
     to left,
-    var(--sv-deep) 0 280px,
-    var(--bg) 280px 572px,
-    var(--sv-gold) 572px 636px,
-    var(--bg) 636px 644px,
-    var(--sv-khaki) 644px 930px,
-    var(--bg) 930px 938px,
-    var(--sv-slate) 938px 1210px,
-    var(--bg) 1210px 1218px,
-    var(--sv-steel) 1218px 100%
+    var(--sv-deep) 0 calc(280px + var(--sv-o)),
+    var(--bg) calc(280px + var(--sv-o)) calc(572px + var(--sv-o)),
+    var(--sv-gold) calc(572px + var(--sv-o)) calc(636px + var(--sv-o)),
+    var(--bg) calc(636px + var(--sv-o)) calc(644px + var(--sv-o)),
+    var(--sv-khaki) calc(644px + var(--sv-o)) calc(930px + var(--sv-o)),
+    var(--bg) calc(930px + var(--sv-o)) calc(938px + var(--sv-o)),
+    var(--sv-slate) calc(938px + var(--sv-o)) calc(1210px + var(--sv-o)),
+    var(--bg) calc(1210px + var(--sv-o)) calc(1218px + var(--sv-o)),
+    var(--sv-steel) calc(1218px + var(--sv-o)) 100%
   );
 }
 
-/* the ladder run inside the bar. .stage-pane::after is used by no other theme */
+/* The ladder run inside the bar, which doubles as the rotation clock: while the
+   next tick will advance the stage (#stage[data-rot-counting], main.ts), its
+   segments light one by one over the interval and go dark again at the swap.
+   Lit is the steel the ladder has always been, so a pinned or paused stage
+   looks exactly as it did before there was a clock. Two layers — the lit run
+   over the dark one — and the lit layer's width steps a whole segment at a
+   time, so the run is a whole number of periods and it repaints ~24 times per
+   interval rather than every frame. .stage-pane::after is used by no other
+   theme. */
 [data-theme="sovereign"] .stage-pane::after {
   content: "";
   position: absolute;
   box-sizing: border-box;
   top: 0;
-  right: 300px;
-  width: 260px;
+  right: calc(300px + var(--sv-o));
+  width: calc(var(--sv-ladder-n) * var(--sv-seg-gap));
   height: var(--sv-bar);
   z-index: 3;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    to right,
-    var(--sv-steel) 0 var(--sv-seg),
-    transparent var(--sv-seg) var(--sv-seg-gap)
-  );
+  background:
+    repeating-linear-gradient(
+        to right,
+        var(--sv-steel) 0 var(--sv-seg),
+        transparent var(--sv-seg) var(--sv-seg-gap)
+      )
+      left top / 100% 100% no-repeat,
+    repeating-linear-gradient(
+      to right,
+      var(--sv-shadow) 0 var(--sv-seg),
+      transparent var(--sv-seg) var(--sv-seg-gap)
+    );
+}
+
+[data-theme="sovereign"] #stage[data-rot-counting] .stage-pane::after {
+  animation: sv-count var(--rot-ms, 25000ms) steps(var(--sv-ladder-n), jump-none)
+    var(--rot-delay, 0ms) both;
+}
+
+/* first segment lit at once, the last one a step before the swap */
+@keyframes sv-count {
+  from {
+    background-size:
+      calc(100% / var(--sv-ladder-n)) 100%,
+      auto;
+  }
+  to {
+    background-size:
+      100% 100%,
+      auto;
+  }
 }
 
 /* Narrow panes: a short run, and the ladder moves INBOARD of the gold block
-   rather than staying at the tail. #page-dots always sits over the last pane,
-   and its plinth is ~194px wide at nine modules — at the tail the segments would
-   run under it and read as a rendering fault, where sitting on the flat deep
-   block is the case lcars already designs for. A rotation past ten modules
-   starts eating the gold block here, which is the same tail budget lcars
-   documents at :3660. */
+   rather than staying at the tail. The panes without the dots keep that
+   layout as it always was. */
 [data-theme="sovereign"][data-panes="2"] .stage-pane::before,
 [data-theme="sovereign"][data-panes="3"] .stage-pane::before {
   background: linear-gradient(
@@ -5702,12 +5769,33 @@ html[data-idle] *::after {
   );
 }
 
-/* 341px of steel left under the pill in a 741px pane — enough for the longest
-   label ("AIR QUALITY · 4471-C") to stay on one uniform block. */
 [data-theme="sovereign"][data-panes="2"] .stage-pane::after,
 [data-theme="sovereign"][data-panes="3"] .stage-pane::after {
+  --sv-ladder-n: 11;
   right: 268px;
-  width: 124px;
+}
+
+/* #page-dots always sits over the LAST pane, and a narrow pane has no room to
+   slide the run left of a 13-module plinth (~294px) and still leave the label
+   its steel. So that pane gives up its ladder — the dots already say where the
+   rotation is, and the other panes' ladders keep the clock — and the deep block
+   grows under the plinth instead, gold and steel moving out with it. */
+[data-theme="sovereign"][data-panes="2"] .stage-pane:last-child::after,
+[data-theme="sovereign"][data-panes="3"] .stage-pane:last-child::after {
+  display: none;
+}
+
+[data-theme="sovereign"][data-panes="2"] .stage-pane:last-child::before,
+[data-theme="sovereign"][data-panes="3"] .stage-pane:last-child::before {
+  --sv-dock: max(200px, calc(var(--dot-count, 0) * 20px + 40px));
+  background: linear-gradient(
+    to left,
+    var(--sv-deep) 0 var(--sv-dock),
+    var(--bg) var(--sv-dock) calc(var(--sv-dock) + 8px),
+    var(--sv-gold) calc(var(--sv-dock) + 8px) calc(var(--sv-dock) + 58px),
+    var(--bg) calc(var(--sv-dock) + 58px) calc(var(--sv-dock) + 66px),
+    var(--sv-steel) calc(var(--sv-dock) + 66px) 100%
+  );
 }
 
 /* the bar runs to the screen edge on the outside pane */
@@ -5737,19 +5825,14 @@ html[data-idle] *::after {
   box-shadow: var(--sv-gap) 0 0 0 var(--bg);
 }
 
-[data-theme="sovereign"] .stage-pane:nth-child(1) .pane-header::after {
-  content: " · 4471-A";
+/* The suffix is how old the pane's data is (main.ts keeps data-age current:
+   "09S", "04M", "02H", "37D" — two digits, so the pill only resizes when the
+   unit changes). Tabular figures keep it from twitching as the seconds run.
+   A pane still waiting for its first payload has no age and no suffix. */
+[data-theme="sovereign"] .pane-header[data-age]:not([data-age=""])::after {
+  content: " · " attr(data-age);
   opacity: 0.55;
-}
-
-[data-theme="sovereign"] .stage-pane:nth-child(2) .pane-header::after {
-  content: " · 4471-B";
-  opacity: 0.55;
-}
-
-[data-theme="sovereign"] .stage-pane:nth-child(3) .pane-header::after {
-  content: " · 4471-C";
-  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
 }
 
 /* one band reserved once, so no module has to dodge the bar individually.
@@ -5873,11 +5956,13 @@ html[data-idle] *::after {
   padding: 5px 18px;
 }
 
+/* A signal colour, not --sv-rust: rust is the tape cap's frame colour here, so
+   a rust square read as one more piece of chrome. */
 [data-theme="sovereign"] .stale-dot {
   top: calc(var(--sv-bar) + var(--sv-gap) + 12px);
   right: 28px;
   border-radius: 3px;
-  background: var(--sv-rust);
+  background: var(--alert);
   opacity: 1;
 }
 
@@ -5948,6 +6033,12 @@ html[data-idle] *::after {
 [data-theme="sovereign"][data-layout="rail-right"] #rail::after {
   left: auto;
   right: 0;
+}
+
+/* The bar butts square against the elbow and rounds off at the far end, as in
+   rail-left — here the elbow is on the right. The pill covers the left end. */
+[data-theme="sovereign"][data-layout="rail-right"] .stage-pane:first-child::before {
+  border-radius: var(--sv-cap) 0 0 var(--sv-cap);
 }
 
 /* ---- split: 380px rail needs a narrower column ---- */
@@ -6024,7 +6115,7 @@ html[data-idle] *::after {
   background-position: left top;
   background-image: linear-gradient(
     to right,
-    var(--sv-slate) 0 var(--sv-col),
+    var(--sv-lead, var(--sv-slate)) 0 var(--sv-col),
     var(--bg) var(--sv-col) calc(var(--sv-col) + 8px),
     var(--sv-steel) calc(var(--sv-col) + 8px) 1640px,
     var(--bg) 1640px 1648px,
@@ -6101,9 +6192,15 @@ html[data-idle] *::after {
   width: 680px; /* no rail-width to track — the rail is the whole screen */
 }
 
-/* same specificity tie as banner above — restore zen's giant readout */
+/* same specificity tie as banner above — restore zen's giant readout, and
+   the date beside it: the base [data-theme] #date rule beats the layout's 34px
+   on order too */
 [data-theme="sovereign"][data-layout="zen"] #clock {
   font-size: 190px;
+}
+
+[data-theme="sovereign"][data-layout="zen"] #date {
+  font-size: 34px;
 }
 
 [data-theme="sovereign"][data-layout="zen"] #rail {
@@ -6142,6 +6239,66 @@ html[data-idle] *::after {
   );
 }
 
+/* ---- alert condition ----
+   main.ts sets data-condition on <html> (yellow: a watch, failover, a cone,
+   stale data; red: a severe NWS warning for home). The frame's lead pieces take
+   the condition colour — the elbow (or the clock cap in focus/mosaic, the strip's
+   lead block in banner) and the tape cap, which also says so. Everything else
+   stays put: a condition can last hours, and it has to read as a state of the
+   ship, not as an alarm going off. Red breathes, slowly. */
+[data-theme="sovereign"][data-condition="yellow"] {
+  --sv-cond: var(--alert);
+  --sv-cond-label: "CONDITION YELLOW";
+}
+
+[data-theme="sovereign"][data-condition="red"] {
+  --sv-cond: var(--sv-red);
+  --sv-cond-label: "RED ALERT";
+}
+
+[data-theme="sovereign"][data-condition] #app::before {
+  border-color: var(--sv-cond);
+}
+
+[data-theme="sovereign"][data-condition][data-layout="focus"] #app::before,
+[data-theme="sovereign"][data-condition][data-layout="mosaic"] #app::before {
+  background: var(--sv-cond);
+}
+
+[data-theme="sovereign"][data-condition][data-layout="banner"] #rail {
+  --sv-lead: var(--sv-cond);
+}
+
+[data-theme="sovereign"][data-condition] #tape::before {
+  content: var(--sv-cond-label);
+  background: var(--sv-cond);
+}
+
+/* The breath is a colour, not opacity: the tape cap has to stay opaque or the
+   items it hides scroll visibly through it. Border for the elbow, fill for the
+   caps. */
+[data-theme="sovereign"][data-condition="red"] #app::before {
+  animation: sv-condition-red-edge 2.4s ease-in-out infinite;
+}
+
+[data-theme="sovereign"][data-condition="red"] #tape::before,
+[data-theme="sovereign"][data-condition="red"][data-layout="focus"] #app::before,
+[data-theme="sovereign"][data-condition="red"][data-layout="mosaic"] #app::before {
+  animation: sv-condition-red-fill 2.4s ease-in-out infinite;
+}
+
+@keyframes sv-condition-red-edge {
+  50% {
+    border-color: color-mix(in srgb, var(--sv-red) 55%, var(--bg));
+  }
+}
+
+@keyframes sv-condition-red-fill {
+  50% {
+    background-color: color-mix(in srgb, var(--sv-red) 55%, var(--bg));
+  }
+}
+
 /* ---- module surfaces: flat cards with a colour rule, not bordered boxes ---- */
 
 [data-theme="sovereign"] .quote-hero,
@@ -6173,9 +6330,16 @@ html[data-idle] *::after {
   border-left-color: var(--sv-ice);
 }
 
+/* --alert, not the gold block: a state is a signal, and the gold is frame */
 [data-theme="sovereign"] .sb-row.live,
 [data-theme="sovereign"] .news-row.fresh {
-  border-left-color: var(--sv-gold);
+  border-left-color: var(--alert);
+}
+
+/* same tie as the rows above: the slate rule would repaint an offline node's
+   left edge, leaving the red outline on three sides */
+[data-theme="sovereign"] .pve-card.offline {
+  border-left-color: var(--down);
 }
 
 [data-theme="sovereign"] .ha-tile {
@@ -6195,6 +6359,19 @@ html[data-idle] *::after {
 [data-theme="sovereign"] .adsb-radar,
 [data-theme="sovereign"] .ships-side {
   padding-top: var(--sv-band);
+}
+
+/* banner reserves 46px, not the band — the pill floats and there is no bar.
+   The scope and list also give back most of their bottom padding: banner's
+   stage is the shortest there is, and with the pill's band on top seven flight
+   rows only fit in the room the default themes have. */
+[data-theme="sovereign"][data-layout="banner"] .adsb-radar,
+[data-theme="sovereign"][data-layout="banner"] .ships-side {
+  padding-top: 46px;
+}
+
+[data-theme="sovereign"][data-layout="banner"] .adsb-radar {
+  padding-bottom: 10px;
 }
 
 /* Same story for the quiet-season chip: .hurr-stage is absolute inset:0, so the
@@ -6238,6 +6415,14 @@ html[data-idle] *::after {
   [data-theme="sovereign"] .stage-layer.swap-out {
     opacity: 0;
     transition: opacity 300ms ease;
+  }
+  /* the ladder holds fully lit and the condition holds steady */
+  [data-theme="sovereign"] #stage[data-rot-counting] .stage-pane::after,
+  [data-theme="sovereign"][data-condition="red"] #app::before,
+  [data-theme="sovereign"][data-condition="red"] #tape::before,
+  [data-theme="sovereign"][data-condition="red"][data-layout="focus"] #app::before,
+  [data-theme="sovereign"][data-condition="red"][data-layout="mosaic"] #app::before {
+    animation: none;
   }
 }
 
@@ -7899,6 +8084,18 @@ html[data-idle] *::after {
   color: var(--alert);
 }
 
+#toast.toast-critical {
+  border-color: var(--down);
+  color: var(--down);
+}
+
+/* a notify message can be longer than a door's name */
+#toast {
+  max-width: calc(100% - 160px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- live game tracker (followed game in progress) ---- */
 
 .live-game {
@@ -9077,6 +9274,7 @@ html[data-idle] *::after {
 [data-panes="2"] .radar-time,
 [data-panes="3"] .radar-time {
   top: 44px; /* below the rotation dots */
+  bottom: auto; /* or the base rule's bottom:44px stretches the chip into a full-height column */
   right: 12px;
   font-size: 20px;
   padding: 4px 12px;
@@ -10191,6 +10389,32 @@ html[data-idle] *::after {
   display: none;
 }
 
+/* A camera-less takeover (POST /api/notify): the message where the wall would
+   be. It keeps the .calert-wall class, so every theme's grid placement and
+   entrance apply to it unchanged. */
+.calert-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 140px;
+  background:
+    radial-gradient(ellipse at 50% 45%, var(--alert-wash), transparent 75%),
+    #05070a;
+}
+
+.calert-notice-text {
+  max-width: 2100px;
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--alert-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .calert-progress {
   position: absolute;
   left: 0;
@@ -10340,7 +10564,7 @@ html[data-idle] *::after {
    curve. */
 
 [data-theme="sovereign"] #camera-alert {
-  --sv-alert: #c8452f;
+  --sv-alert: var(--sv-red);
   --alert-edge: var(--sv-alert);
   --alert-wash: rgba(200, 69, 47, 0.66);
   --calert-banner: 60px;
@@ -10464,4 +10688,143 @@ html[data-idle] *::after {
   [data-theme="sovereign"] .alert-entering .calert-wall {
     animation: none;
   }
+}
+
+[data-theme="lcars"] .calert-notice-text {
+  font-family: var(--lc-font);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+[data-theme="sovereign"] .calert-notice-text {
+  font-family: var(--sv-font);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* ---- Sovereign severe-weather takeover --------------------------------------
+   The camera takeover's red-alert frame, so the two read as one machine: the
+   elbow shoulder and banner as one strip with the 8px cut between them, the
+   breathing border (faster for Extreme), and the theme's hard wipe in place of
+   the default pop. The NWS text inside is set in the theme's type, flat — film
+   panels don't glow. */
+[data-theme="sovereign"] #weather-alert {
+  --sv-alert: var(--sv-red);
+  --wx-banner: 60px;
+  background: var(--bg);
+}
+
+[data-theme="sovereign"] #weather-alert::before {
+  content: "RED ALERT · SEVERE WEATHER";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+  left: var(--sv-gap);
+  right: var(--sv-gap);
+  top: var(--sv-gap);
+  height: var(--wx-banner);
+  padding-left: calc(var(--sv-col) + var(--sv-gap) + 22px);
+  line-height: var(--wx-banner);
+  font-family: var(--sv-font);
+  font-size: 34px;
+  letter-spacing: 5px;
+  white-space: nowrap;
+  color: var(--bg);
+  background: linear-gradient(
+    to right,
+    var(--sv-alert) 0 var(--sv-col),
+    transparent var(--sv-col) calc(var(--sv-col) + var(--sv-gap)),
+    var(--sv-alert) calc(var(--sv-col) + var(--sv-gap)) 100%
+  );
+  /* the shoulder's curve is what the camera takeover's 150x76 radius resolves
+     to on its 112x60 shoulder; the banner's far end is the usual cap */
+  border-radius: var(--sv-col) var(--sv-cap) var(--sv-cap) 0 / 56px var(--sv-cap) var(--sv-cap) 0;
+}
+
+[data-theme="sovereign"] #weather-alert::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+  inset: 0;
+  border: var(--sv-gap) solid var(--sv-alert);
+  animation: sv-red-alert 1.8s ease-in-out infinite;
+}
+
+[data-theme="sovereign"] #weather-alert[data-severity="Extreme"]::after {
+  animation-duration: 1.1s;
+}
+
+[data-theme="sovereign"] .wxalert-card {
+  inset: calc(var(--wx-banner) + 2 * var(--sv-gap)) var(--sv-gap) var(--sv-gap);
+  gap: 64px;
+  padding: 0 96px;
+  animation: alert-wipe 520ms var(--sv-swap-ease) both;
+}
+
+[data-theme="sovereign"] .wxalert-icon {
+  width: 240px;
+  height: 240px;
+  color: var(--sv-alert);
+  filter: none;
+  animation: none;
+}
+
+[data-theme="sovereign"] .wxalert-event {
+  font-family: var(--sv-font);
+  font-size: 112px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #ec7a63; /* --sv-red lifted for text: 7.1:1 on the ground */
+  text-shadow: none;
+}
+
+[data-theme="sovereign"] .wxalert-headline {
+  color: var(--text);
+}
+
+[data-theme="sovereign"] .wxalert-meta {
+  font-family: var(--sv-font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sv-khaki);
+}
+
+[data-theme="sovereign"] .wxalert-instruction {
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="sovereign"] #weather-alert::after,
+  [data-theme="sovereign"] .wxalert-card {
+    animation: none;
+  }
+}
+
+/* ---- Sovereign toast: a block-and-bar strip, not a floating card ---- */
+[data-theme="sovereign"] #toast {
+  border: none;
+  border-left: 18px solid var(--sv-steel);
+  border-radius: 0 28px 28px 0;
+  background: var(--panel-raised);
+  color: var(--sv-ice);
+  font-family: var(--sv-font);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-theme="sovereign"] #toast.toast-alert {
+  border-left-color: var(--alert);
+  color: var(--alert);
+}
+
+[data-theme="sovereign"] #toast.toast-critical {
+  border-left-color: var(--sv-red);
+  color: #ec7a63;
 }

@@ -150,6 +150,48 @@ state-only), and the service must be one of that group's
 domain/service, `403` for anything outside the allowlist, `502` if HA is
 unreachable. The WebSocket `ha_action` message follows the same rules.
 
+### `POST /api/notify`
+
+Push a message to the panel from anything on the LAN — typically a Home
+Assistant automation.
+
+```json
+{ "title": "Washer done", "message": "Load finished",
+  "kind": "toast" | "takeover", "severity": "info" | "alert" | "critical",
+  "duration_seconds": 8, "cameras": ["camera.garage"], "wake": true,
+  "key": "washer", "cooldown_seconds": 5 }
+```
+
+Only `title` is required. `kind: "toast"` (default; severity defaults to
+`info`) broadcasts a `notify` message and the display pops its toast for
+`duration_seconds` (3–60, default 8) — a blanked panel drops it, like any
+toast. `kind: "takeover"` (severity defaults to `alert`) goes through
+`CameraAlertHub.fire()` as a `camera_alert` with `source: "notify"`, so it
+wakes a blanked panel unless `wake: false`, lifts the night dim, yields to a
+weather takeover, and a repeat with the same `key` (default: the title) inside
+`cooldown_seconds` (default 5) is suppressed — `{"ok": false, "suppressed":
+"cooldown"}`. With `cameras` (≤4, each already allowed in the HA tab — anything
+else is a `400`) it is a camera takeover with `message` as the banner subtitle;
+without, `message` (or the title) fills the panel where the wall would be.
+`duration_seconds` defaults to 20 (5–120). `400` lists every problem.
+
+From Home Assistant:
+
+```yaml
+rest_command:
+  ticker_notify:
+    url: http://ticker.local:8080/api/notify
+    method: POST
+    content_type: application/json
+    payload: >-
+      {"title": {{ title | tojson }}, "message": {{ (message | default('')) | tojson }},
+       "kind": {{ (kind | default('toast')) | tojson }},
+       "severity": {{ (severity | default('info')) | tojson }}}
+# automation action:
+#   - action: rest_command.ticker_notify
+#     data: { title: "Garage open", message: "for 10 minutes", kind: takeover }
+```
+
 ## WebSockets
 
 `/ws/display` and `/ws/admin` currently speak the same protocol; admin exists
@@ -173,6 +215,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 | `fantasy_event` | `event` | A fantasy scoring play → celebration overlay |
 | `weather_alert` | `alert` | Severe weather → full-screen takeover |
 | `camera_alert` | `event` | Camera takeover (see below) |
+| `notify` | `notice` (`title`, `message`, `severity`, `duration_seconds`) | `POST /api/notify` toast |
 | `webrtc` | `request`, `event` | A relayed HA WebRTC event for one of this client's sessions: `session`, `answer`, `candidate` or `error` (see below) |
 | `pong` | — | Heartbeat reply |
 | `error` | `error` | A client-initiated action failed |
@@ -249,6 +292,9 @@ bridge is the first consumer, firing on the **entry** edge of an alert that has
   display builds `/api/cameras/<id>/stream` from it. 1–4 entries.
 - `wake` is per event, not a display policy — a quiet alert sets it `false` and
   stays suppressed on a blanked panel.
+- `message` (optional) makes a camera-less takeover: `POST /api/notify` with
+  `kind: "takeover"` and no cameras sends `cameras: []` and the text, which the
+  display shows where the wall would be. Any other event needs ≥1 camera.
 
 Like `sport_event` and `weather_alert`, this is **not replayed** in the connect
 snapshot: a display that reconnects a second later misses it.

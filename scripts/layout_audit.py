@@ -49,8 +49,9 @@ NO_STAGE = {"weather_alerts"}  # rides the weather rail/stage, never its own pan
 PROBE = r"""
 (() => {
   const out = [];
-  // Map viewports clip tiles and tracks by design.
-  const exempt = (el) => el.closest('.radar-viewport, .radar-map, .adsb-radar, .radar-scope, svg');
+  // Map viewports clip tiles and tracks by design. (Not the ADS-B list beside
+  // the scope: exempting all of .adsb-radar hid a banner list cut at both ends.)
+  const exempt = (el) => el.closest('.radar-viewport, .radar-map, .radar-scope, svg');
   const reported = new Set();
   for (const layer of document.querySelectorAll('.stage-pane > .stage-layer:not(.exit):not(.pending)')) {
     const pane = layer.parentElement.dataset.pane;
