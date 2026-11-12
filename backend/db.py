@@ -90,11 +90,16 @@ async def get_config() -> dict | None:
 
 async def put_config(config: dict) -> None:
     assert _conn is not None, "db.init() not called"
+    blob = json.dumps(config)
+    # A save that changes nothing (the admin's Save pressed twice, a restore of
+    # the version already live) is not a version: each one used to push a real
+    # one out of the last-twenty history.
+    unchanged = await get_config() == json.loads(blob)
     await _conn.execute(
-        "INSERT OR REPLACE INTO kv (key, value) VALUES ('config', ?)",
-        (json.dumps(config),),
+        "INSERT OR REPLACE INTO kv (key, value) VALUES ('config', ?)", (blob,)
     )
-    await _record(config, commit=False)
+    if not unchanged:
+        await _record(config, commit=False)
     await _conn.commit()
 
 

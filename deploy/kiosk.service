@@ -37,6 +37,9 @@ ExecStart=/usr/bin/cage -- /snap/bin/chromium \
   http://127.0.0.1:8080/display
 Restart=always
 RestartSec=3
+# cage exits within 100 ms of SIGTERM, a frozen one included. The default 90 s
+# only delays the watchdog's restart of one that doesn't.
+TimeoutStopSec=10
 
 [Install]
 WantedBy=graphical.target

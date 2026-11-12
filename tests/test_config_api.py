@@ -82,6 +82,21 @@ async def test_a_save_from_a_stale_copy_is_refused(client, app):
     assert len(app.state.bus.of_type("config")) == 1
 
 
+async def test_a_save_that_changes_nothing_succeeds_without_a_new_version(client, app):
+    first = await client.get("/api/config")
+    saved = await client.put("/api/config", json=themed(first.json(), "frost"),
+                             headers={"If-Match": first.headers["etag"]})
+    history = (await client.get("/api/config/history")).json()["versions"]
+    for _ in range(3):
+        again = await client.put("/api/config", json=saved.json()["config"],
+                                 headers={"If-Match": saved.headers["etag"]})
+        assert again.status_code == 200 and again.json()["ok"] is True
+        assert again.json()["version"] == saved.json()["version"]
+        assert again.headers["etag"] == saved.headers["etag"]
+    assert (await client.get("/api/config/history")).json()["versions"] == history
+    assert len(app.state.bus.of_type("config")) == 4  # still applied and broadcast each time
+
+
 async def test_a_save_without_if_match_still_overwrites(client, app):
     # curl and the layout audit don't send it
     r = await client.get("/api/config")

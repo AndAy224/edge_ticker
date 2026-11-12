@@ -5,8 +5,10 @@ lockout self-perpetuates if retried fast (the default collector backoff would
 burn the whole budget on retries). Budget: idle polls (default 1800s) make
 one call, plus the recent-results call every 4th poll ≈ 2.5/hr; inside the
 live launch window (T-45m..T+15m) the poll tightens (default 360s, single
-call) ≈ 10/hr; failures retry no sooner than 15 minutes. The display renders
-its own live countdown from `net`.
+call) ≈ 10/hr; failures retry no sooner than 15 minutes. An idle poll that
+would sleep past the opening of a live window wakes for it instead — one
+earlier poll per launch, never sooner than the live cadence. The display
+renders its own live countdown from `net`.
 
 Florida launches (Cape Canaveral / Kennedy) are flagged: they're visible
 from the Tampa Bay area, spectacularly so at night."""
@@ -67,6 +69,9 @@ def _boosters(entry: dict) -> list[dict]:
 
 
 RECENT_EVERY_N_POLLS = 4
+# Rate limit: never poll faster than ~4 min even if misconfigured.
+MIN_POLL_SECONDS = 240.0
+WAKE_MARGIN_SECONDS = 5.0  # past the window's opening, so the wake-up poll is inside it
 
 
 class LaunchesCollector(Collector):
@@ -78,10 +83,10 @@ class LaunchesCollector(Collector):
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)
-        # Rate limit: never poll faster than ~4 min even if misconfigured.
-        self.idle_interval = max(240.0, float(self.module_config.get("poll_seconds", 1800)))
-        self.live_interval = max(240.0, float(self.module_config.get("poll_seconds_live", 360)))
+        self.idle_interval = max(MIN_POLL_SECONDS, float(self.module_config.get("poll_seconds", 1800)))
+        self.live_interval = max(MIN_POLL_SECONDS, float(self.module_config.get("poll_seconds_live", 360)))
         self.interval = self.idle_interval
+        self._woken_for: set[str] = set()  # launch ids already given their early poll
         self._recent: list[dict] = []  # last-fetched copy, reused between refreshes
         self._polls_since_recent = 0
         self._recent_tried = False
@@ -125,6 +130,37 @@ class LaunchesCollector(Collector):
                 except Exception:  # recent strip is decoration — never fail the poll
                     pass
         return upcoming
+
+    def _idle_interval(self, raw: dict, now: datetime) -> float:
+        """The idle cadence, cut short when a live window opens before the next
+        idle poll: the T-0 board (and its auto-pin) used to start up to an idle
+        interval (30 min) into the 45-minute run-up.
+
+        Budget: one early poll per launch, remembered by id — a NET that keeps
+        slipping would otherwise pull a poll forward at every slip — and never
+        sooner than the live cadence, so it costs no more than the live window
+        it leads into."""
+        opening: tuple[float, str] | None = None
+        listed: set[str] = set()
+        for entry in raw.get("results", []):
+            net = _parse_net(entry.get("net"))
+            launch_id = str(entry.get("id") or entry.get("name") or "")
+            listed.add(launch_id)
+            if net is None or (entry.get("status") or {}).get("abbrev") in FINISHED:
+                continue
+            if not launch_id or launch_id in self._woken_for:
+                continue
+            ahead = (net - LIVE_BEFORE - now).total_seconds()
+            if 0 < ahead and (opening is None or ahead < opening[0]):
+                opening = (ahead, launch_id)
+        self._woken_for &= listed  # flown launches leave the list
+        if opening is None:
+            return self.idle_interval
+        wake = max(self.live_interval, opening[0] + WAKE_MARGIN_SECONDS)
+        if wake >= self.idle_interval:
+            return self.idle_interval
+        self._woken_for.add(opening[1])
+        return wake
 
     def shape(self, raw: dict) -> ModulePayload:
         now = datetime.now(timezone.utc)
@@ -177,7 +213,7 @@ class LaunchesCollector(Collector):
                 break
 
         live = any(l["live"] for l in launches)
-        self.interval = self.live_interval if live else self.idle_interval
+        self.interval = self.live_interval if live else self._idle_interval(raw, now)
 
         tape: list[TapeItem] = []
         upcoming = [l for l in launches if l.get("net") and l.get("status") not in FINISHED]

@@ -24,6 +24,35 @@ export interface MapView {
   height: number;
 }
 
+// Layers whose map is still to be built, with the frame callback that will do it.
+const pendingBuilds = new Map<HTMLElement, number>();
+
+/** Run `build` on the next frame if `layer` is in the document by then. A
+ *  renderer is handed a detached layer and can only measure it once main.ts
+ *  has attached it, hence the frame.
+ *
+ *  When no frames come (stalled compositor, hidden tab) every refresh would
+ *  otherwise leave one more callback queued, each holding a layer and its
+ *  payload long after a newer refresh replaced it — and all of them would run
+ *  in the first frame back. So a layer that has left the document gives its
+ *  callback up here, at the next render. The layer being rendered right now is
+ *  not attached yet either, which is why it is registered after the sweep. */
+export function buildWhenAttached(layer: HTMLElement, build: () => void): void {
+  for (const [other, frame] of pendingBuilds) {
+    if (!other.isConnected) {
+      cancelAnimationFrame(frame);
+      pendingBuilds.delete(other);
+    }
+  }
+  pendingBuilds.set(
+    layer,
+    requestAnimationFrame(() => {
+      pendingBuilds.delete(layer);
+      if (layer.isConnected) build();
+    }),
+  );
+}
+
 /** Integer tile zoom + the residual CSS scale for a fractional view zoom.
  *  Rounding (not flooring) means the residual downscales more often than it
  *  upscales, which keeps tiles crisp. */

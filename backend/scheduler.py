@@ -77,6 +77,9 @@ class NightScheduler:
         # The backlight level ddcutil last confirmed; None = unknown (nothing
         # written yet, or the last write failed, timed out or was cancelled).
         self._hw: int | None = None
+        # The last level a write confirmed, kept through later failures: where
+        # the backlight most likely still is.
+        self._hw_last: int | None = None
         # One ddcutil at a time: a boost starting while the tick writes the
         # dim would otherwise race it on the i2c bus.
         self._ddc_lock = asyncio.Lock()
@@ -92,6 +95,33 @@ class NightScheduler:
         level = _level(night, dimming)
         method = self.method_used or night.get("method", "ddc")
         return {"mode": "dim" if dimming else "wake", "level": level, "software": method == "software"}
+
+    def _stranded(self, level: int) -> bool:
+        """DDC has stopped answering with the backlight below `level`.
+
+        The software fallback only darkens — an overlay over whatever the
+        backlight gives — so it covers a failed dim, not a failed wake: one
+        ddcutil failure at wake_at used to leave the panel at the night level
+        until the next evening, with the display told all was well."""
+        return (
+            self._night().get("method", "ddc") == "ddc"
+            and self.method_used == "software"
+            and self._hw_last is not None
+            and self._hw_last < level
+        )
+
+    def problem(self) -> str | None:
+        """For /api/health: DDC is configured and not doing the job."""
+        night = self._night()
+        if night.get("method", "ddc") != "ddc" or self.method_used != "software":
+            return None
+        level = _level(night, _in_night_window(night, _now_minute()))
+        if self._stranded(level):
+            return (
+                f"night: ddcutil is failing with the backlight last set to {self._hw_last}% "
+                f"(wanted {level}%) — retrying every minute"
+            )
+        return "night: ddcutil is failing — the display dims in software instead"
 
     def boost(self, seconds: float) -> None:
         """Lift a hardware dim for a full-screen takeover; returns at once.
@@ -217,7 +247,9 @@ class NightScheduler:
             and not self._boosting()
             and self._hw != level
         )
-        if wanted != self._applied or drifted:
+        # ... except where the software dim can't take over: a backlight left
+        # below the wanted level is retried until a write lands.
+        if wanted != self._applied or drifted or self._stranded(level):
             await self._end_boost()  # a takeover's restore would undo this
             await self._set_brightness(night, dimming=dimming)
             self._applied = wanted
@@ -253,7 +285,7 @@ class NightScheduler:
         async with self._ddc_lock:
             self._hw = None  # a write that times out or is cancelled may have landed or not
             if await self._ddcutil(level):
-                self._hw = level
+                self._hw = self._hw_last = level
                 return True
             return False
 

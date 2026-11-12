@@ -7,3 +7,6 @@ Type=oneshot
 # core.fileMode=false once dropped the exec bit and the watchdog failed
 # silently with 203/EXEC every minute for three months.
 ExecStart=/bin/bash /opt/edge-ticker/deploy/watchdog.sh
+# A oneshot has no start timeout by default, and its restarts are synchronous:
+# one that hangs must not stop the checks for good.
+TimeoutStartSec=120

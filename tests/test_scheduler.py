@@ -327,6 +327,45 @@ async def test_a_restore_that_keeps_failing_falls_back_to_the_software_dim(make,
     assert ddc.levels == [10, 100, 10, 10]
 
 
+async def test_a_failed_wake_is_retried_until_the_backlight_is_back(make, fake_bus, monkeypatch):
+    # One ddcutil failure at wake_at: the software fallback can only darken,
+    # the retries had stopped, and the panel sat at the night level all day
+    # while the display was told there was nothing to dim.
+    sched, ddc = make()
+    await sched._tick("23:00")
+    ddc.fail_next = 2
+    await sched._tick("07:00")
+    assert ddc.levels == [10, 100] and sched.method_used == "software"
+    pin_clock(monkeypatch, 7, 1)
+    assert "backlight last set to 10%" in sched.problem()
+    await sched._tick("07:01")  # fails again
+    await sched._tick("07:02")
+    assert ddc.levels == [10, 100, 100, 100]
+    assert (sched.method_used, sched._hw, sched.problem()) == ("ddc", 100, None)
+    assert fake_bus.of_type("night")[-1] == {"type": "night", "mode": "wake", "level": 100, "software": False}
+    await sched._tick("07:03")
+    assert len(ddc.levels) == 4  # and that is the end of it
+
+
+async def test_a_failed_dim_is_left_to_the_software_dim(make, monkeypatch):
+    # The other direction needs no retries: the overlay darkens a bright panel.
+    sched, ddc = make()
+    await sched._tick("22:59")
+    ddc.works = False
+    await sched._tick("23:00")
+    await sched._tick("23:01")
+    assert ddc.levels == [100, 10]
+    pin_clock(monkeypatch, 23, 1)
+    assert sched.problem() == "night: ddcutil is failing — the display dims in software instead"
+
+
+async def test_a_panel_without_ddc_is_not_probed_every_minute(make):
+    sched, ddc = make(works=False)
+    for minute in ("23:00", "23:01", "07:00", "07:01", "07:02"):
+        await sched._tick(minute)
+    assert ddc.levels == [10, 100]  # the two edges, nothing in between
+
+
 async def test_a_boost_waits_for_the_ticks_write(make, monkeypatch):
     sched, ddc = make()
     pin_clock(monkeypatch, 23, 30)

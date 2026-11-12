@@ -1,5 +1,6 @@
 import { WEATHER_ICONS } from "../icons";
 import { register } from "./registry";
+import { fetchTimeout } from "../net";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(
@@ -316,7 +317,7 @@ function fetchDetail(item: any): Promise<any> {
     week: String(m.week),
     team_id: String(item.teamId),
   });
-  return fetch(`/api/fantasy/detail?${params}`)
+  return fetchTimeout(`/api/fantasy/detail?${params}`)
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
 }
@@ -401,7 +402,7 @@ function renderPlayer(el: HTMLElement, item: any): void {
     week: String(item.meta.week),
     player_id: String(item.playerId),
   });
-  fetch(`/api/fantasy/player?${params}`)
+  fetchTimeout(`/api/fantasy/player?${params}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
       if (!d || d.error || !el.isConnected) return;

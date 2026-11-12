@@ -11,6 +11,7 @@ import {
   BASEMAP_ATTRIB,
   MapView,
   basemapImgs,
+  buildWhenAttached,
   fitView,
   mapScaleStyle,
   project,
@@ -250,9 +251,6 @@ register({
       <div class="radar-attrib">${BASEMAP_ATTRIB} &middot; NOAA/NHC</div>
     </div>`;
     const stage = el.querySelector<HTMLElement>(".hurr-stage")!;
-    requestAnimationFrame(() => {
-      if (!el.isConnected) return;
-      buildMap(stage, { ...data, storms, home_name: homeName });
-    });
+    buildWhenAttached(el, () => buildMap(stage, { ...data, storms, home_name: homeName }));
   },
 });

@@ -121,6 +121,46 @@ async def test_earnings_follow_the_local_date(collector, http, clock):
     await collector._client.aclose()
 
 
+async def test_stream_redraws_only_self_built_sparklines(collector, http, clock, monkeypatch):
+    """BTC-USD polls 48 Coinbase candles; SPY has no candle source and draws
+    our own quote history. The stream rebuilt both from that history, so the
+    crypto sparkline flipped between two different series every minute."""
+    candles = [[1_800_000_000 - 900 * i, 0, 0, 0, 90_000.0 + i, 1] for i in range(48)]  # newest first
+    upstream = Upstream()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/candles"):
+            return json_response(candles)
+        return upstream(request)
+
+    http.handler = handler
+    wall = {"t": 1_800_000_000.0}
+    monkeypatch.setattr(stocks.time, "time", lambda: wall["t"])
+    collector.shape(await collector.fetch())
+    coinbase_spark = [90_000.0 + i for i in range(47, -1, -1)]
+    assert collector._quotes["BTC-USD"]["spark"] == coinbase_spark
+    assert collector._quotes["SPY"]["spark"] == [500.0]
+
+    wall["t"] += stocks.HISTORY_STREAM_INTERVAL
+    payload = collector._apply_live({"BTC-USD": 100_500.0, "SPY": 501.0})
+    quotes = {q["symbol"]: q for q in payload.stage["quotes"]}
+    assert quotes["BTC-USD"]["price"] == 100_500.0  # the price still streams
+    assert quotes["BTC-USD"]["spark"] == coinbase_spark  # the candles stay
+    assert quotes["SPY"]["spark"] == [500.0, 501.0]  # self-built: follows the stream
+    assert collector._history["BTC-USD"][-1] == [wall["t"], 100_500.0]  # history still accrues
+
+    # Coinbase's candles fail one poll: that poll's sparkline is self-built,
+    # and until the next poll the stream keeps it moving.
+    candles = {"message": "rate limited"}
+    wall["t"] += 60
+    collector.shape(await collector.fetch())
+    assert collector._quotes["BTC-USD"]["spark"] == [100_000.0, 100_500.0, 100_000.0]
+    wall["t"] += stocks.HISTORY_STREAM_INTERVAL
+    payload = collector._apply_live({"BTC-USD": 100_700.0})
+    assert payload.stage["quotes"][-1]["spark"][-1] == 100_700.0
+    await collector._client.aclose()
+
+
 class FakeSocket:
     def __init__(self, frames: list, hang: bool = False):
         self.frames, self.sent, self.hang = list(frames), [], hang

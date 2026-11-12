@@ -10,6 +10,7 @@ import {
   BASEMAP_ATTRIB,
   MapView,
   basemapImgs,
+  buildWhenAttached,
   layerImgs,
   mapScaleStyle,
   project,
@@ -201,9 +202,6 @@ register({
     </div>`;
     // The layer is detached until crossfade() appends it — measure after attach.
     const stage = el.querySelector<HTMLElement>(".radar-stage")!;
-    requestAnimationFrame(() => {
-      if (!el.isConnected) return;
-      buildMap(stage, { ...data, frames });
-    });
+    buildWhenAttached(el, () => buildMap(stage, { ...data, frames }));
   },
 });

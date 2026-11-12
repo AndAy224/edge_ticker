@@ -12,8 +12,10 @@ import time
 from datetime import date, timedelta
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+
+from .throttle import Throttle
 
 router = APIRouter()
 
@@ -22,6 +24,12 @@ CACHE_TTL_SECONDS = 300.0
 CACHE_MAX_ENTRIES = 50
 NEWS_LIMIT = 5
 _cache: dict[str, tuple[float, dict]] = {}
+
+# Cache misses only. An equity miss is five Finnhub calls on the key the
+# collector's quotes also run on (60 a minute on the free tier): six at once
+# covers tapping through the default board, and three a minute after that keeps
+# the worst case at 15 calls a minute.
+_lookups = Throttle(burst=6, refill_seconds=20.0)
 
 CRYPTO_NAMES = {
     "BTC": "bitcoin",
@@ -194,9 +202,23 @@ async def _crypto_detail(client: httpx.AsyncClient, symbol: str) -> dict | None:
     return detail
 
 
+def _configured_symbols(config: dict) -> set[str]:
+    """The symbols on the board, as the collector reads them (same default)."""
+    markets = ((config or {}).get("modules") or {}).get("markets") or {}
+    symbols = markets.get("symbols", ["SPY", "QQQ"])
+    if not isinstance(symbols, list):
+        return set()
+    return {s.upper() for s in symbols if isinstance(s, str)}
+
+
 @router.get("/markets/detail")
-async def market_detail(symbol: str):
+async def market_detail(symbol: str, request: Request):
     symbol = symbol.upper()
+    # Only what the board shows: the display asks for nothing else, and any
+    # other symbol is a caller spending the Finnhub key on a ticker of its
+    # choosing (a cross-site GET gets this far).
+    if symbol not in _configured_symbols(request.app.state.config):
+        return JSONResponse({"error": "unknown symbol"}, status_code=404)
     now = time.monotonic()
     cached = _cache.get(symbol)
     if cached and now - cached[0] < CACHE_TTL_SECONDS:
@@ -204,6 +226,8 @@ async def market_detail(symbol: str):
     key = os.environ.get("FINNHUB_KEY", "").strip()
     if not key:
         return {"profile": None, "metrics": None, "news": []}
+    if not _lookups.take():
+        return _lookups.refused()
     # Key in a header, not a `token` query param: request URLs end up in logs.
     async with httpx.AsyncClient(timeout=15, headers={"X-Finnhub-Token": key}) as client:
         if symbol.endswith("-USD"):

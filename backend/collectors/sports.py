@@ -47,6 +47,17 @@ WINDOW_RETRY_SECONDS = 60.0
 # poll waits this long for a refresh still in flight, then goes out with the
 # cached window — fresh scores must not queue behind ~36 slow day requests.
 WINDOW_WAIT_SECONDS = 10.0
+# The whole window refresh gets this long. Its requests have timeouts of their
+# own, but those restart with every byte: a trickling ESPN kept the task alive
+# for good, and with it the live-cadence poll that waits for it to land.
+WINDOW_JOB_SECONDS = 240.0
+# An idle poll wakes this soon after the next scheduled start, and a game still
+# `pre` up to START_GRACE_SECONDS past its start is polled at the live cadence:
+# ESPN flips a game to `in` at the first pitch or kickoff, usually a few
+# minutes late, and waking once on the dot would see `pre` and sleep a whole
+# idle interval through the opening innings.
+START_WAKE_MARGIN_SECONDS = 5.0
+START_GRACE_SECONDS = 15 * 60.0
 # Per-event state (score history, celebration and predictor stamps) for a game
 # unseen this long is dropped. Long enough to ride out one league's scoreboard
 # outage: its games' score history has to survive it, or the first score after
@@ -54,6 +65,20 @@ WINDOW_WAIT_SECONDS = 10.0
 EVENT_MEMORY_SECONDS = 6 * 3600.0
 
 FOOTBALL_DELTA_LABELS = {6: "TOUCHDOWN", 3: "FIELD GOAL", 2: "TWO-POINT", 1: "EXTRA POINT"}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)  # a function so tests can pin the clock
+
+
+def _parse_start(start: str | None) -> datetime | None:
+    if not start:
+        return None
+    try:
+        when = datetime.fromisoformat(start.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
 
 
 # ---- ESPN summary extraction (shared by the live path and the admin test) ----
@@ -411,6 +436,7 @@ class SportsCollector(Collector):
         self._bus: Bus | None = None
         self._side_scores: dict[str, tuple[int, int]] = {}  # game id -> (away, home)
         self._scores_seen: dict[str, float] = {}  # game id -> monotonic stamp of its last poll
+        self._live_at_last_poll: set[str] = set()  # game ids `in` when last seen
         self._celebrated_at: dict[str, float] = {}
         self._window: list[dict] = []  # cached dated-window games
         # (league key, day) -> that day's games; settled days are reused
@@ -519,10 +545,11 @@ class SportsCollector(Collector):
 
     async def _window_job(self) -> None:
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                await self._refresh_window(client)
-        except Exception as exc:  # per-day failures are handled inside; this is a bug
-            log.warning("sports window refresh failed: %s", exc)
+            async with asyncio.timeout(WINDOW_JOB_SECONDS):
+                async with httpx.AsyncClient(timeout=15) as client:
+                    await self._refresh_window(client)
+        except Exception as exc:  # per-day failures are handled inside: a bug, or the deadline
+            log.warning("sports window refresh failed: %s", f"{type(exc).__name__}: {exc}")
             self._window_back_off()
 
     def _window_back_off(self) -> None:
@@ -538,8 +565,9 @@ class SportsCollector(Collector):
 
         One request per league per *day*: ESPN began rejecting
         `dates=YYYYMMDD-YYYYMMDD` ranges with a 400 (Sep 2026), while single
-        days still work. A day that ended before yesterday is settled, so it is
-        cached until it scrolls out of the window rather than re-fetched."""
+        days still work. A day that ended before yesterday is settled once
+        every game in its cached copy is final, and is then kept until it
+        scrolls out of the window rather than re-fetched."""
         if not self._window_due():
             return
         today = date.today()
@@ -557,11 +585,19 @@ class SportsCollector(Collector):
         for key in list(self._window_days):
             if key not in wanted:
                 del self._window_days[key]
-        to_fetch = [
-            key
-            for key in wanted
-            if not (key[1] < settled_before and key in self._window_days)
-        ]
+
+        def settled(key: tuple[str, date]) -> bool:
+            # Not by age alone: a copy taken mid-game and then cut off by a
+            # day-long outage kept its game `in` (the live cadence, the
+            # followed-game pin) until the day left the window.
+            cached = self._window_days.get(key)
+            return (
+                cached is not None
+                and key[1] < settled_before
+                and all(game.get("state") == "post" for game in cached)
+            )
+
+        to_fetch = [key for key in wanted if not settled(key)]
         gate = asyncio.Semaphore(WINDOW_CONCURRENCY)
 
         async def one(key: tuple[str, date]) -> list[dict]:
@@ -857,10 +893,12 @@ class SportsCollector(Collector):
 
     async def _maybe_celebrate(self, games: list[dict]) -> None:
         """Diff per-side scores vs the previous poll; broadcast a sport_event
-        when a followed team's score increases in a live game."""
+        when a followed team's score increases in a live game — or in the poll
+        that first shows the game final, for the score that ended it."""
         first_seed = not self._side_scores
         scored: list[tuple[dict, int]] = []
         new_scores: dict[str, tuple[int, int]] = {}
+        now_live: set[str] = set()
         now = time.monotonic()
         for g in games:
             gid = str(g.get("id"))
@@ -873,7 +911,15 @@ class SportsCollector(Collector):
 
             current = (score_of("away"), score_of("home"))
             new_scores[gid] = current
-            if first_seed or not (g["followed"] and g["state"] == "in"):
+            live = g["state"] == "in"
+            if live:
+                now_live.add(gid)
+            # A walk-off, an overtime winner, a last-play field goal: the score
+            # and the final arrive in the same poll. Only for a game that was
+            # live when last seen — one first met already final has no score
+            # of ours to celebrate, and a finished one is not live next time.
+            just_ended = g["state"] == "post" and gid in self._live_at_last_poll
+            if first_seed or not (g["followed"] and (live or just_ended)):
                 continue
             side = self._followed_side(g)
             if side is None:
@@ -895,6 +941,9 @@ class SportsCollector(Collector):
         # history, and the next score in them diffed against nothing.
         self._side_scores.update(new_scores)
         self._scores_seen.update(dict.fromkeys(new_scores, now))
+        # Same rule for the live set: a game missing from this poll keeps its
+        # last-seen state.
+        self._live_at_last_poll = (self._live_at_last_poll - set(new_scores)) | now_live
         self._forget_old_events(now)
         if not self.celebrations or self._bus is None:
             return
@@ -914,6 +963,7 @@ class SportsCollector(Collector):
             if now - seen > EVENT_MEMORY_SECONDS:
                 del self._scores_seen[gid]
                 self._side_scores.pop(gid, None)
+                self._live_at_last_poll.discard(gid)
         longest_cooldown = max(CELEBRATION_COOLDOWN_SECONDS, *SPORT_COOLDOWN_SECONDS.values())
         self._celebrated_at = {
             gid: at for gid, at in self._celebrated_at.items() if now - at < longest_cooldown
@@ -1001,19 +1051,34 @@ class SportsCollector(Collector):
                 chosen.append(game)
         return chosen[:limit]
 
+    def _idle_interval(self, games: list[dict], now: datetime) -> float:
+        """The idle cadence, cut short to reach the next scheduled start: a
+        game used to go unwatched for up to an idle interval (10 min) after it
+        began — no live board, no pin, and its first scores uncelebrated."""
+        interval = self.idle_interval
+        for game in games:
+            start = _parse_start(game.get("start")) if game["state"] == "pre" else None
+            if start is None:
+                continue
+            ahead = (start - now).total_seconds()
+            if ahead > 0:
+                interval = min(interval, ahead + START_WAKE_MARGIN_SECONDS)
+            elif ahead > -START_GRACE_SECONDS:
+                interval = min(interval, self.live_interval)
+        return interval
+
     def shape(self, games: list[dict]) -> ModulePayload:
+        now = _now()
         self.interval = (
             self.live_interval
             if any(g["state"] == "in" for g in games)
-            else self.idle_interval
+            else self._idle_interval(games, now)
         )
         if self._window_task is not None and not self._window_task.done():
             # This payload went out without the window refresh still in
             # flight; poll again soon so it lands, not an idle interval later.
             self.interval = min(self.interval, self.live_interval)
-        horizon = (
-            datetime.now(timezone.utc) + timedelta(days=self.days_ahead)
-        ).isoformat()
+        horizon = (now + timedelta(days=self.days_ahead)).isoformat()
 
         # Newest result first; the display reverses the past group so the
         # freshest final ends up against the now line.

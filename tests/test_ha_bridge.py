@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime as real_datetime
 
 import pytest
@@ -155,6 +156,36 @@ async def test_state_changes_fan_out_for_mapped_entities_only(bridge, fake_bus):
     assert set(bridge.mapped_states()) == {"light.desk", "binary_sensor.front_door"}
 
 
+def removed(entity: str) -> dict:
+    """What HA sends when an entity is deleted, or renamed away from this id."""
+    return {
+        "event_type": "state_changed",
+        "data": {"entity_id": entity, "old_state": {"state": "on"}, "new_state": None},
+    }
+
+
+async def test_an_entity_removed_from_ha_is_forgotten(bridge, fake_bus):
+    # new_state: null was ignored, so the entity stayed in the admin's entity
+    # list and on the display until the bridge next reconnected.
+    on = {"state": "on", "attributes": {}}
+    bridge.all_states = {"light.desk": on, "fan.bedroom": on, "lock.front_door": on}
+
+    await bridge._on_event(removed("lock.front_door"))  # not mapped: nothing to tell displays
+    assert set(bridge.all_states) == {"light.desk", "fan.bedroom"}
+    assert fake_bus.messages == []
+
+    await bridge._on_event(removed("light.desk"))
+    assert [e["entity_id"] for e in bridge.list_entities()] == ["fan.bedroom"]
+    # the mapped set again: `ha_state` has no way to say "gone"
+    assert fake_bus.messages == [
+        {"type": "ha_states", "status": bridge.status, "states": {"fan.bedroom": on}}
+    ]
+
+    await bridge._on_event(removed("light.desk"))  # already gone
+    await bridge._on_event(removed("sensor.never_seen"))
+    assert len(fake_bus.messages) == 1
+
+
 def test_list_entities_sorted_by_domain_then_name(bridge):
     bridge.all_states = {
         "light.b": {"state": "on", "attributes": {"friendly_name": "beta"}},
@@ -165,6 +196,95 @@ def test_list_entities_sorted_by_domain_then_name(bridge):
 
 
 # ---- connection robustness -----------------------------------------------------------
+
+
+class FakeHA:
+    """Home Assistant's end of the bridge's WebSocket; the test feeds the frames."""
+
+    def __init__(self) -> None:
+        self.sent: list[dict] = []
+        self.inbox: asyncio.Queue = asyncio.Queue()
+
+    def push(self, message: dict) -> None:
+        self.inbox.put_nowait(json.dumps(message))
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc) -> bool:
+        return False
+
+    async def recv(self) -> str:
+        return await self.inbox.get()
+
+    async def send(self, raw: str) -> None:
+        self.sent.append(json.loads(raw))
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> str:
+        return await self.recv()
+
+
+async def test_no_command_goes_out_before_auth_has_succeeded(fake_bus, monkeypatch):
+    # The socket was published as soon as it opened, so a tile tap landing
+    # mid-handshake was sent ahead of the auth message.
+    ha = FakeHA()
+    monkeypatch.setattr(ha_bridge.websockets, "connect", lambda url, **kwargs: ha)
+    bridge = HABridge(fake_bus, lambda: HA_CONFIG)
+    bridge.token = "secret"
+
+    async def refused() -> None:
+        async def on_event(event):
+            pass
+
+        for call in (
+            bridge.call_service("light", "toggle", "light.desk"),
+            bridge.send_command({"type": "camera/webrtc/candidate"}),
+            bridge.subscribe({"type": "camera/webrtc/offer"}, on_event),
+        ):
+            with pytest.raises(RuntimeError, match="not connected"):
+                await asyncio.wait_for(call, timeout=1)
+
+    session = asyncio.create_task(bridge._session("ws://ha.test/api/websocket"))
+    try:
+        await asyncio.sleep(0.01)  # connected; HA has not said auth_required yet
+        await refused()
+        assert ha.sent == []
+
+        ha.push({"type": "auth_required"})
+        await until(lambda: ha.sent)
+        await refused()  # auth sent, not yet accepted
+        assert ha.sent == [{"type": "auth", "access_token": "secret"}]
+        assert bridge.status == "unconfigured"  # no env in tests; not "connected" either
+
+        ha.push({"type": "auth_ok"})
+        await until(lambda: len(ha.sent) == 2)
+        assert ha.sent[1] == {"type": "get_states", "id": 1}
+        assert bridge.status == "connected"
+        ha.push({"type": "result", "id": 1, "success": True, "result": [
+            {"entity_id": "light.desk", "state": "on", "attributes": {}},
+        ]})
+        await until(lambda: len(ha.sent) == 3)
+        ha.push({"type": "result", "id": 2, "success": True, "result": None})
+        await until(lambda: fake_bus.of_type("ha_states"))
+
+        call = asyncio.create_task(bridge.call_service("light", "toggle", "light.desk"))
+        await until(lambda: len(ha.sent) == 4)
+        assert ha.sent[3]["type"] == "call_service" and ha.sent[3]["id"] == 3
+        ha.push({"type": "result", "id": 3, "success": True, "result": {"ok": True}})
+        assert await asyncio.wait_for(call, timeout=1) == {"ok": True}
+
+        # and a removal arriving over the socket reaches displays
+        ha.push({"type": "event", "id": 2, "event": removed("light.desk")})
+        await until(lambda: len(fake_bus.of_type("ha_states")) == 2)
+        assert fake_bus.of_type("ha_states")[-1]["states"] == {}
+    finally:
+        session.cancel()
+        await asyncio.gather(session, return_exceptions=True)
+    with pytest.raises(RuntimeError, match="not connected"):
+        await bridge.call_service("light", "toggle", "light.desk")
 
 
 class _Night(real_datetime):

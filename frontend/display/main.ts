@@ -24,6 +24,7 @@ import { WeatherAlertOverlay } from "./weather-alert";
 import { CameraAlertOverlay } from "./camera-alert";
 import { HAOverlay } from "./overlay-ha";
 import { Tape } from "./tape";
+import { fetchTimeout } from "./net";
 import type { Config, ModulePayload } from "./types";
 import { WEATHER_ICONS, weatherIcon } from "./icons";
 import { DEFAULT_LAYOUT, DEFAULT_THEME, LAYOUTS, THEMES } from "../shared/themes";
@@ -109,6 +110,9 @@ const tape = new Tape(document.getElementById("tape-track")!);
 const celebration = new Celebration(
   document.getElementById("celebration")!,
   () => blanked,
+  // A camera wall covers it (z-index 92 vs 80): events wait for the wall —
+  // and the queued one behind it — rather than play out unseen.
+  () => cameraAlert.isBusy(),
 );
 // Debug/test hook: lets devtools (or CDP) fire arbitrary celebration events.
 (window as any).__celebrate = (event: any) => celebration.show(event);
@@ -128,6 +132,10 @@ const cameraAlert = new CameraAlertOverlay(
   () => wake(),
   () => weatherAlert.isOpen(), // severe weather is life-safety; it outranks a door
   (open) => {
+    // A takeover wins over a celebration, so end the one playing rather than
+    // leave its state machine ticking behind an opaque wall. Here, not on the
+    // camera_alert message: a wall also opens from the overlay's own queue.
+    if (open && celebration.isOpen()) celebration.dismiss();
     suppressDim("camera", open);
     reportDisplayState();
   },
@@ -149,6 +157,9 @@ const overlay = new HAOverlay(
   document.getElementById("overlay")!,
   (domain, service, entityId, data) =>
     sendWs({ type: "ha_action", domain, service, entity_id: entityId, data }),
+  // The admin preview shows the overlay; rotation is paused while it is open,
+  // so without this the next report would be a whole overlay session late.
+  () => reportDisplayState(),
 );
 
 // ---- WebSocket -------------------------------------------------------------
@@ -204,10 +215,12 @@ async function selfHealReload(): Promise<void> {
   if (selfHealing) return;
   selfHealing = true;
   try {
-    const r = await fetch("/api/health", { cache: "no-store" });
+    // With a deadline: a backend that accepts the connection and never answers
+    // would otherwise hold this flag, and self-heal with it, for good.
+    const r = await fetchTimeout("/api/health", 10_000, { cache: "no-store" });
     if (r.ok) location.reload();
   } catch {
-    // still down — the next watchdog tick tries again
+    // still down (or silent) — the next watchdog tick tries again
   } finally {
     selfHealing = false;
   }
@@ -224,6 +237,25 @@ function reportDisplayState(): void {
       takeover: cameraAlert.isOpen(),
     },
   });
+}
+
+// The alert lists the weather pane and the radar last drew, serialized: the
+// collector republishes them unchanged on every poll.
+let alertsDrawn = "[]";
+let warningsDrawn = "[]";
+
+/** Hand the weather_alerts lists to their renderers; says which one changed. */
+function applyWeatherAlerts(stage: any): { alerts: boolean; nearby: boolean } {
+  const alerts = stage?.alerts ?? [];
+  const nearby = stage?.nearby ?? [];
+  const a = JSON.stringify(alerts);
+  const n = JSON.stringify(nearby);
+  const changed = { alerts: a !== alertsDrawn, nearby: n !== warningsDrawn };
+  alertsDrawn = a;
+  warningsDrawn = n;
+  setWeatherAlerts(alerts);
+  setRadarWarnings(nearby);
+  return changed;
 }
 
 function handleMessage(msg: any): void {
@@ -245,8 +277,7 @@ function handleMessage(msg: any): void {
       overlay.setSystem(msg.system?.ip ?? null);
       haStates.clear();
       for (const [id, s] of Object.entries(msg.ha?.states ?? {})) haStates.set(id, s);
-      setWeatherAlerts((modules.get("weather_alerts")?.stage as any)?.alerts ?? []);
-      setRadarWarnings((modules.get("weather_alerts")?.stage as any)?.nearby ?? []);
+      applyWeatherAlerts(modules.get("weather_alerts")?.stage);
       setLaunchSun((modules.get("weather")?.stage as any)?.sun ?? null);
       if (msg.night) applyNight(msg.night);
       applyConfig();
@@ -282,13 +313,17 @@ function handleMessage(msg: any): void {
       }
       if (payload.module === "weather_alerts") {
         // Alerts render inside the weather rail/stage and outline on the
-        // radar — not in a pane of their own.
-        setWeatherAlerts(payload.stage?.alerts ?? []);
-        setRadarWarnings(payload.stage?.nearby ?? []);
-        renderWeather();
-        for (let i = 0; i < paneEls.length; i++) {
+        // radar — not in a pane of their own. The collector republishes every
+        // poll, so redraw only what changed: an unchanged list used to tear
+        // down and rebuild the radar loop every three minutes.
+        const changed = applyWeatherAlerts(payload.stage);
+        if (changed.alerts) renderWeather(); // the rail is not redrawn on wake
+        // Blanked, the panes wait for wake() like any other module update.
+        for (let i = 0; !blanked && i < paneEls.length; i++) {
           const id = paneModule(i);
-          if ((id === "weather" || id === "weather_radar") && !paneDetailTimers.has(i)) renderPane(i);
+          const stale =
+            (id === "weather" && changed.alerts) || (id === "weather_radar" && changed.nearby);
+          if (stale && !paneDetailTimers.has(i)) renderPane(i);
         }
       }
       if (payload.module === "sports") updateScoreChip();
@@ -312,10 +347,7 @@ function handleMessage(msg: any): void {
       modules.delete(msg.module);
       forgetAutoFeature(msg.module);
       applyCondition();
-      if (msg.module === "weather_alerts") {
-        setWeatherAlerts([]);
-        setRadarWarnings([]);
-      }
+      if (msg.module === "weather_alerts") applyWeatherAlerts(undefined);
       renderWeather();
       rebuildTape();
       renderStage();
@@ -351,9 +383,6 @@ function handleMessage(msg: any): void {
       cameraAlert.onWebrtc(msg);
       break;
     case "camera_alert":
-      // A takeover wins over a celebration (z-index 92 vs 80), so end that one
-      // rather than leaving its state machine ticking behind an opaque wall.
-      if (celebration.isOpen()) celebration.dismiss();
       cameraAlert.show(msg.event);
       break;
     case "ha_state": {
@@ -381,7 +410,48 @@ function handleMessage(msg: any): void {
   }
 }
 
-setInterval(() => sendWs({ type: "ping" }), 10_000);
+// ---- Frame heartbeat ---------------------------------------------------------
+//
+// The compositor can stop presenting while this page lives on: timers fire,
+// the socket stays up and the panel shows one frozen picture until someone
+// power-cycles the box (cage never retries a failed page flip; two in one
+// refresh end its frame loop). So each ping carries a count of animation
+// frames this page was actually given. A 1px probe is dirtied first, so there
+// is something to present even under the blanker, where nothing else moves;
+// with the compositor gone Chromium's unacknowledged swaps back up and the
+// callback never comes. The backend reports how long the count has stood
+// still (/health `kiosk.frame_age`) and the watchdog restarts the kiosk.
+const frameProbe = document.createElement("div");
+frameProbe.style.cssText =
+  "position:fixed;right:0;bottom:0;width:1px;height:1px;z-index:2147483647;" +
+  "pointer-events:none;background:#000;opacity:0.01";
+document.body.append(frameProbe);
+let framesSeen = 0;
+let frameProbeArmed = false;
+
+function probeFrame(): void {
+  // One outstanding callback at most: through a stall they would only pile up.
+  if (frameProbeArmed) return;
+  frameProbeArmed = true;
+  frameProbe.style.opacity = frameProbe.style.opacity === "0.01" ? "0.02" : "0.01";
+  requestAnimationFrame(() => {
+    frameProbeArmed = false;
+    framesSeen++;
+  });
+}
+// Debug/test hook: the heartbeat's frame count.
+(window as any).__frames = () => framesSeen;
+
+setInterval(() => {
+  probeFrame();
+  sendWs({
+    type: "ping",
+    frames: framesSeen,
+    // A background tab gets no animation frames; it is not a frozen panel.
+    hidden: document.visibilityState !== "visible",
+    blanked,
+  });
+}, 10_000);
 
 // ---- Rotation engine ---------------------------------------------------------
 
@@ -475,7 +545,9 @@ function syncCountdown(restart = false): void {
 }
 // Pin, details, overlays, takeovers and blanking all stop the clock — and hold
 // off an auto-pin; they are set from a dozen places, so both catch up here.
+// So do celebrations that waited out a camera takeover.
 setInterval(() => {
+  celebration.resume();
   reconcileAutoFeature();
   syncCountdown();
 }, 1000);
@@ -515,6 +587,10 @@ function syncPanes(): void {
   // Resize rather than clear: growing 2→3 panes leaves panes 0-1 on the same
   // modules, and clearing would make them all read as changed and wipe.
   paneView.length = count;
+  // The old panes' layers go with them: nothing may still be waiting on one.
+  for (const pane of [...pendingRefresh.keys()]) dropPendingRefresh(pane);
+  for (const pane of [...paneEnter.keys()]) settleEnter(pane);
+  refreshAfterSwap.clear();
   stageEl.replaceChildren();
   paneEls = Array.from({ length: count }, (_, i) => {
     const pane = document.createElement("div");
@@ -579,6 +655,14 @@ function renderStage(): void {
 
 function renderPane(i: number): void {
   const id = paneModule(i);
+  // A refresh of the view that is still wiping in would restart the transition
+  // part-way: the half-arrived layer faded out under a new one that simply
+  // appeared (markets refreshes every 2 s, so about one rotation in five).
+  // Hold it — the end of the swap draws whatever the payload is by then.
+  if (paneView[i] === id && midSwap(i)) {
+    refreshAfterSwap.add(i);
+    return;
+  }
   const layer = document.createElement("div");
   layer.className = "stage-layer";
   if (!id) {
@@ -626,21 +710,25 @@ function crossfade(
   // A pane with nothing in it yet isn't changing views, it's arriving: at boot
   // and after every pane rebuild there is no outgoing layer to wipe away.
   const swap = previous.length > 0 && paneView[pane] !== view;
+  // The same view again while it is still wiping in — a second tap on the item
+  // whose detail is opening: what is arriving already shows it. (Module
+  // refreshes don't get this far; renderPane holds them until the swap ends.)
+  if (!swap && midSwap(pane)) return;
   paneView[pane] = view;
 
   // A routine data refresh of the view already on screen: swap in one frame,
   // no crossfade. Crossfading every refresh (markets streams every ~2s) put a
   // translucent ghost of the old digits over the new ones for 300ms.
   const current = previous.filter((el) => !el.classList.contains("exit"));
-  const midSwap = current.some((el) => el.classList.contains("swap-in"));
-  if (!swap && current.length && !midSwap) {
+  if (!swap && current.length) {
     quietRefresh(pane, container, layer, current);
     const header = container.querySelector<HTMLElement>(".pane-header");
     if (header && !paneLabelTimers.has(pane)) header.textContent = label;
     return;
   }
-  pendingRefresh.get(pane)?.remove(); // a view change supersedes a queued refresh
-  pendingRefresh.delete(pane);
+  dropPendingRefresh(pane); // a view change supersedes a queued refresh
+  refreshAfterSwap.delete(pane); // ...and a held one: this layer is the latest payload
+  settleEnter(pane);
 
   // swap-in/swap-out are additive markers on top of the existing enter/exit, so
   // a theme that ignores them behaves exactly as it did before.
@@ -649,7 +737,13 @@ function crossfade(
   container.appendChild(layer);
   // Deliberately no style read between the append and this rAF: `.enter` is
   // never observed in computed style, so no theme fades the incoming layer in.
-  requestAnimationFrame(() => layer.classList.remove("enter"));
+  paneEnter.set(pane, {
+    layer,
+    frame: requestAnimationFrame(() => {
+      paneEnter.delete(pane);
+      layer.classList.remove("enter");
+    }),
+  });
   for (const el of previous) {
     el.classList.add("exit");
     if (swap) el.classList.add("swap-out");
@@ -658,7 +752,17 @@ function crossfade(
 
   // Drop the marker once the animation is done, so the sweep pseudo-element
   // doesn't linger on a layer that stays on screen for the next 25 seconds.
-  if (swap) setTimeout(() => layer.classList.remove("swap-in"), swapExitMs);
+  if (swap) {
+    setTimeout(() => {
+      layer.classList.remove("swap-in");
+      // Refreshes held while this layer was arriving: draw the latest now —
+      // unless it has itself been replaced, and the hold is its successor's.
+      if (!layer.isConnected || layer.classList.contains("exit")) return;
+      if (!refreshAfterSwap.delete(pane)) return;
+      if (blanked) renderDeferred = true;
+      else if (!paneDetailTimers.has(pane)) renderPane(pane);
+    }, swapExitMs);
+  }
 
   const header = container.querySelector<HTMLElement>(".pane-header");
   clearTimeout(paneLabelTimers.get(pane));
@@ -684,8 +788,45 @@ function crossfade(
   );
 }
 
-// Per pane: a refreshed layer waiting for its images to decode.
-const pendingRefresh = new Map<number, HTMLElement>();
+// Per pane: a refreshed layer waiting for its images to decode, and the frame
+// callback that starts the wait.
+const pendingRefresh = new Map<number, { layer: HTMLElement; frame: number }>();
+
+// Per pane: the incoming layer still carrying `.enter`, and the frame callback
+// that drops it.
+const paneEnter = new Map<number, { layer: HTMLElement; frame: number }>();
+
+// Panes whose data refreshed while their view was still wiping in (renderPane).
+const refreshAfterSwap = new Set<number>();
+
+// Frame callbacks are tracked per pane and given up when a newer render
+// supersedes them. With no frames coming (stalled compositor, hidden tab) they
+// used to pile up — markets queues one every 2 s — each holding a detached
+// layer, and all ran in the first frame back.
+
+function dropPendingRefresh(pane: number): void {
+  const pending = pendingRefresh.get(pane);
+  if (!pending) return;
+  cancelAnimationFrame(pending.frame);
+  pending.layer.remove();
+  pendingRefresh.delete(pane);
+}
+
+/** A newer layer is replacing the one still entering: take `.enter` off now,
+ *  as its frame was about to — ahead of the next style pass either way, so
+ *  nothing is drawn differently. */
+function settleEnter(pane: number): void {
+  const entering = paneEnter.get(pane);
+  if (!entering) return;
+  cancelAnimationFrame(entering.frame);
+  entering.layer.classList.remove("enter");
+  paneEnter.delete(pane);
+}
+
+/** The pane's incoming layer is still inside its swap transition. */
+function midSwap(pane: number): boolean {
+  return Boolean(paneEls[pane]?.querySelector(":scope > .stage-layer.swap-in:not(.exit)"));
+}
 
 /** Replace `current` with `layer` once the new layer's images are decoded, so
  *  the swap can't flash an empty tile mosaic or logo slot. The new layer sits
@@ -697,23 +838,23 @@ function quietRefresh(
   layer: HTMLElement,
   current: Element[],
 ): void {
-  pendingRefresh.get(pane)?.remove();
+  dropPendingRefresh(pane);
   layer.classList.add("pending");
   container.appendChild(layer);
-  pendingRefresh.set(pane, layer);
   // Map renderers build their tiles in a requestAnimationFrame after attach;
   // this frame callback is queued after theirs, so their images exist by now.
-  requestAnimationFrame(() => {
+  const frame = requestAnimationFrame(() => {
     const images = Array.from(layer.querySelectorAll("img"));
     const decoded = Promise.all(images.map((img) => img.decode().catch(() => undefined)));
     const timeout = new Promise((resolve) => setTimeout(resolve, 1500));
     Promise.race([decoded, timeout]).then(() => {
-      if (pendingRefresh.get(pane) !== layer || !layer.isConnected) return; // superseded
+      if (pendingRefresh.get(pane)?.layer !== layer || !layer.isConnected) return; // superseded
       pendingRefresh.delete(pane);
       for (const el of current) el.remove();
       layer.classList.remove("pending");
     });
   });
+  pendingRefresh.set(pane, { layer, frame });
 }
 
 function renderDots(): void {

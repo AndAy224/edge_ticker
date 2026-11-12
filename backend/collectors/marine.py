@@ -102,14 +102,24 @@ class MarineCollector(Collector):
     async def fetch(self) -> dict:
         async with httpx.AsyncClient(timeout=20, headers={"User-Agent": "edge-ticker/1.0"}) as client:
             station = await self._resolve_station(client)
-            await self._refresh_predictions(client, station)
+            problems = []
+            try:
+                await self._refresh_predictions(client, station)
+            except Exception as exc:
+                # A refresh comes due every few hours, but a fetched table
+                # runs ~54 h ahead: NOAA being down at that moment used to
+                # fail the whole poll with a good curve in hand.
+                if not self._predictions_cover(_now()):
+                    raise
+                problems.append(f"tide predictions (using cached): {type(exc).__name__}")
+                log.info("marine: tide predictions refresh failed, using cached: %s", exc)
             water, marine, uv = await asyncio.gather(
                 self._water_temp(client, station),
                 self._marine(client, station),
                 self._uv(client),
                 return_exceptions=True,
             )
-        problems = [
+        problems += [
             f"{label}: {type(r).__name__}"
             for label, r in (("water temperature", water), ("waves", marine), ("uv", uv))
             if isinstance(r, BaseException)
@@ -147,6 +157,13 @@ class MarineCollector(Collector):
                 raise RuntimeError("no NOAA reference tide station found")
             self._station = station
         return self._station
+
+    def _predictions_cover(self, now: datetime) -> bool:
+        """The cached table still reaches past `now`: a height and a next tide
+        can be read off it."""
+        predictions = self._predictions or {}
+        curve, events = predictions.get("curve") or [], predictions.get("events") or []
+        return bool(curve and events) and _gmt(curve[-1]["t"]) > now and _gmt(events[-1]["t"]) > now
 
     async def _refresh_predictions(self, client: httpx.AsyncClient, station: dict) -> None:
         today = datetime.now().date().isoformat()

@@ -28,6 +28,7 @@ def test_websockets_never_logs_handshakes():
 async def test_health_lists_kiosk_clients_and_dead_background_tasks(monkeypatch):
     monkeypatch.setattr(ws_module, "display_clients", 2)
     monkeypatch.setattr(ws_module, "kiosk_clients", 1)
+    monkeypatch.setattr(ws_module, "_kiosks", set())
 
     async def crash():
         raise RuntimeError("boom")
@@ -49,5 +50,27 @@ async def test_health_lists_kiosk_clients_and_dead_background_tasks(monkeypatch)
     body = main.health(SimpleNamespace(app=SimpleNamespace(state=state)))
     assert (body["display_clients"], body["kiosk_clients"]) == (2, 1)
     assert body["problems"] == ["ha-bridge: background task has died (RuntimeError('boom'))"]
+    # ... and by name, for the watchdog: a restart is what brings a task back
+    assert body["dead_tasks"] == ["ha-bridge"]
+    assert body["kiosk"] is None  # no display socket from this machine to judge
     alive.cancel()
     await asyncio.gather(alive, return_exceptions=True)
+
+
+async def test_health_reports_whether_the_kiosk_is_still_drawing(monkeypatch):
+    # A connected socket is not a working panel; the watchdog reads these ages.
+    now = [500.0]
+    monkeypatch.setattr(ws_module, "_now", lambda: now[0])
+    kiosk = ws_module.Liveness()
+    monkeypatch.setattr(ws_module, "_kiosks", {kiosk})
+    kiosk.ping({"type": "ping", "frames": 9})
+    now[0] += 75
+    state = SimpleNamespace(
+        bus=Bus(),
+        ha=SimpleNamespace(status="connected"),
+        manager=SimpleNamespace(status=lambda: []),
+        scheduler=NightScheduler(FakeBus(), lambda: {}),
+    )
+    body = main.health(SimpleNamespace(app=SimpleNamespace(state=state)))
+    assert body["kiosk"] == {"connected_for": 75.0, "ping_age": 75.0, "frame_age": 75.0, "blanked": False}
+    assert body["dead_tasks"] == []

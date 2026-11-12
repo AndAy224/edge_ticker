@@ -71,7 +71,7 @@ TICKER_FIXTURE=scripts/fixtures/display_snapshot.json TICKER_DB=/tmp/dev.db \
 ## Appliance install (Ubuntu Server 24.04)
 
 ```bash
-sudo bash deploy/install.sh     # idempotent; safe to re-run
+sudo bash deploy/install.sh     # first install; refuses on a running appliance (use deploy/update.sh)
 ```
 
 Installs cage + chromium, creates `ticker`/`kiosk` users, builds everything

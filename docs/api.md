@@ -26,6 +26,7 @@ to the mapped controls (see `POST /api/ha/action`).
   "ok": true,
   "stuck": [],
   "problems": ["sports: schedule window: 3/12 days failing"],
+  "dead_tasks": [],
   "collectors": [
     {
       "name": "markets",
@@ -48,6 +49,8 @@ to the mapped controls (see `POST /api/ha/action`).
   "night": { "mode": "wake", "level": 100, "software": false, "method_used": "ddc" },
   "ws_clients": 2,
   "display_clients": 1,
+  "kiosk_clients": 1,
+  "kiosk": { "connected_for": 5231.4, "ping_age": 3.2, "frame_age": 3.2, "blanked": false },
   "dropped_messages": 0,
   "fixture": false,
   "revision": "03266d3ef0ab",
@@ -55,11 +58,31 @@ to the mapped controls (see `POST /api/ha/action`).
 }
 ```
 
+- `display_clients` counts every `/ws/display` socket; `kiosk_clients` only
+  those from loopback (the kiosk itself), which is what the watchdog and
+  `update.sh` wait on. `problems` also names a long-running background task
+  (`ha-bridge`, `night-scheduler`…) that has died, and a DDC backlight that
+  has stopped answering; the dead tasks are listed by name in `dead_tasks`,
+  which the watchdog restarts the backend for, like `stuck`.
+- `kiosk` says whether that kiosk is still *drawing* — a socket alone stays
+  up through a dead compositor, with the panel frozen on one picture. Seconds
+  since the freshest loopback display socket connected, since its last `ping`
+  (`ping_age`) and since the frame count in its pings last moved
+  (`frame_age`); `null` ages = not reported yet (or a bundle from before the
+  frame count), and the whole object is `null` with no such socket, or only
+  hidden pages. The watchdog restarts the kiosk when either age stays above
+  60 s for three checks on a socket connected for at least 120 s.
+- Every request whose `Host` isn't plausibly this box on the LAN (an IP,
+  `localhost`, a single-label name, `.local`/`.lan`/`.home.arpa`/`.internal`/
+  `.localdomain`/`.home`/`.corp`, its hostname, or `TICKER_ALLOWED_HOSTS`) gets
+  `403` — the DNS-rebinding guard.
 - `ok` means the backend process is alive — an upstream outage never makes it
   false. Collectors that stopped *attempting* polls (a hung fetch, an exited
   loop) are listed in `stuck`; that is what the watchdog restarts the backend
   for. Everything else worth a look is summarised in `problems`.
-- Per collector: `overdue` = no fresh data for 3 intervals (+60 s);
+- Per collector: a `fetch()` that outlives its deadline (120 s; hurricanes
+  240 s) is an ordinary failure — `last_error` reads `TimeoutError: fetch()
+  still running after N s` — not `stuck`. `overdue` = no fresh data for 3 intervals (+60 s);
   `degraded` = a partial failure the collector survives (some feeds, the sports
   schedule window, the hurricane outlook…); `state` is `running`, `dead`,
   `disabled`, `missing env` or `error` (its constructor rejected the config).
@@ -91,7 +114,8 @@ without `If-Match` (curl, `scripts/layout_audit.py`) overwrites as before.
 
 ### `GET /api/config/history` · `GET /api/config/history/{id}` · `POST /api/config/restore`
 
-Every save is kept (last 20). The list is newest first:
+Every save that changes the document is kept (last 20; a no-op save is not
+recorded). The list is newest first:
 `{"versions": [{"id", "saved_at", "current", "changed": ["appearance.theme", …]}]}`.
 `GET …/{id}` returns that version's document. `POST /api/config/restore
 {"id": n}` applies it through the same validation as a `PUT` — and is itself
@@ -112,6 +136,19 @@ alert configured for a takeover; `400` if none is). `starship_test` needs no
 backend branch — it rides the generic `control` message and is handled entirely
 by the display.
 
+### On-demand detail proxies
+
+`GET /api/sports/detail`, `/api/markets/detail`, `/api/fantasy/detail`,
+`/api/fantasy/player` and `/api/adsb/route` are fetched by the display on tap
+only (never polled) and cached briefly. Whatever the caller supplies is checked
+before it reaches an upstream URL: `400` for a `sport`/`league`/`event`,
+`league_id`/`season`/`week` outside their patterns; `404` from markets for a
+symbol that is not in `modules.markets.symbols`; `{"route": null}` for
+something that is not a callsign. Cache *misses* draw on a small per-endpoint
+budget (`backend/api/throttle.py`: markets 6 then one per 20 s, sports and
+fantasy detail 10 then one per 6 s, the player card 6 then one per 10 s) —
+over it, `429` with `Retry-After`; cached answers are always free.
+
 ### `GET /api/cameras`
 
 ```json
@@ -124,14 +161,16 @@ by the display.
 The proxyable set is derived from live config (`ha.cameras` plus any
 `ha.alerts[].cameras`) — nothing else can be fetched. `active_streams` (MJPEG)
 and `active_webrtc` (relayed WebRTC sessions) are the teardown assertions: both
-must return to `0` shortly after a takeover ends.
+must return to `0` shortly after a takeover ends. `active_streams` counts slots
+held, including a stream still waiting for HA's response headers.
 
 ### `GET /api/cameras/{id}/stream`
 
 `multipart/x-mixed-replace` passthrough of HA's `/api/camera_proxy_stream/<entity>`,
 for use as an `<img>` src. `400` bad id, `404` unknown id, `503` if HA is
-unconfigured or all `max_streams` slots are busy, `502` if HA fails. The
-display falls back to the snapshot route on any of these.
+unconfigured or all `max_streams` slots are busy, `502` if HA fails or sends
+no response headers within 10 s (the body may then idle between frames for as
+long as it likes). The display falls back to the snapshot route on any of these.
 
 ### `GET /api/cameras/{id}/snapshot`
 
@@ -218,7 +257,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 | `night` | `mode` (`dim`\|`wake`), `level`, `software` | Sent on every brightness change. `software: true` = DDC/CI unavailable, the display draws the dim; `false` = the panel dims itself (clears any software overlay) |
 | `display_state` | `state` | What the display is showing (admin live preview) |
 | `ha_state` | `entity_id`, `state`, `attributes` | One mapped entity changed |
-| `ha_states` | `status`, `states` | All mapped entity states (reconnect / remap) |
+| `ha_states` | `status`, `states` | All mapped entity states (reconnect / remap / a mapped entity removed from HA) |
 | `ha_status` | `status` | HA bridge connection status changed |
 | `sport_event` | `event` | A followed team scored → celebration overlay |
 | `fantasy_event` | `event` | A fantasy scoring play → celebration overlay |
@@ -233,7 +272,7 @@ as a separate channel so Phase 5 can add an admin-only health stream.
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `ping` | — | Heartbeat (display sends every 10 s) |
+| `ping` | `frames`, `hidden`, `blanked` (all optional) | Heartbeat (display sends every 10 s). `frames` counts animation frames the page was given — it stops moving when the compositor stops presenting; `hidden` = a background tab, which gets none by design. Read only from loopback display sockets (`/api/health` `kiosk`) |
 | `control` | `action` | Gesture-originated control |
 | `ha_action` | `domain`, `service`, `entity_id`, `data` | Tile tap service call |
 | `display_state` | `state` (`module`, `pinned`, `blanked`, `overlay`, `takeover`) | Display state report |

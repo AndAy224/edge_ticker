@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from datetime import datetime, timezone
 import io
+from types import SimpleNamespace
 import zipfile
 
 import httpx
@@ -217,6 +218,45 @@ async def test_overlay_fires_for_new_severe_warnings_only(defaults_config, fresh
     restarted._bus = bus
     await restarted._maybe_overlay(parsed_alerts())
     assert len(bus.of_type("weather_alert")) == 1
+
+
+async def test_update_inside_the_cooldown_is_shown_not_postponed(defaults_config, fresh_overlay_state, monkeypatch):
+    clock = SimpleNamespace(now=50_000.0)
+    monkeypatch.setattr(alerts_module, "time", SimpleNamespace(monotonic=lambda: clock.now))
+    bus = FakeBus()
+    collector = WeatherAlertsCollector(defaults_config)
+    collector._bus = bus
+    warning = parsed_alerts()[1]  # Flood Warning, Severe
+    await collector._maybe_overlay([warning])
+    assert len(bus.of_type("weather_alert")) == 1
+
+    # Three minutes on NWS re-issues it under a new id: inside the cooldown.
+    update = dict(warning, id="urn:oid:update-1")
+    clock.now += 180
+    await collector._maybe_overlay([update])
+    assert len(bus.of_type("weather_alert")) == 1
+    # The cooldown lapses with the same update still active. It used to take
+    # the screen now — the cooldown had only postponed it.
+    for _ in range(4):
+        clock.now += 180
+        await collector._maybe_overlay([update])
+    assert clock.now - 50_000.0 > alerts_module.OVERLAY_COOLDOWN_SECONDS
+    assert len(bus.of_type("weather_alert")) == 1
+
+    # A different kind of warning is not held back by the flood's cooldown...
+    tornado = dict(warning, id="urn:oid:tornado-1", event="Tornado Warning", severity="Extreme")
+    await collector._maybe_overlay([update, tornado])
+    assert [m["alert"]["event"] for m in bus.of_type("weather_alert")] == ["Flood Warning", "Tornado Warning"]
+    # ...and its own update, seconds later, is counted as shown too.
+    clock.now += 60
+    await collector._maybe_overlay([update, dict(tornado, id="urn:oid:tornado-2")])
+    clock.now += alerts_module.OVERLAY_COOLDOWN_SECONDS
+    await collector._maybe_overlay([update, dict(tornado, id="urn:oid:tornado-2")])
+    assert len(bus.of_type("weather_alert")) == 2
+
+    # An id first seen once the cooldown is over still takes the screen.
+    await collector._maybe_overlay([dict(warning, id="urn:oid:update-2")])
+    assert [m["alert"]["id"] for m in bus.of_type("weather_alert")][-1] == "urn:oid:update-2"
 
 
 async def test_overlay_can_be_disabled(defaults_config, fresh_overlay_state):

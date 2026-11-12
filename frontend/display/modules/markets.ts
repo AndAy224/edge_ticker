@@ -1,4 +1,5 @@
 import { register } from "./registry";
+import { fetchTimeout } from "../net";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(
@@ -199,7 +200,7 @@ function newsAge(unix: number | null | undefined): string {
 
 /** Fetch company profile / metrics / headlines and fill the right column. */
 function enrichStockDetail(el: HTMLElement, item: any): void {
-  fetch(`/api/markets/detail?symbol=${encodeURIComponent(item.symbol ?? "")}`)
+  fetchTimeout(`/api/markets/detail?symbol=${encodeURIComponent(item.symbol ?? "")}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
       if (!d || !el.isConnected) return;

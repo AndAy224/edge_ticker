@@ -9,6 +9,7 @@ so a quiet GA-heavy sky doesn't re-query every tap.
 """
 from __future__ import annotations
 
+import re
 import time
 
 import httpx
@@ -23,6 +24,10 @@ NEGATIVE_TTL_SECONDS = 600.0  # GA/unknown callsigns 404 — don't re-hammer
 ERROR_TTL_SECONDS = 60.0  # transient upstream failure — retry sooner
 CACHE_MAX_ENTRIES = 200
 _cache: dict[str, tuple[float, float, dict]] = {}  # callsign -> (ts, ttl, data)
+
+# The callsign becomes a path segment of the adsbdb URL. A transponder's flight
+# id is at most eight letters and digits; anything else has no route to find.
+CALLSIGN_RE = re.compile(r"[A-Z0-9]{1,8}")
 
 
 def _airport(node: dict | None) -> dict | None:
@@ -48,7 +53,7 @@ def _flightroute(body) -> dict:
 @router.get("/adsb/route")
 async def adsb_route(callsign: str):
     callsign = callsign.strip().upper()
-    if not callsign:
+    if not CALLSIGN_RE.fullmatch(callsign):
         return {"route": None}
 
     now = time.monotonic()

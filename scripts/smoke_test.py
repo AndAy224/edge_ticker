@@ -1,13 +1,23 @@
 """Dev smoke test: exercises REST endpoints and the display WebSocket.
 
-Usage: start a dev backend (`.venv/bin/uvicorn backend.main:app --port 8081`),
-then `.venv/bin/python scripts/smoke_test.py`. Targets TICKER_URL, default
-http://127.0.0.1:8081 — the dev port. Pointing it at prod (:8080) is possible
-but deliberate: the script PUTs the config back and posts a `next` control.
+Runs against a FIXTURE-MODE backend (recorded payloads, nothing polled — a
+plain dev backend polls every rate-limited upstream with the dev .env):
+
+    TICKER_FIXTURE=scripts/fixtures/display_snapshot.json \\
+      TICKER_DB=/tmp/dev.db FINNHUB_KEY= HA_URL= \\
+      .venv/bin/uvicorn backend.main:app --port 8081
+    .venv/bin/python scripts/smoke_test.py
+
+Targets TICKER_URL, default http://127.0.0.1:8081 — the dev port. The script
+PUTs the config back without If-Match (a concurrent admin save is overwritten,
+and collectors restart) and posts a `next` control that moves the panel, so it
+refuses a backend that is not in fixture mode — prod on :8080 above all —
+unless TICKER_ALLOW_LIVE=1 says that is meant.
 """
 import asyncio
 import json
 import os
+import sys
 
 import httpx
 import websockets
@@ -16,9 +26,19 @@ BASE = os.environ.get("TICKER_URL", "http://127.0.0.1:8081").rstrip("/")
 WS_BASE = "ws" + BASE.removeprefix("http")  # http→ws, https→wss
 
 
+def require_fixture(health: dict) -> None:
+    if health.get("fixture") or os.environ.get("TICKER_ALLOW_LIVE") == "1":
+        return
+    sys.exit(
+        f"{BASE} is not a fixture-mode backend — refusing to PUT its config and "
+        "post a control (TICKER_ALLOW_LIVE=1 to run against it anyway)"
+    )
+
+
 async def main() -> None:
     async with httpx.AsyncClient(base_url=BASE) as client:
         health = (await client.get("/api/health")).json()
+        require_fixture(health)
         print(
             "HEALTH:",
             json.dumps(

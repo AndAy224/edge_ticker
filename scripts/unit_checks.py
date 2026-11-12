@@ -2,10 +2,13 @@
 display_state relay, stretch collector shaping.
 
 Only the display_state relay needs a running backend, at TICKER_URL (default
-http://127.0.0.1:8081, the dev port). A fixture-mode backend is enough:
+http://127.0.0.1:8081, the dev port) — a fixture-mode one:
 `TICKER_FIXTURE=<snapshot.json> TICKER_DB=<tmp.db> FINNHUB_KEY= HA_URL=
-.venv/bin/uvicorn backend.main:app --port 8081`. check_astro_live calls
-Open-Meteo. The pytest suite (tests/) covers most of this offline.
+.venv/bin/uvicorn backend.main:app --port 8081`. The relay check sends a made-up
+display_state, which the backend caches and every admin preview shows until
+the real display next reports, so the script refuses a backend that is not in
+fixture mode unless TICKER_ALLOW_LIVE=1 says that is meant. check_astro_live
+calls Open-Meteo. The pytest suite (tests/) covers most of this offline.
 """
 import asyncio
 import json
@@ -13,6 +16,7 @@ import os
 import sys
 from pathlib import Path
 
+import httpx
 import websockets
 
 BASE = os.environ.get("TICKER_URL", "http://127.0.0.1:8081").rstrip("/")
@@ -60,6 +64,17 @@ async def check_scheduler() -> None:
         {"type": "control", "action": "reload"},
     ], bus.messages
     print("SCHEDULER OK:", bus.messages)
+
+
+async def require_fixture() -> None:
+    async with httpx.AsyncClient(base_url=BASE) as client:
+        health = (await client.get("/api/health")).json()
+    if health.get("fixture") or os.environ.get("TICKER_ALLOW_LIVE") == "1":
+        return
+    sys.exit(
+        f"{BASE} is not a fixture-mode backend — refusing to send it a fake "
+        "display_state (TICKER_ALLOW_LIVE=1 to run against it anyway)"
+    )
 
 
 async def check_display_state_relay() -> None:
@@ -158,6 +173,7 @@ def check_adsb_shape() -> None:
 
 
 async def main() -> None:
+    await require_fixture()
     await check_scheduler()
     await check_display_state_relay()
     await check_astro_live()

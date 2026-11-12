@@ -41,7 +41,9 @@ HEADERS = {
 MAX_TAPE_ALERTS = 4
 OVERLAY_SEVERITIES = ("Extreme", "Severe")
 # NWS issues an Update as a brand-new alert id; without a per-event cooldown a
-# long-running warning would re-take the screen on every update.
+# long-running warning would re-take the screen on every update. Measured from
+# the last takeover for that event name: a new id seen inside it is recorded as
+# shown and never takes over; one first seen after it does.
 OVERLAY_COOLDOWN_SECONDS = 600.0
 
 # Overlay dedup state is module-level on purpose: PUT /api/config restarts all
@@ -227,17 +229,36 @@ class WeatherAlertsCollector(Collector):
     def shape(self, raw: list[dict]) -> ModulePayload:
         raw = [a for a in raw if not _expired(a.get("ends"))]
         nearby = [a for a in self._nearby if not _expired(a.get("ends"))]
+        return ModulePayload(
+            module=self.name,
+            stage={"alerts": raw, "nearby": nearby, "location": self.location_name},
+            tape=self._tape(raw),
+        )
+
+    @staticmethod
+    def _tape(alerts: list[dict]) -> list[TapeItem]:
         tape = []
-        for a in raw[:MAX_TAPE_ALERTS]:
+        for a in alerts[:MAX_TAPE_ALERTS]:
             until = _short_time(a.get("ends"))
             text = f"{a['event']} — until {until}" if until else a["event"]
             # Above HA alerts (2) and followed-game items (1).
             tape.append(TapeItem(text=text, accent="alert", priority=3, icon="warning"))
-        return ModulePayload(
-            module=self.name,
-            stage={"alerts": raw, "nearby": nearby, "location": self.location_name},
-            tape=tape,
-        )
+        return tape
+
+    def prune_stale(self, payload: ModulePayload) -> ModulePayload:
+        """Alerts end on their own clock, whether or not NWS can be reached: a
+        warning that ended at 18:15 used to hold the tape, the weather page's
+        alert chip, its radar outline and the red condition through a two-hour
+        outage, because a failed poll re-published the last payload as it was."""
+        stage = payload.stage
+        alerts = [a for a in stage.get("alerts") or [] if not _expired(a.get("ends"))]
+        nearby = [a for a in stage.get("nearby") or [] if not _expired(a.get("ends"))]
+        if len(alerts) == len(stage.get("alerts") or []) and len(nearby) == len(stage.get("nearby") or []):
+            return payload
+        return payload.model_copy(update={
+            "stage": {**stage, "alerts": alerts, "nearby": nearby},
+            "tape": self._tape(alerts),
+        })
 
     async def _maybe_overlay(self, alerts: list[dict]) -> None:
         if self._bus is None or not self.overlay_enabled:
@@ -255,6 +276,10 @@ class WeatherAlertsCollector(Collector):
             if a["id"] in _fired_ids:
                 continue
             if now - _event_fired_at.get(a["event"], -OVERLAY_COOLDOWN_SECONDS) < OVERLAY_COOLDOWN_SECONDS:
+                # An update of the warning already shown. It counts as shown:
+                # left unrecorded it was only postponed, and took the screen
+                # on the first poll after the cooldown.
+                _fired_ids[a["id"]] = now
                 continue
             _fired_ids[a["id"]] = now
             _event_fired_at[a["event"]] = now

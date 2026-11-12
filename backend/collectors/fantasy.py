@@ -272,7 +272,7 @@ class FantasyCollector(Collector):
         return teams[0].get("id") if teams else None
 
     def _side(
-        self, raw_side: dict, teams_by_id: dict, members_by_id: dict, decided: bool, week: int
+        self, raw_side: dict, teams_by_id: dict, members_by_id: dict, decided: bool, period: int
     ) -> dict:
         tid = raw_side.get("teamId")
         team = teams_by_id.get(tid, {})
@@ -280,7 +280,7 @@ class FantasyCollector(Collector):
         if cur is None:
             cur = raw_side.get("totalPoints") or 0.0
         proj = raw_side.get("totalProjectedPointsLive")
-        starters = _starters(raw_side, self._pro, week)
+        starters = _starters(raw_side, self._pro, period)
         return {
             "teamId": tid,
             "name": _team_name(team),
@@ -321,9 +321,12 @@ class FantasyCollector(Collector):
                 continue
             winner = m.get("winner") or "UNDECIDED"
             decided = winner not in ("UNDECIDED", None)
-            home = self._side(home_raw, teams_by_id, members_by_id, decided, week)
+            # Starters' opponent, kickoff and bye are per NFL week, like the
+            # kickoffs below: keyed by the matchup period, the second week of
+            # a two-week playoff matchup showed the previous week's.
+            home = self._side(home_raw, teams_by_id, members_by_id, decided, period)
             away = (
-                self._side(away_raw, teams_by_id, members_by_id, decided, week)
+                self._side(away_raw, teams_by_id, members_by_id, decided, period)
                 if away_raw else None
             )
             kickoffs = (
@@ -456,7 +459,7 @@ def _record_summary(team: dict) -> str | None:
     return f"{base}-{t}" if t else base
 
 
-def _starters(raw_side: dict, pro: dict, week: int) -> list[dict]:
+def _starters(raw_side: dict, pro: dict, period: int) -> list[dict]:
     roster = (
         raw_side.get("rosterForCurrentMatchupPeriod")
         or raw_side.get("rosterForMatchupPeriod")
@@ -476,7 +479,7 @@ def _starters(raw_side: dict, pro: dict, week: int) -> list[dict]:
             "points": round(actual, 1) if actual is not None else None,
             "projected": round(proj, 1) if proj is not None else None,
             "yetToPlay": actual in (None, 0) and proj not in (None, 0),
-            **player_meta(player, pro, week),
+            **player_meta(player, pro, period),
         })
     return out
 

@@ -4,6 +4,9 @@ Description=Run the edge ticker health watchdog every minute
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=1min
+# The default accuracy is a minute, which stretched "every minute" to 64–99 s
+# and "5 checks" to as much as 8 minutes.
+AccuracySec=5s
 
 [Install]
 WantedBy=timers.target

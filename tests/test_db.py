@@ -47,6 +47,30 @@ async def test_history_keeps_last_twenty(fresh_db):
     assert values == list(range(last, last - db.HISTORY_KEEP, -1))
 
 
+async def test_a_save_that_changes_nothing_is_not_a_version(fresh_db):
+    # Each one used to be recorded, so pressing Save over and over pushed the
+    # real versions out of the last twenty.
+    frost = db.defaults()
+    frost["appearance"]["theme"] = "frost"
+    await db.put_config(frost)
+    before = await db.history()
+    for _ in range(db.HISTORY_KEEP + 5):
+        await db.put_config(frost)
+    await db.put_config(dict(reversed(list(frost.items()))))  # key order is not a change
+    assert await db.history() == before
+    assert len(before) == 2 and before[1]["config"] == db.defaults()
+    assert await db.get_config() == frost
+
+
+async def test_going_back_to_an_earlier_document_is_a_version(fresh_db):
+    frost = db.defaults()
+    frost["appearance"]["theme"] = "frost"
+    await db.put_config(frost)
+    await db.put_config(db.defaults())  # equal to an older version, not to the current one
+    themes = [h["config"]["appearance"]["theme"] for h in await db.history()]
+    assert themes == [db.defaults()["appearance"]["theme"], "frost", themes[0]]
+
+
 async def test_reinit_keeps_stored_config(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "ticker.db")
     await db.init()

@@ -33,7 +33,12 @@ UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 # Names that only resolve inside a LAN (mDNS, router DNS, RFC 8375/6762/6761
 # special-use) — a rebinding attacker can't register them publicly.
-LAN_SUFFIXES = (".local", ".lan", ".home.arpa", ".internal", ".localdomain", ".localhost")
+LAN_SUFFIXES = (
+    ".local", ".lan", ".home.arpa", ".internal", ".localdomain", ".localhost",
+    # never delegated (ICANN deferred them over name collisions) and common as
+    # home-router domains, so just as unregistrable for an attacker
+    ".home", ".corp",
+)
 ALLOWED_HOSTS_ENV = "TICKER_ALLOWED_HOSTS"
 
 

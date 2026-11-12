@@ -1,10 +1,26 @@
 #!/usr/bin/env bash
 # Idempotent setup for a fresh Ubuntu Server 24.04 kiosk host.
 # Run as root: sudo bash deploy/install.sh
+# An appliance that is already installed and running is updated with
+# deploy/update.sh instead; --force runs the installer over it anyway.
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/AndAy224/edge_ticker.git}"
-APP_DIR=/opt/edge-ticker
+APP_DIR=${EDGE_TICKER_DIR:-/opt/edge-ticker}  # the override exists for the sandboxed test
+
+# Re-run on a live appliance, this script pulled and then built straight into
+# the live frontend/dist — vite empties it first, so /display answered 503
+# during the build and stayed broken if the build failed — with none of
+# update.sh's checks or its rollback. A fresh box has no checkout, and one
+# whose backend is down is not serving anything a re-run could break.
+if [ "${1:-}" != "--force" ] && [ -d "$APP_DIR/.git" ] \
+    && systemctl is-active --quiet ticker-backend.service 2>/dev/null; then
+  echo "edge-ticker is already installed and running in $APP_DIR."
+  echo "  update it:      sudo bash $APP_DIR/deploy/update.sh"
+  echo "  install anyway: sudo bash $APP_DIR/deploy/install.sh --force"
+  echo "                  (builds into the live bundle: /display is down meanwhile)"
+  exit 1
+fi
 
 echo "==> apt packages"
 apt-get update
@@ -65,7 +81,10 @@ cp "$APP_DIR/deploy/ticker-watchdog.service" /etc/systemd/system/
 cp "$APP_DIR/deploy/ticker-watchdog.timer" /etc/systemd/system/
 chmod +x "$APP_DIR/deploy/watchdog.sh" "$APP_DIR/deploy/update.sh"
 systemctl daemon-reload
-systemctl enable --now ticker-backend.service
+systemctl enable ticker-backend.service
+# restart, not `enable --now`: that leaves a backend that is already running
+# (--force) on the old code over the new checkout and bundle.
+systemctl restart ticker-backend.service
 systemctl enable --now ticker-watchdog.timer
 systemctl enable kiosk.service
 

@@ -17,7 +17,8 @@ from helpers import FakeBus
 
 
 class Scripted(Collector):
-    """fetch() plays a script: a value is returned, an exception raised."""
+    """fetch() plays a script: a value is returned, an exception raised, and
+    HANG never answers (until cancelled)."""
 
     name = "scripted"
 
@@ -25,15 +26,27 @@ class Scripted(Collector):
         super().__init__(config or {"modules": {}})
         self.interval = interval
         self.script = list(script)
+        self.hanging = asyncio.Event()  # set while fetch() sits in a HANG step
+        self.cancelled_in_fetch = 0
 
     async def fetch(self):
         step = self.script.pop(0)
         if isinstance(step, BaseException):
             raise step
+        if step is HANG:
+            self.hanging.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.cancelled_in_fetch += 1
+                raise
         return step
 
     def shape(self, raw):
         return ModulePayload(module=self.name, stage={"value": raw})
+
+
+HANG = object()
 
 
 class Stop(Exception):
@@ -42,7 +55,8 @@ class Stop(Exception):
 
 def fake_sleeps(monkeypatch, count: int) -> list[float]:
     """Swap base's asyncio for one whose sleep() records the delay, and ends
-    the loop (CancelledError) on the `count`-th sleep."""
+    the loop (CancelledError) on the `count`-th sleep. The fetch deadline
+    stays real."""
     delays: list[float] = []
 
     async def sleep(delay):
@@ -51,7 +65,9 @@ def fake_sleeps(monkeypatch, count: int) -> list[float]:
             raise asyncio.CancelledError
 
     monkeypatch.setattr(
-        base, "asyncio", SimpleNamespace(sleep=sleep, CancelledError=asyncio.CancelledError)
+        base,
+        "asyncio",
+        SimpleNamespace(sleep=sleep, CancelledError=asyncio.CancelledError, timeout=asyncio.timeout),
     )
     return delays
 
@@ -144,6 +160,137 @@ async def test_cancellation_propagates_out_of_fetch(fake_bus):
     with pytest.raises(asyncio.CancelledError):
         await collector.start(fake_bus)
     assert collector.failures_total == 0
+
+
+# ---- the fetch deadline -------------------------------------------------------------
+
+
+async def test_hung_fetch_becomes_an_ordinary_failure(monkeypatch, fake_bus):
+    # An upstream trickling bytes never trips a per-request timeout: the fetch
+    # used to sit until /health called the collector stuck and the watchdog
+    # restarted the whole backend.
+    delays = fake_sleeps(monkeypatch, 3)
+    collector = Scripted(script=[7, HANG, 8], interval=60)
+    collector.fetch_timeout = 0.05
+    await run_loop(collector, fake_bus)
+    published = [m["payload"] for m in fake_bus.of_type("module")]
+    assert [(p.stage["value"], p.stale) for p in published] == [(7, False), (7, True), (8, False)]
+    assert delays == [60, 5.0, 60]  # the usual backoff, then back to the interval
+    assert collector.cancelled_in_fetch == 1  # the hung fetch was torn down, not abandoned
+    assert collector.failures_total == 1 and collector.consecutive_failures == 0
+    assert collector._attempt_started is None and not collector.stuck()
+
+
+async def test_fetch_deadline_is_reported_as_the_error(monkeypatch, fake_bus):
+    fake_sleeps(monkeypatch, 1)
+    collector = Scripted(script=[HANG])
+    collector.fetch_timeout = 0.05
+    await run_loop(collector, fake_bus)
+    assert collector.last_error == "TimeoutError: fetch() still running after 0.05 s"
+    assert collector.stale is True
+
+
+async def test_a_timeout_raised_by_fetch_itself_keeps_its_own_message(monkeypatch, fake_bus):
+    fake_sleeps(monkeypatch, 1)
+    collector = Scripted(script=[TimeoutError("upstream took too long")])
+    await run_loop(collector, fake_bus)
+    assert collector.last_error == "TimeoutError: upstream took too long"
+
+
+async def test_stopping_a_collector_mid_fetch_is_a_cancellation_not_a_timeout(fake_bus):
+    # The manager stops a collector by cancelling its task.
+    collector = Scripted(script=[HANG])
+    task = asyncio.create_task(collector.start(fake_bus))
+    await asyncio.wait_for(collector.hanging.wait(), timeout=2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+    assert collector.cancelled_in_fetch == 1
+    assert collector.failures_total == 0 and collector.last_error is None
+    assert fake_bus.messages == []
+
+
+def test_every_fetch_deadline_fires_before_the_collector_counts_as_stuck():
+    from backend.collectors import collector_classes
+
+    for cls in collector_classes():
+        assert 0 < cls.fetch_timeout < base.HUNG_ATTEMPT_SECONDS, cls.name
+    assert Collector.fetch_timeout <= base.HUNG_ATTEMPT_SECONDS / 2
+
+
+# ---- pruning a stale payload ---------------------------------------------------------
+
+
+class Expiring(Scripted):
+    """Stage values listed in `expired` have run out on their own clock."""
+
+    name = "expiring"
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.expired: set[str] = set()
+        self.prune_calls = 0
+
+    def prune_stale(self, payload):
+        self.prune_calls += 1
+        kept = [v for v in payload.stage["value"] if v not in self.expired]
+        if len(kept) == len(payload.stage["value"]):
+            return payload
+        return payload.model_copy(update={"stage": {"value": kept}})
+
+
+async def test_stale_republish_drops_what_expired_and_repeats_only_on_change(monkeypatch, fake_bus):
+    collector = Expiring(script=[["a", "b", "c"]] + [RuntimeError("down")] * 4)
+    expiries = iter([set(), {"a"}, {"a"}, {"a", "b"}, {"a", "b"}])
+    delays: list[float] = []
+
+    async def sleep(delay):
+        delays.append(delay)
+        if len(delays) == 5:
+            raise asyncio.CancelledError
+        collector.expired = next(expiries)  # time passes between polls
+
+    monkeypatch.setattr(
+        base,
+        "asyncio",
+        SimpleNamespace(sleep=sleep, CancelledError=asyncio.CancelledError, timeout=asyncio.timeout),
+    )
+    await run_loop(collector, fake_bus)
+    published = [m["payload"] for m in fake_bus.of_type("module")]
+    # fresh; stale as it was; "a" ran out; (no change: nothing); "b" ran out.
+    assert [(p.stage["value"], p.stale) for p in published] == [
+        (["a", "b", "c"], False),
+        (["a", "b", "c"], True),
+        (["b", "c"], True),
+        (["c"], True),
+    ]
+    assert collector.prune_calls == 4  # every failed poll
+    assert published[-1].updated_at == published[0].updated_at  # still the last good fetch's age
+
+
+async def test_prune_hook_that_raises_does_not_break_the_failure_path(monkeypatch, fake_bus):
+    class Broken(Scripted):
+        def prune_stale(self, payload):
+            raise KeyError("stage changed shape")
+
+    delays = fake_sleeps(monkeypatch, 3)
+    collector = Broken(script=[7, RuntimeError("down"), RuntimeError("down")])
+    await run_loop(collector, fake_bus)
+    published = [m["payload"] for m in fake_bus.of_type("module")]
+    assert [(p.stage["value"], p.stale) for p in published] == [(7, False), (7, True)]
+    assert delays == [60, 5.0, 10.0]  # the loop kept its pacing
+    assert collector.last_error == "RuntimeError: down"
+
+
+async def test_inherited_stale_payload_is_pruned_by_a_restarted_collector(monkeypatch, fake_bus):
+    fake_bus.payloads["expiring"] = ModulePayload(module="expiring", stage={"value": ["a", "b"]}, stale=True)
+    fake_sleeps(monkeypatch, 1)
+    collector = Expiring(script=[RuntimeError("down")])
+    collector.expired = {"a"}
+    await run_loop(collector, fake_bus)
+    [message] = fake_bus.of_type("module")
+    assert message["payload"].stage == {"value": ["b"]} and message["payload"].stale is True
 
 
 # ---- config fingerprints ----------------------------------------------------------

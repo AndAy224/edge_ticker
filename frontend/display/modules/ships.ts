@@ -8,7 +8,16 @@
 // list and detail card classes (.adsb-list/.adsb-header/.adsb-row,
 // .adsb-detail*), so the themes treat them alike; ship-specific bits are
 // .ships-*.
-import { BASEMAP_ATTRIB, MapView, basemapImgs, fitView, mapScaleStyle, project, tileZoom } from "../slippymap";
+import {
+  BASEMAP_ATTRIB,
+  MapView,
+  basemapImgs,
+  buildWhenAttached,
+  fitView,
+  mapScaleStyle,
+  project,
+  tileZoom,
+} from "../slippymap";
 import { HULL_ICON, HULL_PATH, VESSEL_ICONS } from "../icons";
 import { register } from "./registry";
 
@@ -204,10 +213,7 @@ register({
       <div class="ships-side">${listHtml(vessels, data)}</div>
     </div>`;
     const stage = el.querySelector<HTMLElement>(".ships-stage")!;
-    requestAnimationFrame(() => {
-      if (!el.isConnected) return;
-      buildMap(stage, data);
-    });
+    buildWhenAttached(el, () => buildMap(stage, data));
   },
   getDetailItem(stage, key) {
     const list: any[] = stage?.vessels ?? [];

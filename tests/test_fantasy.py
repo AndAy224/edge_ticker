@@ -164,6 +164,41 @@ def test_without_a_schedule_points_still_mean_live(config, at):
     assert payload.stage["matchup"]["state"] == "in"
 
 
+def test_two_week_playoff_matchup_reads_the_current_nfl_week(config, at):
+    """Matchup period 15 spans NFL weeks 15 and 16. In week 16 the starters'
+    opponent, kickoff and bye came from week 15's schedule, while the live
+    check beside them already used week 16."""
+    week_15 = datetime(2026, 12, 20, 18, 0, tzinfo=UTC)
+    week_16 = datetime(2026, 12, 27, 18, 0, tzinfo=UTC)
+    pro = {
+        TB: {"abbrev": "TB", "byeWeek": 11,
+             "games": {15: pro_game(ATL, True, week_15), 16: pro_game(KC, False, week_16)}},
+        GB: {"abbrev": "GB", "byeWeek": 16, "games": {15: pro_game(KC, True, week_15)}},
+        ATL: {"abbrev": "ATL", "byeWeek": 5,
+              "games": {15: pro_game(TB, False, week_15), 16: pro_game(GB, True, week_16)}},
+        KC: {"abbrev": "KC", "byeWeek": 10,
+             "games": {15: pro_game(GB, False, week_15), 16: pro_game(TB, True, week_16)}},
+    }
+    for team in pro.values():
+        for game in team["games"].values():
+            game["oppAbbrev"] = pro[game["oppId"]]["abbrev"]
+    raw = league()
+    raw["scoringPeriodId"] = 16
+    raw["status"]["currentMatchupPeriod"] = 15
+    for matchup in raw["schedule"]:
+        matchup["matchupPeriodId"] = 15
+
+    at(week_16 - timedelta(days=1))
+    collector = FantasyCollector(config)
+    collector._pro = pro
+    payload = collector.shape(raw)
+    assert payload.stage["meta"]["week"] == 15  # the matchup is still period 15
+    evans, reed = payload.stage["matchup"]["home"]["starters"]
+    assert (evans["opp"], evans["kickoff"], evans["bye"]) == ("@ KC", ms(week_16), False)  # not "vs ATL"
+    assert (reed["opp"], reed["kickoff"], reed["bye"]) == ("BYE", None, True)  # GB is off in week 16
+    assert payload.stage["matchup"]["attention"] == 1  # the bye starter needs a swap
+
+
 # ---- the NFL schedule lookup is reported, not just logged -------------------------
 
 

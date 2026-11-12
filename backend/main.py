@@ -53,7 +53,7 @@ from .api.sports import router as sports_router  # noqa: E402
 from .camera_alert import CameraAlertHub  # noqa: E402
 from .ha_bridge import HABridge  # noqa: E402
 from .manager import CollectorManager  # noqa: E402
-from .origin import UNSAFE_METHODS, cross_site  # noqa: E402
+from .origin import ALLOWED_HOSTS_ENV, UNSAFE_METHODS, cross_site, host_allowed  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
 from .tasks import failed, spawn  # noqa: E402
@@ -135,9 +135,20 @@ app = FastAPI(title="edge-ticker", lifespan=lifespan)
 
 @app.middleware("http")
 async def refuse_cross_site_writes(request: Request, call_next):
-    if request.method in UNSAFE_METHODS and cross_site(
-        request.headers.get("origin"), request.headers.get("host")
-    ):
+    host = request.headers.get("host")
+    # Every request, reads included: a rebinding page's same-origin GETs carry
+    # no Origin, so checking only writes still let it read /api/config and the
+    # camera snapshot/stream proxies. A name this box isn't plausibly reached by
+    # on the LAN gets nothing at all (backend/origin.py, host_allowed).
+    if not host_allowed(host):
+        return JSONResponse(
+            {
+                "error": f"refused: {host!r} is not a name this appliance answers to — "
+                f"add it to {ALLOWED_HOSTS_ENV} in .env if it should be"
+            },
+            status_code=403,
+        )
+    if request.method in UNSAFE_METHODS and cross_site(request.headers.get("origin"), host):
         return JSONResponse({"error": "cross-site request refused"}, status_code=403)
     return await call_next(request)
 
@@ -160,19 +171,24 @@ def health(request: Request) -> dict:
     bridge: HABridge = request.app.state.ha
     collectors = request.app.state.manager.status()
     scheduler: NightScheduler = request.app.state.scheduler
+    background = [
+        *getattr(request.app.state, "background", []),
+        *filter(None, [getattr(scheduler, "watcher", None)]),
+    ]
     return {
         # `ok` means the backend itself is alive — an upstream outage is not a
         # reason for the watchdog to restart it. What a restart *does* fix is
         # listed in `stuck`; everything else worth a look is in `problems`.
         "ok": True,
         "stuck": [c["name"] for c in collectors if c.get("stuck")],
-        "problems": _problems(
-            collectors,
-            [
-                *getattr(request.app.state, "background", []),
-                *filter(None, [getattr(scheduler, "watcher", None)]),
-            ],
-        ),
+        "problems": [
+            *_problems(collectors, background),
+            *filter(None, [scheduler.problem()]),
+        ],
+        # Background tasks that have died (night scheduler, HA bridge): like
+        # `stuck`, something only a restart brings back, so the watchdog acts
+        # on it. The rest of `problems` (a rejected config, say) it can't fix.
+        "dead_tasks": [task.get_name() for task in background if failed(task)],
         "collectors": collectors,
         "ha": bridge.status,
         "night": scheduler.state() | {"method_used": scheduler.method_used},
@@ -181,6 +197,10 @@ def health(request: Request) -> dict:
         # Display sockets from this machine, i.e. the kiosk itself — what the
         # watchdog checks (a /display tab elsewhere doesn't prove the panel is up).
         "kiosk_clients": ws_channels.kiosk_clients,
+        # Whether that kiosk is still drawing: seconds since its pings last
+        # arrived and since its frame count last moved (ws.Liveness). A socket
+        # alone stays up through a dead compositor.
+        "kiosk": ws_channels.kiosk_liveness(),
         "dropped_messages": bus.dropped,
         "fixture": bool(FIXTURE),
         "revision": REVISION,

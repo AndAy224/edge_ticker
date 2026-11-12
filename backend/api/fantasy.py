@@ -29,6 +29,7 @@ from ..collectors.fantasy import (
     player_meta,
     pro_teams,
 )
+from .throttle import Throttle
 
 router = APIRouter()
 
@@ -47,10 +48,30 @@ LOGO_MAX_ENTRIES = 64
 _logo_cache: dict[str, tuple[float, str, bytes]] = {}
 _LOGO_ID_RE = re.compile(r"^[0-9a-fA-F-]{8,64}$")
 
+# `league_id` becomes a path segment on the host our ESPN cookies are sent to,
+# and the caller picks it: "../.." used to reach any path there. League ids are
+# numbers; season and week arrive as ints, bounded because every distinct
+# season also costs a pro-schedule fetch and an entry in a cache nothing evicts.
+LEAGUE_ID_RE = re.compile(r"[0-9]{1,15}")
+SEASONS = range(2000, 2100)
+WEEKS = range(1, 31)
+
+# Cache misses only; a tap is one lookup. A boxscore is one request, a player
+# card up to ten (one per week of its game log) — hence the smaller budget.
+_detail_lookups = Throttle(burst=10, refill_seconds=6.0)
+_player_lookups = Throttle(burst=6, refill_seconds=10.0)
+
 
 def _cookies() -> dict:
     s2, swid = os.environ.get("ESPN_S2", "").strip(), os.environ.get("ESPN_SWID", "").strip()
     return {"espn_s2": s2, "SWID": swid} if s2 and swid else {}
+
+
+def _bad_request(league_id: str, season: int, week: int) -> JSONResponse | None:
+    # fullmatch: `$` would let a trailing newline through
+    if LEAGUE_ID_RE.fullmatch(league_id) and season in SEASONS and week in WEEKS:
+        return None
+    return JSONResponse({"error": "bad league_id, season or week"}, status_code=400)
 
 
 def _entry_player(e: dict, pro: dict, week: int) -> dict:
@@ -183,11 +204,15 @@ def _team_block(raw_side: dict, teams_by_id: dict, pro: dict, week: int) -> dict
 
 @router.get("/fantasy/detail")
 async def fantasy_detail(league_id: str, season: int, week: int, team_id: int):
+    if (bad := _bad_request(league_id, season, week)) is not None:
+        return bad
     key = f"{league_id}/{season}/{week}/{team_id}"
     now = time.monotonic()
     cached = _cache.get(key)
     if cached and now - cached[0] < CACHE_TTL_SECONDS:
         return cached[1]
+    if not _detail_lookups.take():
+        return _detail_lookups.refused()
     try:
         async with httpx.AsyncClient(
             timeout=15, headers=HEADERS, cookies=_cookies(), follow_redirects=True
@@ -260,11 +285,15 @@ async def fantasy_logo(id: str):
 async def fantasy_player(league_id: str, season: int, week: int, player_id: int):
     """Per-player card: identity, injury, ownership, this-week opp/bye/projected,
     season total/avg, and a weekly points log for the sparkline."""
+    if (bad := _bad_request(league_id, season, week)) is not None:
+        return bad
     key = f"{league_id}/{season}/{week}/{player_id}"
     now = time.monotonic()
     cached = _player_cache.get(key)
     if cached and now - cached[0] < PLAYER_TTL_SECONDS:
         return cached[1]
+    if not _player_lookups.take():
+        return _player_lookups.refused()
     player_filter = '{"players":{"filterIds":{"value":[%d]}}}' % player_id
     try:
         async with httpx.AsyncClient(

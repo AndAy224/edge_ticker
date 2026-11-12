@@ -98,6 +98,9 @@ class MarketsCollector(Collector):
         self._spark_file = DB_PATH.parent / "markets-spark.json"
         self._history: dict[str, list[list[float]]] = self._load_history()
         self._history_at: dict[str, float] = {}  # last stream-sourced point per symbol
+        # Symbols whose sparkline the last poll built from our own history —
+        # the only ones the stream may redraw.
+        self._self_built_spark: set[str] = set()
         self._earnings_today: set[str] = set()
         self._earnings_checked: datetime | None = None  # last successful fetch
         self._earnings_retry_at: datetime | None = None
@@ -228,7 +231,11 @@ class MarketsCollector(Collector):
             if now - self._history_at.get(symbol, 0.0) >= HISTORY_STREAM_INTERVAL:
                 self._history_at[symbol] = now
                 self._record(symbol, price, now)
-                quote["spark"] = self._spark(symbol)
+                # A symbol with real candles (Coinbase, Yahoo) keeps them: its
+                # sparkline used to flip between the 12 h of candles and our
+                # own shorter series every minute.
+                if symbol in self._self_built_spark:
+                    quote["spark"] = self._spark(symbol)
             changed = True
         if not changed:
             return None
@@ -279,10 +286,12 @@ class MarketsCollector(Collector):
             self.degraded = None  # the error says it all
             raise RuntimeError("all quote requests failed")
         now = time.time()
+        self._self_built_spark = set()
         for q in quotes:
             self._record(q["symbol"], q["price"], now)
             if not q["spark"]:  # Finnhub path — fill from accumulated history
                 q["spark"] = self._spark(q["symbol"])
+                self._self_built_spark.add(q["symbol"])
         self._save_history()
         await self._refresh_earnings_today(client)
         # A symbol whose quote failed (Coinbase down, Finnhub answering zeros)

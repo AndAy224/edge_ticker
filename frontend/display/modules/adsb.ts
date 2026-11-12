@@ -1,6 +1,7 @@
 import { register } from "./registry";
 import { AIRCRAFT_ICON, AIRCRAFT_PATH } from "../icons";
 import { COASTLINE, AIRPORTS, PLACES } from "./basemap-tampa";
+import { fetchTimeout } from "../net";
 
 // .radar-sweep's animation period (styles.css radar-spin).
 const SWEEP_PERIOD_MS = 8000;
@@ -201,6 +202,13 @@ function scopeSvg(aircraft: any[], radiusKm: number, center: any): string {
 // flight costs one lookup, not one per render.
 const routeLabels = new Map<string, string | null>();
 const routePending = new Set<string>();
+// callsign -> when a lookup that failed may be tried again. Only an answer is
+// cached above: a 502 or 429 from the proxy used to be kept as "no route"
+// until the page reloaded. The hold keeps a failing proxy (or one refusing
+// lookups over its budget) from being asked again on every 15 s render.
+const routeRetryAt = new Map<string, number>();
+const ROUTE_RETRY_MS = 60_000;
+const ROUTE_TIMEOUT_MS = 15_000; // the proxy gives its upstream 10 s
 
 function rowCallsign(a: any): string {
   const callsign = String(a.flight ?? "").trim();
@@ -226,23 +234,30 @@ function enrichListRoutes(el: HTMLElement): void {
   )) {
     const callsign = span.dataset.routeFor!;
     if (routeLabels.has(callsign) || routePending.has(callsign)) continue;
+    if ((routeRetryAt.get(callsign) ?? 0) > Date.now()) continue;
     routePending.add(callsign);
-    fetch(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`)
-      .then((r) => (r.ok ? r.json() : null))
+    fetchTimeout(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`, ROUTE_TIMEOUT_MS)
+      .then((r) => {
+        if (!r.ok) throw new Error(`route lookup: HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
         const route = d?.route;
         const code = (ap: any) => ap?.iata || ap?.icao || "";
         const from = code(route?.origin);
         const to = code(route?.destination);
         routeLabels.set(callsign, from && to ? `${from} → ${to}` : null);
+        routeRetryAt.delete(callsign);
       })
       .catch(() => {
-        routePending.delete(callsign); // transient failure — retry next render
+        // No answer (refused, unreachable, timed out): ask again, but not yet.
+        routeRetryAt.set(callsign, Date.now() + ROUTE_RETRY_MS);
       })
       .then(() => {
         routePending.delete(callsign);
         // 24/7 kiosk: don't let a season of callsigns accumulate.
         if (routeLabels.size > 500) routeLabels.clear();
+        if (routeRetryAt.size > 500) routeRetryAt.clear();
         const label = routeLabels.get(callsign);
         if (!label || !el.isConnected) return;
         // Patch every pane showing this flight, not just ours.
@@ -330,7 +345,7 @@ function enrichRoute(el: HTMLElement, item: any): void {
   const callsign = String(item.flight ?? "").trim();
   // No real callsign (collector fell back to registration/hex) → no route to find.
   if (!callsign || callsign === item.registration || callsign === item.hex) return;
-  fetch(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`)
+  fetchTimeout(`/api/adsb/route?callsign=${encodeURIComponent(callsign)}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
       const route = d?.route;

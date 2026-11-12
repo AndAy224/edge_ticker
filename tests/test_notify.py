@@ -70,6 +70,18 @@ async def test_a_repeat_inside_the_cooldown_is_suppressed(app):
     assert len(app.state.bus.of_type("camera_alert")) == 1
 
 
+@pytest.mark.parametrize("duration, seconds", [("1e999", 120), ("-1e999", 5), ("NaN", 30), ("1e30", 120)])
+async def test_a_takeover_with_an_absurd_duration_is_clamped_not_a_500(app, duration, seconds):
+    # json accepts these as numbers; int(inf) raised OverflowError out of
+    # fire() — a 500 with the key's cooldown already spent
+    body = '{"title": "Garage open", "kind": "takeover", "duration_seconds": %s}' % duration
+    r = await post(app, content=body.encode(), headers={"Content-Type": "application/json"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert r.json()["event"]["duration_seconds"] == seconds
+    (msg,) = app.state.bus.of_type("camera_alert")
+    assert msg["event"]["duration_seconds"] == seconds
+
+
 @pytest.mark.parametrize(
     "body, error",
     [

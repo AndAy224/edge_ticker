@@ -75,10 +75,21 @@ def allowed_cameras(config: dict) -> dict[str, str]:
 
 
 def _clamp_int(value, default: int, lo: int, hi: int) -> int:
-    try:
-        return max(lo, min(hi, int(value)))
-    except (TypeError, ValueError):
+    """`value` as a whole number within [lo, hi]; `default` when it isn't one.
+
+    Total over anything a JSON body or a hand-written config can hold: 1e999
+    parses to inf, and int(inf) raised OverflowError out of fire() as a 500."""
+    if isinstance(value, bool):
         return default
+    if isinstance(value, int):
+        return max(lo, min(hi, value))  # no float round trip: 10**400 overflows one
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return default
+    if number != number:  # NaN
+        return default
+    return int(max(lo, min(hi, number)))
 
 
 class CameraAlertHub:
@@ -124,7 +135,6 @@ class CameraAlertHub:
             if last is not None and now - last < cooldown_seconds:
                 log.info("camera alert %s suppressed by cooldown", key)
                 return None
-        self._fired_at[key] = now
 
         tiles = []
         for item in cameras or []:
@@ -156,6 +166,11 @@ class CameraAlertHub:
         }
         if message:
             event["message"] = str(message)
+        # Only now, with a takeover that is going out: recorded up front, a
+        # request that then failed or had no usable cameras still silenced the
+        # key for the whole cooldown. Still before the first await, so two
+        # fires racing each other can't both pass the check above.
+        self._fired_at[key] = now
         await self.bus.broadcast({"type": "camera_alert", "event": event})
         log.info(
             "camera alert: %s (%d cameras, %ds)",

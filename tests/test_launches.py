@@ -92,6 +92,63 @@ def test_live_window_tightens_poll_and_flags_canaveral(monkeypatch, defaults_con
     assert item.accent == "alert"
 
 
+def test_idle_poll_wakes_when_the_live_window_opens(monkeypatch, defaults_config):
+    # Crew-13 lifts off 15:10:06Z, so its live window opens 14:25:06Z. An idle
+    # poll at 14:15 used to sleep until 14:45: the T-0 board started at T-25.
+    pin(monkeypatch, "2026-10-01T14:15:00")
+    collector = LaunchesCollector(defaults_config)
+    payload = collector.shape(results("Crew-13", "NROL-97"))
+    assert payload.stage["live"] is False
+    assert collector.interval == 606 + launches_module.WAKE_MARGIN_SECONDS
+    pin(monkeypatch, "2026-10-01T14:25:11")  # the early poll lands inside the window
+    payload = collector.shape(results("Crew-13", "NROL-97"))
+    assert payload.stage["live"] is True and collector.interval == collector.live_interval
+
+
+def test_window_opening_beyond_the_idle_interval_changes_nothing(monkeypatch, defaults_config):
+    pin(monkeypatch, "2026-10-01T13:50:00")  # opens in 35 min; the 14:20 idle poll comes first
+    collector = LaunchesCollector(defaults_config)
+    collector.shape(results("Crew-13", "NROL-97"))
+    assert collector.interval == collector.idle_interval
+    assert collector._woken_for == set()  # its early poll is still unspent
+
+
+def test_early_poll_is_never_sooner_than_the_live_cadence(monkeypatch, defaults_config):
+    pin(monkeypatch, "2026-10-01T14:24:00")  # the window opens in a minute
+    collector = LaunchesCollector(defaults_config)
+    collector.shape(results("Crew-13", "NROL-97"))
+    assert collector.interval == collector.live_interval == 360
+
+
+def test_slipping_launch_gets_one_early_poll_only(monkeypatch, defaults_config):
+    """Launch Library allows ~15 requests an hour, shared with production: a
+    NET that slips at every poll must not pull every poll forward."""
+    pin(monkeypatch, "2026-10-01T14:15:00")
+    collector = LaunchesCollector(defaults_config)
+    raw = results("Crew-13", "NROL-97")
+    collector.shape(raw)
+    assert collector.interval < collector.idle_interval  # the one early poll
+    for minutes in (20, 40, 60):  # each poll finds the NET moved out again
+        slipped = copy.deepcopy(raw)
+        slipped["results"][0]["net"] = f"2026-10-01T15:{10 + minutes // 2}:00Z"
+        pin(monkeypatch, f"2026-10-01T14:{15 + minutes // 2}:00")
+        payload = collector.shape(slipped)
+        assert payload.stage["live"] is False
+        assert collector.interval == collector.idle_interval
+    # Once it has flown and left the list, its id is forgotten.
+    collector.shape(results("NROL-97"))
+    assert collector._woken_for == set()
+
+
+def test_finished_launch_does_not_wake_the_poll(monkeypatch, defaults_config):
+    pin(monkeypatch, "2026-10-01T14:15:00")
+    raw = results("Crew-13", "NROL-97")
+    raw["results"][0]["status"] = {"id": 3, "name": "Launch Successful", "abbrev": "Success"}
+    collector = LaunchesCollector(defaults_config)
+    collector.shape(raw)
+    assert collector.interval == collector.idle_interval
+
+
 def test_starship_flight_day_owns_the_tape(monkeypatch, defaults_config):
     pin(monkeypatch, "2026-09-28T10:00:00")  # 6 AM local; Starship NET 8:15 AM
     payload = LaunchesCollector(defaults_config).shape(results())

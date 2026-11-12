@@ -3,12 +3,15 @@
 beach & tides collector (marine)."""
 from __future__ import annotations
 
+import asyncio
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
+from backend.collectors import base as base_module
 from backend.collectors import marine as marine_module
 from backend.collectors import weather_alerts as alerts_module
 from backend.collectors.hurricanes import (
@@ -18,7 +21,7 @@ from backend.collectors.hurricanes import (
 )
 from backend.collectors.marine import MarineCollector, nearest_reference_station
 from backend.collectors.weather_alerts import WeatherAlertsCollector
-from helpers import load_bytes, load_json
+from helpers import FakeBus, load_bytes, load_json
 
 # ---- NHC Graphical Tropical Weather Outlook ----------------------------------
 
@@ -199,6 +202,79 @@ async def test_expired_alerts_drop_out(http, defaults_config, monkeypatch, fresh
     assert WeatherAlertsCollector._parse(feature) is None
 
 
+def test_stale_payload_loses_expired_alerts_and_outlines(defaults_config, monkeypatch):
+    monkeypatch.setattr(alerts_module, "_now", lambda: RECORDED_AT)
+    collector = WeatherAlertsCollector(defaults_config)
+    alerts = [
+        a for f in load_json("nws_alerts_tx.json")["features"]
+        if (a := WeatherAlertsCollector._parse(f)) is not None
+    ]
+    collector._nearby = [{"id": "w", "event": "Flood Warning", "severity": "Severe",
+                          "ends": "2026-09-25T11:00:00-05:00", "rings": [[[29.0, -103.0]] * 3], "km": 4}]
+    payload = collector.shape(alerts)
+    assert collector.prune_stale(payload) is payload  # nothing has ended yet
+    # 17:00Z: the Flood Warning ended at 11:00 CDT; the watch and the air
+    # quality alert run into the evening.
+    monkeypatch.setattr(alerts_module, "_now", lambda: datetime(2026, 9, 25, 17, 0, tzinfo=timezone.utc))
+    pruned = collector.prune_stale(payload)
+    assert [a["event"] for a in pruned.stage["alerts"]] == ["Flood Watch", "Air Quality Alert"]
+    assert pruned.stage["nearby"] == [] and pruned.stage["location"] == "Clearwater, FL"
+    assert [t.text for t in pruned.tape] == ["Flood Watch — until 12:00 AM", "Air Quality Alert — until 7:00 PM"]
+    assert pruned.updated_at == payload.updated_at
+    assert len(payload.stage["alerts"]) == 3  # the published payload itself is not edited
+
+
+async def test_warning_that_ends_during_an_nws_outage_leaves_the_screen(
+    http, defaults_config, monkeypatch, fresh_overlay_state
+):
+    """Expiry lived only in shape(), and a failed poll re-publishes the last
+    payload unshaped: a warning that had ended stayed on the tape, the overlay
+    and the red condition for as long as NWS was unreachable."""
+    clock = {"now": RECORDED_AT}
+    monkeypatch.setattr(alerts_module, "_now", lambda: clock["now"])
+    nws = {"up": True}
+    tx = load_json("nws_alerts_tx.json")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if not nws["up"]:
+            return httpx.Response(503)
+        if "/points/" in request.url.path:
+            return httpx.Response(200, json={"properties": {"relativeLocation": {"properties": {"state": "TX"}}}})
+        return httpx.Response(200, json=tx)  # at the point and in the state alike
+
+    http.handler = handler
+    sleeps = []
+
+    async def sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) == 1:  # after the good poll: NWS goes down
+            nws["up"] = False
+        elif len(sleeps) == 2:  # five hours pass with it still down
+            clock["now"] = RECORDED_AT + timedelta(hours=5)
+        elif len(sleeps) == 4:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(
+        base_module,
+        "asyncio",
+        SimpleNamespace(sleep=sleep, CancelledError=asyncio.CancelledError, timeout=asyncio.timeout),
+    )
+    bus = FakeBus()
+    collector = WeatherAlertsCollector(texas_config(defaults_config))
+    with pytest.raises(asyncio.CancelledError):
+        await collector.start(bus)
+
+    fresh, stale, pruned = [m["payload"] for m in bus.of_type("module")]  # the 3rd failure adds nothing
+    events = lambda payload: [a["event"] for a in payload.stage["alerts"]]  # noqa: E731
+    assert events(fresh) == events(stale) == ["Flood Watch", "Flood Warning", "Air Quality Alert"]
+    assert (fresh.stale, stale.stale, pruned.stale) == (False, True, True)
+    assert [a["event"] for a in stale.stage["nearby"]] == ["Flood Warning"]
+    assert events(pruned) == ["Flood Watch", "Air Quality Alert"]
+    assert pruned.stage["nearby"] == []
+    assert not any("Flood Warning" in t.text for t in pruned.tape) and len(pruned.tape) == 2
+    assert bus.payloads["weather_alerts"] is pruned
+
+
 # ---- beach & tides -----------------------------------------------------------------
 
 TIDES_AT = datetime(2026, 9, 25, 13, 0, tzinfo=timezone.utc)  # 9 AM EDT, flood tide
@@ -283,3 +359,56 @@ async def test_marine_station_override(http, defaults_config, tides_clock):
     await collector.fetch()
     assert collector._station["name"] == "St. Petersburg"
     assert not any(r.url.path.endswith("stations.json") for r in http.requests)
+
+
+async def test_marine_keeps_cached_tides_when_a_refresh_fails(http, defaults_config, tides_clock):
+    """The 6-hourly refresh used to be awaited bare: NOAA down at that moment
+    failed the poll and staled the module, with a table reaching two days
+    ahead already in hand."""
+    noaa = {"up": True}
+    good = noaa_handler()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        params = request.url.params
+        if not noaa["up"] and params.get("product") == "predictions":
+            return httpx.Response(503)
+        return good(request)
+
+    http.handler = handler
+    collector = MarineCollector(defaults_config)
+    first = collector.shape(await collector.fetch()).stage["tide"]
+    collector._predictions_at = 0.0  # the refresh is due...
+    noaa["up"] = False  # ...and NOAA is down
+    raw = await collector.fetch()
+    assert collector.degraded == "tide predictions (using cached): HTTPStatusError"
+    assert collector.shape(raw).stage["tide"] == first
+    assert raw["water"] is not None  # the rest of the poll still ran
+
+    noaa["up"] = True
+    await collector.fetch()
+    assert collector.degraded is None and collector._predictions_at > 0
+
+
+async def test_marine_fails_when_cached_tides_no_longer_cover_now(http, defaults_config, monkeypatch):
+    good = noaa_handler()
+    noaa = {"up": True}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if not noaa["up"] and request.url.params.get("product") == "predictions":
+            return httpx.Response(503)
+        return good(request)
+
+    http.handler = handler
+    monkeypatch.setattr(marine_module, "_now", lambda: TIDES_AT)
+    collector = MarineCollector(defaults_config)
+    await collector.fetch()
+    last = marine_module._gmt(collector._predictions["curve"][-1]["t"])
+    collector._predictions_at = 0.0
+    noaa["up"] = False
+    monkeypatch.setattr(marine_module, "_now", lambda: last + timedelta(hours=1))  # the table has run out
+    with pytest.raises(httpx.HTTPStatusError):
+        await collector.fetch()
+
+    # Nothing cached at all: the first poll of a fresh collector fails outright.
+    with pytest.raises(httpx.HTTPStatusError):
+        await MarineCollector(defaults_config).fetch()

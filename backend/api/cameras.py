@@ -35,8 +35,17 @@ CAM_ID_RE = re.compile(r"^[0-9a-f]{16}$")
 # fail fast so the <img> errors and the tile degrades to snapshots, rather than
 # queueing behind an in-flight stream.
 MAX_CONCURRENT_STREAMS = 6
-_stream_sem = asyncio.Semaphore(MAX_CONCURRENT_STREAMS)
+# Slots in use: one per /stream request from before it connects to HA until its
+# teardown has run. The cap and the number /api/cameras reports are this one
+# counter — it used to count only streams whose headers had arrived, beside a
+# semaphore that could be held (and leaked) with the count still reading 0.
 _active_streams = 0
+
+# How long HA gets to answer with response headers. The client's read timeout
+# has to stay off for the body (see camera_stream), and it covered this wait
+# too: an HA that accepted the connection and then said nothing held the slot
+# for good, and six of those refused every stream until a restart.
+HEADER_TIMEOUT_SECONDS = 10.0
 
 SNAPSHOT_TTL_SECONDS = 0.75  # tiles poll at ~1 Hz; don't stampede HA
 SNAPSHOT_MAX_ENTRIES = 8
@@ -139,9 +148,40 @@ async def camera_test_mjpeg(cam_id: str):
 # ---- stream ----------------------------------------------------------------
 
 
+def _take_slot() -> bool:
+    global _active_streams
+    if _active_streams >= MAX_CONCURRENT_STREAMS:
+        return False
+    _active_streams += 1
+    return True
+
+
+def _free_slot() -> None:
+    global _active_streams
+    _active_streams -= 1
+
+
+class _ProxiedStream(StreamingResponse):
+    """A StreamingResponse that runs `release` once it is done being served.
+
+    The body generator's own `finally` only runs if the generator was started
+    and then finished or was cancelled: a response whose first send fails never
+    starts it, and one whose send fails mid-stream leaves it parked at a yield
+    until it is collected."""
+
+    def __init__(self, *args, release, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._release = release
+
+    async def __call__(self, scope, receive, send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await self._release()
+
+
 @router.get("/cameras/{cam_id}/stream")
 async def camera_stream(cam_id: str, request: Request):
-    global _active_streams
     test_index = _test_index(cam_id)
     if test_index is None:
         if not CAM_ID_RE.match(cam_id):
@@ -162,9 +202,8 @@ async def camera_stream(cam_id: str, request: Request):
         url = f"http://127.0.0.1:{port}/api/cameras/{cam_id}/mjpeg"
         headers = {}
 
-    if _stream_sem.locked():
+    if not _take_slot():
         return JSONResponse({"error": "too many streams"}, status_code=503)
-    await _stream_sem.acquire()
 
     # read=None is load-bearing: MJPEG frames can be seconds apart on a quiet
     # camera, and any read timeout would kill a perfectly healthy feed.
@@ -172,24 +211,52 @@ async def camera_stream(cam_id: str, request: Request):
         timeout=httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0),
         follow_redirects=True,
     )
-    try:
-        upstream = await client.send(client.build_request("GET", url, headers=headers), stream=True)
-        if upstream.status_code != 200:
-            await upstream.aclose()
-            raise RuntimeError(f"upstream returned {upstream.status_code}")
-    except Exception as exc:
-        await client.aclose()
-        _stream_sem.release()
-        log.warning("camera stream %s: %s", entity_id, exc)
-        return JSONResponse({"error": f"camera unavailable: {exc}"}, status_code=502)
+    upstream: httpx.Response | None = None
+    released = False
 
-    _active_streams += 1
+    async def release() -> None:
+        """Close the upstream and the client and give the slot back, once.
+        The slot is freed even if a close is cancelled or raises."""
+        nonlocal released
+        if released:
+            return
+        released = True
+        try:
+            if upstream is not None:
+                await upstream.aclose()
+        finally:
+            try:
+                await client.aclose()
+            finally:
+                _free_slot()
+
+    try:
+        # wait_for bounds only the wait for headers; the body below is read
+        # with no timeout between frames.
+        upstream = await asyncio.wait_for(
+            client.send(client.build_request("GET", url, headers=headers), stream=True),
+            timeout=HEADER_TIMEOUT_SECONDS,
+        )
+        if upstream.status_code != 200:
+            raise RuntimeError(f"upstream returned {upstream.status_code}")
+    except BaseException as exc:
+        # BaseException: a request cancelled while it waits here (the client
+        # went away, shutdown) skipped an `except Exception` and kept its slot.
+        await release()
+        if not isinstance(exc, Exception):
+            raise
+        reason = (
+            f"no response within {HEADER_TIMEOUT_SECONDS:g} s"
+            if isinstance(exc, asyncio.TimeoutError)
+            else str(exc)
+        )
+        log.warning("camera stream %s: %s", entity_id, reason)
+        return JSONResponse({"error": f"camera unavailable: {reason}"}, status_code=502)
 
     async def body():
-        # The client and the upstream response are owned by this generator, not
-        # by the handler — an `async with` around the handler would close them
-        # before Starlette pulled the first chunk.
-        global _active_streams
+        # The client and the upstream response outlive the handler — an
+        # `async with` around it would close them before Starlette pulled the
+        # first chunk.
         try:
             # aiter_raw, not aiter_bytes: pass the multipart body through
             # untouched, with no content decoding and no extra buffering.
@@ -198,16 +265,14 @@ async def camera_stream(cam_id: str, request: Request):
         except Exception as exc:
             log.info("camera stream %s ended: %s", entity_id, exc)
         finally:
-            # The only teardown path, and it covers all three exits: upstream
-            # EOF, upstream error, and client disconnect (Starlette cancels the
-            # generator, which raises inside the async for).
-            _active_streams -= 1
-            await upstream.aclose()
-            await client.aclose()
-            _stream_sem.release()
+            # Upstream EOF, upstream error, and client disconnect where
+            # Starlette cancels the generator (which raises inside the async
+            # for). _ProxiedStream covers the exits that never get here.
+            await release()
 
-    return StreamingResponse(
+    return _ProxiedStream(
         body(),
+        release=release,
         # Passed through verbatim — it carries the multipart boundary, and
         # inventing one breaks the parse.
         media_type=upstream.headers.get(

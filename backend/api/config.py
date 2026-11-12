@@ -1,6 +1,7 @@
 """GET/PUT the full config document. PUT validates, persists, converges the
 collectors on the new config, and pushes it to every display/admin client.
-Every save is kept (last 20) so a bad one can be rolled back from the admin.
+Every save that changes the document is kept (last 20) so a bad one can be
+rolled back from the admin.
 
 Saves are optimistic-concurrency checked: GET returns the document's version
 as an ETag, and a PUT carrying If-Match is refused with 409 (and the current

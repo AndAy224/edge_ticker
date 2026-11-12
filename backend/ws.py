@@ -5,6 +5,8 @@ import asyncio
 import functools
 import ipaddress
 import logging
+import time
+from collections.abc import Callable
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -18,7 +20,11 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def _serve(websocket: WebSocket) -> None:
+async def _serve(
+    websocket: WebSocket,
+    liveness: Liveness | None = None,
+    gone: Callable[[], None] = lambda: None,
+) -> None:
     if cross_site(websocket.headers.get("origin"), websocket.headers.get("host")):
         # Any page a LAN user visits could otherwise read the stream and send
         # ha_action / control messages.
@@ -61,8 +67,12 @@ async def _serve(websocket: WebSocket) -> None:
         try:
             while True:
                 message = await websocket.receive_json()
-                await _handle(app, queue, message, work)
+                await _handle(app, queue, message, work, liveness)
         finally:
+            # Before the teardown below: closing this client's camera sessions
+            # waits on Home Assistant (10 s each when it is unresponsive), and
+            # a socket that has left must not count as a panel meanwhile.
+            gone()
             send_task.cancel()
             await asyncio.gather(send_task, return_exceptions=True)
             await work.cancel()
@@ -126,11 +136,15 @@ class _Work:
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
-async def _handle(app, queue: asyncio.Queue, message: dict, work: _Work) -> None:
+async def _handle(
+    app, queue: asyncio.Queue, message: dict, work: _Work, liveness: Liveness | None = None
+) -> None:
     # Replies go through this connection's queue so only the sender task
     # ever writes to the socket.
     kind = message.get("type")
     if kind == "ping":
+        if liveness is not None:
+            liveness.ping(message)
         queue.put_nowait({"type": "pong"})
     elif kind == "control":
         await app.state.bus.broadcast({"type": "control", "action": message.get("action")})
@@ -180,6 +194,74 @@ async def _service_call(app, queue: asyncio.Queue, message: dict) -> None:
 display_clients = 0
 kiosk_clients = 0
 
+_now = time.monotonic  # patchable
+
+
+class Liveness:
+    """What one display socket from this machine says about itself in its
+    pings (every 10 s).
+
+    A connected socket does not prove a working panel: with the compositor's
+    frame loop dead the page lives on — timers fire, the socket stays up,
+    module fetches continue — while the screen shows one frozen picture, for
+    hours, until someone power-cycles the box. So each ping carries `frames`,
+    a count that only advances when the page gets an animation frame, and the
+    time it last moved is what /health reports as `frame_age`."""
+
+    def __init__(self) -> None:
+        self.connected_at = _now()
+        self.pinged_at: float | None = None
+        self.frames: int | None = None
+        self.frames_at: float | None = None
+        self.hidden = False
+        self.blanked = False
+
+    def ping(self, message: dict) -> None:
+        now = _now()
+        self.pinged_at = now
+        self.hidden = message.get("hidden") is True
+        self.blanked = message.get("blanked") is True
+        frames = message.get("frames")
+        if isinstance(frames, bool) or not isinstance(frames, int):
+            return  # a bundle from before the heartbeat: pings only
+        # The first report starts the clock too — a panel already frozen when
+        # it (re)connects, after a backend restart say, never moves off it.
+        if frames != self.frames:
+            self.frames = frames
+            self.frames_at = now
+
+    def report(self) -> dict:
+        now = _now()
+
+        def age(since: float | None) -> float | None:
+            return None if since is None else round(now - since, 1)
+
+        return {
+            "connected_for": round(now - self.connected_at, 1),
+            "ping_age": age(self.pinged_at),
+            "frame_age": age(self.frames_at),
+            "blanked": self.blanked,
+        }
+
+
+_kiosks: set[Liveness] = set()
+
+
+def kiosk_liveness() -> dict | None:
+    """The watchdog's view of the panel: the freshest display socket from this
+    machine. A hidden page gets no animation frames by design (a background
+    tab through an SSH tunnel), so it is not judged; and of several, the one
+    whose frames moved last is the one somebody can see."""
+    reports = [k.report() for k in _kiosks if not k.hidden]
+    if not reports:
+        return None
+
+    def staleness(report: dict) -> tuple[bool, float]:
+        frame_age = report["frame_age"]
+        return (frame_age is None, frame_age or 0.0)
+
+    return min(reports, key=staleness)
+
 
 def _loopback(websocket: WebSocket) -> bool:
     try:
@@ -193,14 +275,28 @@ def _loopback(websocket: WebSocket) -> bool:
 @router.websocket("/ws/display")
 async def ws_display(websocket: WebSocket) -> None:
     global display_clients, kiosk_clients
-    kiosk = _loopback(websocket)
+    liveness = Liveness() if _loopback(websocket) else None
     display_clients += 1
-    kiosk_clients += kiosk
-    try:
-        await _serve(websocket)
-    finally:
+    if liveness is not None:
+        kiosk_clients += 1
+        _kiosks.add(liveness)
+    counted = True
+
+    def gone() -> None:
+        global display_clients, kiosk_clients
+        nonlocal counted
+        if not counted:
+            return
+        counted = False
         display_clients -= 1
-        kiosk_clients -= kiosk
+        if liveness is not None:
+            kiosk_clients -= 1
+            _kiosks.discard(liveness)
+
+    try:
+        await _serve(websocket, liveness, gone)
+    finally:
+        gone()
 
 
 @router.websocket("/ws/admin")

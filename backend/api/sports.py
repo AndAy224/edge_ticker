@@ -7,6 +7,7 @@ don't hammer ESPN.
 """
 from __future__ import annotations
 
+import re
 import time
 
 import httpx
@@ -14,12 +15,31 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from ..collectors.sports import SUMMARY_URL
+from .throttle import Throttle
 
 router = APIRouter()
 
 CACHE_TTL_SECONDS = 120.0
 CACHE_MAX_ENTRIES = 50
 _cache: dict[str, tuple[float, dict]] = {}
+
+# `sport` and `league` become path segments of the ESPN URL, and the caller
+# picks them: "../../../v3/x?y=" used to reach any path on the host. ESPN's own
+# slugs are words joined by single dots or hyphens (football, eng.1,
+# mens-college-basketball), which also rules out "." and "..".
+SLUG_RE = re.compile(r"[a-z0-9]+(?:[.-][a-z0-9]+)*")
+SLUG_MAX_LENGTH = 40
+EVENT_RE = re.compile(r"[0-9]{1,15}")
+
+# Cache misses only. A tap is one lookup and a person manages one every few
+# seconds; a summary is ~1 MB from ESPN, so a page looping over event ids is
+# stopped at 10 a minute.
+_lookups = Throttle(burst=10, refill_seconds=6.0)
+
+
+def _slug(value: str) -> bool:
+    # fullmatch: `$` would let a trailing newline through
+    return len(value) <= SLUG_MAX_LENGTH and SLUG_RE.fullmatch(value) is not None
 
 
 def _probability(summary: dict) -> dict | None:
@@ -230,15 +250,21 @@ def _last_play(summary: dict) -> str | None:
 
 @router.get("/sports/detail")
 async def game_detail(sport: str, league: str, event: str):
+    # The payload carries the league in upper case ("NFL"); ESPN's path is lower.
+    sport, league = sport.lower(), league.lower()
+    if not (_slug(sport) and _slug(league) and EVENT_RE.fullmatch(event)):
+        return JSONResponse({"error": "bad sport, league or event"}, status_code=400)
     key = f"{sport}/{league}/{event}"
     now = time.monotonic()
     cached = _cache.get(key)
     if cached and now - cached[0] < CACHE_TTL_SECONDS:
         return cached[1]
+    if not _lookups.take():
+        return _lookups.refused()
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             response = await client.get(
-                SUMMARY_URL.format(sport=sport, league=league.lower()),
+                SUMMARY_URL.format(sport=sport, league=league),
                 params={"event": event},
             )
             response.raise_for_status()

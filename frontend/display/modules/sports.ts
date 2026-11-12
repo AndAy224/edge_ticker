@@ -1,5 +1,6 @@
 import { sportIcon } from "../icons";
 import { register } from "./registry";
+import { fetchTimeout } from "../net";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(
@@ -471,7 +472,7 @@ function enrichDetail(el: HTMLElement, item: any, live: boolean): void {
     league: item.league ?? "",
     event: String(item.id ?? ""),
   });
-  fetch(`/api/sports/detail?${params}`)
+  fetchTimeout(`/api/sports/detail?${params}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
       if (!d || !el.isConnected) return;

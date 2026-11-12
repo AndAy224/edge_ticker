@@ -109,6 +109,8 @@ export class HAOverlay {
   constructor(
     private el: HTMLElement,
     private send: ActionSender,
+    // Told when the overlay opens or closes — its idle auto-close included.
+    private onOpenChange: (open: boolean) => void = () => {},
   ) {
     el.addEventListener("click", (e) => this.onClick(e));
     el.addEventListener("pointerdown", () => this.resetIdle());
@@ -119,14 +121,18 @@ export class HAOverlay {
   }
 
   open(): void {
+    const wasOpen = this.isOpen();
     this.render();
     this.el.classList.remove("hidden");
     this.resetIdle();
+    if (!wasOpen) this.onOpenChange(true);
   }
 
   close(): void {
+    const wasOpen = this.isOpen();
     this.el.classList.add("hidden");
     clearTimeout(this.idleTimer);
+    if (wasOpen) this.onOpenChange(false);
   }
 
   setMapping(mapping: Partial<HAMapping> | undefined): void {

@@ -1,13 +1,19 @@
 // Full-screen score celebration: the sport's ball flies across the panel with
 // firework bursts (Phase A, ~2.2s), then a card with the scorer's photo, the
 // play, and the score (Phase B, ~10s). Tap dismisses; events queue while one
-// is playing. All animation is transform/opacity (GPU compositor path).
+// is playing, and while a takeover that would cover them is up (`isHeld`).
+// All animation is transform/opacity (GPU compositor path).
 
 import { sportIcon } from "./icons";
 
 const FLIGHT_MS = 2300;
 const CARD_MS = 10_000;
+const GAP_MS = 500; // between one celebration and the next
 const MAX_QUEUE = 3;
+// The longest the queue alone can make an event wait (the third in line), plus
+// one slot of slack so timer drift never costs that third its turn. One that
+// waited longer — behind a camera takeover, say — is old news: dropped.
+const STALE_MS = (MAX_QUEUE + 1) * (FLIGHT_MS + CARD_MS + GAP_MS);
 const BURSTS = [
   { x: 18, y: 42, at: 350 },
   { x: 50, y: 28, at: 850 },
@@ -24,13 +30,17 @@ function esc(value: unknown): string {
 }
 
 export class Celebration {
-  private queue: any[] = [];
+  private queue: { event: any; at: number }[] = [];
   private active = false;
+  private gap = false; // between two queued celebrations; its timer is in `timers`
   private timers: number[] = [];
 
   constructor(
     private el: HTMLElement,
     private isBlanked: () => boolean,
+    // Something that draws over this overlay is up: hold events, don't play
+    // them where nobody can see. The owner calls resume() once it may be gone.
+    private isHeld: () => boolean = () => false,
   ) {
     el.addEventListener("pointerdown", () => this.dismiss());
   }
@@ -42,11 +52,30 @@ export class Celebration {
   show(event: any): void {
     if (!event || this.isBlanked()) return;
     this.preload(event); // warm image cache during the flight phase
-    if (this.active) {
-      if (this.queue.length < MAX_QUEUE) this.queue.push(event);
+    if (this.active || this.isHeld()) {
+      if (this.queue.length < MAX_QUEUE) this.queue.push({ event, at: Date.now() });
       return;
     }
     this.play(event);
+  }
+
+  /** Play the next queued event, if nothing is playing or covering us: after
+   *  a celebration ends, and (the owner's call) after a hold is over. Events
+   *  stay queued until they actually start, so a hold keeps their order. */
+  resume(): void {
+    if (this.active || this.gap || !this.queue.length || this.isHeld()) return;
+    if (this.isBlanked()) {
+      this.queue = []; // same as show(): nobody is watching
+      return;
+    }
+    const cutoff = Date.now() - STALE_MS;
+    while (this.queue.length) {
+      const next = this.queue.shift()!;
+      if (next.at >= cutoff) {
+        this.play(next.event);
+        return;
+      }
+    }
   }
 
   private preload(event: any): void {
@@ -149,7 +178,14 @@ export class Celebration {
     this.active = false;
     this.el.className = "hidden"; // also drops the sport-* class
     this.el.innerHTML = "";
-    const next = this.queue.shift();
-    if (next) this.later(() => this.show(next), 500);
+    // Cleared with the other timers above if a celebration that started
+    // inside the gap is itself dismissed; this then sets it afresh.
+    this.gap = this.queue.length > 0;
+    if (this.gap) {
+      this.later(() => {
+        this.gap = false;
+        this.resume();
+      }, GAP_MS);
+    }
   }
 }

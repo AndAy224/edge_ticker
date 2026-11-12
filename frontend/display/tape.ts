@@ -34,6 +34,7 @@ function fillItem(span: HTMLElement, item: TapeItem): void {
 export class Tape {
   private signature = "";
   private itemSpans: HTMLElement[] = []; // spans across both halves, item i at [i] and [i + items.length]
+  private restartFrame = 0; // the rebuild's pending animation restart
 
   constructor(private track: HTMLElement) {}
 
@@ -94,7 +95,12 @@ export class Tape {
       ...clone.querySelectorAll<HTMLElement>(".tape-item"),
     ];
 
-    requestAnimationFrame(() => {
+    // One restart outstanding: when no frames come (stalled compositor, hidden
+    // tab) each rebuild would otherwise queue another, holding its replaced
+    // half, and they would all reflow the track in the first frame back. The
+    // one dropped measured a half that is no longer in the track anyway.
+    cancelAnimationFrame(this.restartFrame);
+    this.restartFrame = requestAnimationFrame(() => {
       const width = half.scrollWidth;
       const duration = Math.max(width / SPEED_PX_PER_SECOND, MIN_DURATION_SECONDS);
       this.track.style.setProperty("--tape-duration", `${duration}s`);

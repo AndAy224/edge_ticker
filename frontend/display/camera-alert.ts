@@ -36,6 +36,7 @@ const WEBRTC_STAGGER_MS = 400; // between tiles' session starts
 const MAX_TILE_FAILURES = 3;
 const MAX_QUEUE = 1; // a 30s-stale motion event isn't worth showing
 const PREEMPT_RETRY_MS = 3000;
+const QUEUE_GAP_MS = 500; // between one wall closing and the queued one opening
 const BLANK_GIF =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
@@ -51,6 +52,10 @@ function esc(value: unknown): string {
 interface RtcFeed {
   pc: RTCPeerConnection;
   request: string;
+  /** Closed (dismissed, or handed to the MJPEG path): nothing more may be
+   *  signalled for it — an offer sent after its `webrtc_close` would open an
+   *  HA session that nobody closes. */
+  done: boolean;
 }
 
 let rtcSeq = 0;
@@ -72,9 +77,11 @@ function gathered(pc: RTCPeerConnection): Promise<void> {
 export class CameraAlertOverlay {
   private queue: CameraAlertEvent[] = [];
   private current: CameraAlertEvent | null = null;
-  private timers: number[] = [];
+  private timers: number[] = []; // the open wall's; cleared when it is dismissed
   private intervals: number[] = [];
   private dismissTimer = 0;
+  private retryTimer = 0; // the one retry of an alert a weather card preempted
+  private drainTimer = 0; // the gap before the queued alert opens
   private endsAt = 0;
   private rtcFeeds: RtcFeed[] = [];
   // request id -> handler for the backend's relayed HA WebRTC events
@@ -110,7 +117,12 @@ export class CameraAlertOverlay {
     return this.current !== null;
   }
 
-  show(event: CameraAlertEvent): void {
+  /** A wall is up, or the queued one is about to follow it. */
+  isBusy(): boolean {
+    return this.current !== null || this.drainTimer !== 0;
+  }
+
+  show(event: CameraAlertEvent, retry = false): void {
     if (!event?.cameras?.length && !event?.message) return;
     if (this.isBlanked()) {
       // Waking is a per-event decision, not a display policy: a quiet
@@ -127,10 +139,14 @@ export class CameraAlertOverlay {
     }
     if (this.isPreempted()) {
       // A severe-weather takeover is life-safety and outranks a door. Retry
-      // once, then drop.
-      if (this.queue.length < MAX_QUEUE) {
-        this.queue.push(event);
-        this.timers.push(window.setTimeout(() => this.drain(), PREEMPT_RETRY_MS));
+      // once, then drop: the retry used to re-queue itself every 3.5 s until
+      // the card ended and then show an alert up to a minute old. Only one
+      // alert waits for its retry; another preempted meanwhile is dropped.
+      if (!retry && !this.retryTimer) {
+        this.retryTimer = window.setTimeout(() => {
+          this.retryTimer = 0;
+          this.show(event, true);
+        }, PREEMPT_RETRY_MS);
       }
       return;
     }
@@ -249,14 +265,12 @@ export class CameraAlertOverlay {
     // Host candidates only: the appliance and HA share a routed LAN, and a
     // public STUN server would add a dependency for nothing.
     const pc = new RTCPeerConnection({ iceServers: [] });
-    const feed: RtcFeed = { pc, request };
+    const feed: RtcFeed = { pc, request, done: false };
     this.rtcFeeds.push(feed);
     let live = false;
-    let done = false;
 
     const fallback = (why: string) => {
-      if (done) return;
-      done = true;
+      if (feed.done) return;
       console.info(`camera tile: WebRTC → MJPEG (${why})`);
       this.stopRtc(feed);
       video.classList.add("hidden");
@@ -284,7 +298,7 @@ export class CameraAlertOverlay {
     // display:none video, so hiding it would starve the very check that
     // reveals it.
     const reveal = () => {
-      if (done || live) return;
+      if (feed.done || live) return;
       live = true;
       this.stopFeed(tile.querySelector<HTMLImageElement>("img")!); // the still underneath
       tile.dataset.mode = "webrtc";
@@ -295,7 +309,7 @@ export class CameraAlertOverlay {
     else video.addEventListener("playing", reveal, { once: true });
 
     this.rtcHandlers.set(request, (event) => {
-      if (done) return;
+      if (feed.done) return;
       if (event.type === "answer") {
         pc.setRemoteDescription({ type: "answer", sdp: event.answer }).catch(() => fallback("bad answer"));
       } else if (event.type === "candidate" && event.candidate) {
@@ -312,7 +326,8 @@ export class CameraAlertOverlay {
       .then((offer) => pc.setLocalDescription(offer))
       .then(() => gathered(pc))
       .then(() => {
-        if (!done) {
+        // Gathering can outlast the tile (up to 2 s): not after its close.
+        if (!feed.done) {
           this.signal({
             type: "webrtc_offer",
             request,
@@ -329,6 +344,7 @@ export class CameraAlertOverlay {
   }
 
   private stopRtc(feed: RtcFeed): void {
+    feed.done = true;
     this.rtcHandlers.delete(feed.request);
     this.rtcFeeds = this.rtcFeeds.filter((f) => f !== feed);
     feed.pc.ontrack = null;
@@ -428,8 +444,12 @@ export class CameraAlertOverlay {
   }
 
   private drain(): void {
-    if (this.current || !this.queue.length) return;
+    if (this.current || !this.queue.length || this.drainTimer) return;
     const next = this.queue.shift()!;
-    this.timers.push(window.setTimeout(() => this.show(next), 500));
+    this.drainTimer = window.setTimeout(() => {
+      this.drainTimer = 0;
+      this.show(next);
+      this.drain(); // nothing to do if `next` opened; else whoever is still waiting
+    }, QUEUE_GAP_MS);
   }
 }

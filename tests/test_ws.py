@@ -179,3 +179,142 @@ async def test_kiosk_clients_count_only_this_machine(monkeypatch, host, kiosk):
     await sock.incoming.put(None)
     await asyncio.wait_for(display, timeout=1)
     assert (ws_module.display_clients, ws_module.kiosk_clients) == (0, 0)
+
+
+# ---- frame heartbeat: is the kiosk still drawing? ---------------------------
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(ws_module, "_now", clock)
+    monkeypatch.setattr(ws_module, "_kiosks", set())
+    monkeypatch.setattr(ws_module, "display_clients", 0)
+    monkeypatch.setattr(ws_module, "kiosk_clients", 0)
+    return clock
+
+
+async def connect(host: str = "127.0.0.1"):
+    sock = FakeSocket(make_app(), host=host)
+    task = asyncio.create_task(ws_module.ws_display(sock))
+    await until(lambda: sock.sent)
+
+    async def ping(**fields) -> None:
+        seen = sock.sent.count({"type": "pong"})
+        await sock.incoming.put({"type": "ping", **fields})
+        await until(lambda: sock.sent.count({"type": "pong"}) > seen)
+
+    async def leave() -> None:
+        await sock.incoming.put(None)
+        await asyncio.wait_for(task, timeout=1)
+
+    return ping, leave
+
+
+async def test_frame_age_is_the_time_since_the_kiosks_frame_count_moved(clock):
+    # The compositor's frame loop can die under a live page: the socket stays
+    # up and the pings keep coming, but the frame count in them stands still.
+    ping, leave = await connect()
+    assert ws_module.kiosk_liveness() == {
+        "connected_for": 0.0, "ping_age": None, "frame_age": None, "blanked": False,
+    }
+    await ping(frames=3)
+    clock.now += 10
+    await ping(frames=4)
+    clock.now += 10
+    await ping(frames=4)
+    clock.now += 10
+    await ping(frames=4, blanked=True)
+    clock.now += 2
+    assert ws_module.kiosk_liveness() == {
+        "connected_for": 32.0, "ping_age": 2.0, "frame_age": 22.0, "blanked": True,
+    }
+    await leave()
+    assert ws_module.kiosk_liveness() is None
+
+
+async def test_a_kiosk_already_frozen_when_it_connects_is_caught(clock):
+    # After a backend restart the frozen page reconnects and reports the same
+    # count for ever: the first report has to start the clock.
+    ping, leave = await connect()
+    await ping(frames=57)
+    clock.now += 300
+    await ping(frames=57)
+    assert ws_module.kiosk_liveness()["frame_age"] == 300.0
+    await leave()
+
+
+async def test_a_bundle_from_before_the_heartbeat_only_has_a_ping_age(clock):
+    ping, leave = await connect()
+    await ping()
+    clock.now += 15
+    assert ws_module.kiosk_liveness() == {
+        "connected_for": 15.0, "ping_age": 15.0, "frame_age": None, "blanked": False,
+    }
+    await ping(frames="12")  # not a count
+    await ping(frames=True)
+    assert ws_module.kiosk_liveness()["frame_age"] is None
+    await leave()
+
+
+async def test_only_sockets_from_this_machine_are_the_kiosk(clock):
+    ping, leave = await connect(host="192.168.1.50")  # a laptop's /display tab
+    await ping(frames=1)
+    assert ws_module.kiosk_liveness() is None
+    await leave()
+
+
+async def test_a_hidden_tab_is_not_a_frozen_panel(clock):
+    # A background tab reached through an SSH tunnel gets no animation frames
+    # by design; the kiosk beside it is the one that is judged.
+    tab_ping, tab_leave = await connect()
+    kiosk_ping, kiosk_leave = await connect()
+    await tab_ping(frames=0, hidden=True)
+    await kiosk_ping(frames=5)
+    clock.now += 600
+    await tab_ping(frames=0, hidden=True)
+    await kiosk_ping(frames=65)
+    clock.now += 1
+    assert ws_module.kiosk_liveness()["frame_age"] == 1.0
+    await kiosk_leave()
+    assert ws_module.kiosk_liveness() is None  # nothing left to judge
+    await tab_leave()
+
+
+async def test_of_two_visible_pages_the_one_still_drawing_is_reported(clock):
+    first_ping, first_leave = await connect()
+    second_ping, second_leave = await connect()
+    await first_ping(frames=1)
+    await second_ping(frames=1)
+    clock.now += 120
+    await second_ping(frames=2)
+    assert ws_module.kiosk_liveness()["frame_age"] == 0.0
+    await first_leave()
+    await second_leave()
+
+
+async def test_a_socket_that_left_stops_counting_before_its_teardown(clock):
+    # Closing its camera sessions waits on Home Assistant, 10 s each when HA
+    # is unresponsive: a dead socket counted as a panel for over a minute.
+    sock = FakeSocket(make_app())
+    counts_during_teardown = []
+
+    async def slow_close(owner) -> None:
+        counts_during_teardown.append((ws_module.display_clients, ws_module.kiosk_clients))
+
+    sock.app.state.webrtc.close_owner = slow_close
+    task = asyncio.create_task(ws_module.ws_display(sock))
+    await until(lambda: sock.sent)
+    assert (ws_module.display_clients, ws_module.kiosk_clients) == (1, 1)
+    await sock.incoming.put(None)
+    await asyncio.wait_for(task, timeout=1)
+    assert counts_during_teardown == [(0, 0)]
+    assert (ws_module.display_clients, ws_module.kiosk_clients) == (0, 0)

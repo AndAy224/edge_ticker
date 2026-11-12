@@ -9,6 +9,7 @@ import zipfile
 
 import httpx
 
+from backend.collectors import base
 from backend.collectors.hurricanes import HurricanesCollector
 from helpers import json_response, load_json
 
@@ -110,3 +111,12 @@ async def test_first_sighting_without_kmzs_is_still_empty(http, defaults_config)
     stage = await poll(collector)
     assert stage["storms"][0]["cone"] == [] and stage["threat"] is None
     assert collector.degraded == "1 storm geometry product(s) failed"
+
+
+def test_fetch_deadline_leaves_room_for_a_busy_basin():
+    # Products are fetched one after another: CurrentStorms, two per storm on
+    # a new advisory, the outlook. Four Atlantic storms with NHC answering at
+    # 15 s a request is a slow poll, not a hung one.
+    slow_poll = (1 + 2 * 4 + 1) * 15
+    assert slow_poll > base.FETCH_TIMEOUT_SECONDS
+    assert slow_poll < HurricanesCollector.fetch_timeout < base.HUNG_ATTEMPT_SECONDS

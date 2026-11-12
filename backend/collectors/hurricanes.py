@@ -297,6 +297,11 @@ def point_in_polygon(lat: float, lon: float, ring: list[list[float]]) -> bool:
 class HurricanesCollector(Collector):
     name = "hurricanes"
     uses_location = True
+    # Storm products are fetched one after another (two per storm on a new
+    # advisory, 20 s timeout each): a busy basin with NHC answering slowly runs
+    # past the default deadline, and a product cut off there is not cached, so
+    # every poll would be cut off again.
+    fetch_timeout = 240.0
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

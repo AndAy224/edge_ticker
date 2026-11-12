@@ -25,6 +25,12 @@ MAX_BACKOFF_SECONDS = 300.0
 MIN_INTERVAL_SECONDS = 5.0
 # A fetch still running after this long is hung, whatever its own timeouts say.
 HUNG_ATTEMPT_SECONDS = 300.0
+# Deadline for one whole fetch(). Per-request timeouts restart with every byte
+# received, so an upstream that trickles held a collector inside fetch() until
+# /health called it stuck and the watchdog restarted the entire backend, over
+# and over. Well under HUNG_ATTEMPT_SECONDS: a fetch cut off here is an
+# ordinary failure (stale payload, backoff), not a stuck collector.
+FETCH_TIMEOUT_SECONDS = 120.0
 
 
 class Collector(ABC):
@@ -42,6 +48,10 @@ class Collector(ABC):
     # lock the collector out permanently (learned from Launch Library 2).
     backoff_start: float = 5.0
     backoff_max: float = MAX_BACKOFF_SECONDS
+    # Overall deadline for one fetch(). Raise it for a collector whose fetch
+    # legitimately runs long (many sequential requests), but keep it under
+    # HUNG_ATTEMPT_SECONDS or stuck() fires first and the backend is restarted.
+    fetch_timeout: float = FETCH_TIMEOUT_SECONDS
 
     def __init__(self, config: dict) -> None:
         self.config = config
@@ -100,7 +110,7 @@ class Collector(ABC):
         while True:
             self._attempt_started = time.monotonic()
             try:
-                raw = await self.fetch()
+                raw = await self._fetch_within_deadline()
                 payload = self.shape(raw)
                 payload.stale = False
                 self.stale = False
@@ -121,12 +131,44 @@ class Collector(ABC):
                 self.failures_total += 1
                 self.consecutive_failures += 1
                 log.warning("collector %s failed: %s", self.name, self.last_error)
-                if self._last_payload is not None and not self._last_payload.stale:
-                    stale_payload = self._last_payload.model_copy(update={"stale": True})
-                    self._last_payload = stale_payload
-                    await bus.publish(stale_payload)
+                last = self._last_payload
+                if last is not None:
+                    kept = self._pruned(last)
+                    # Once when the payload goes stale, then again only when
+                    # pruning changed what should be on screen.
+                    if not last.stale or kept != last:
+                        stale_payload = kept.model_copy(update={"stale": True})
+                        self._last_payload = stale_payload
+                        await bus.publish(stale_payload)
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, self.backoff_max)
+
+    async def _fetch_within_deadline(self) -> Any:
+        try:
+            async with asyncio.timeout(self.fetch_timeout) as deadline:
+                return await self.fetch()
+        except TimeoutError:
+            # Only our own deadline is renamed; a cancellation from outside
+            # (the manager stopping this collector) is not a TimeoutError and
+            # passes straight through.
+            if deadline.expired():
+                raise TimeoutError(f"fetch() still running after {self.fetch_timeout:g} s") from None
+            raise
+
+    def prune_stale(self, payload: ModulePayload) -> ModulePayload:
+        """What is left of the last payload while the upstream cannot be
+        reached. Called on every failed poll, before the stale re-publish;
+        override it when part of a payload expires on its own (a weather
+        warning's end time) and must not stay on screen through an outage.
+        Return `payload` itself, or a copy without the expired parts."""
+        return payload
+
+    def _pruned(self, payload: ModulePayload) -> ModulePayload:
+        try:
+            return self.prune_stale(payload)
+        except Exception as exc:  # the failure path itself must never fail
+            log.warning("collector %s: prune_stale failed: %s", self.name, exc)
+            return payload
 
     def _end_attempt(self) -> None:
         now = time.monotonic()

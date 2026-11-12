@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import httpx
@@ -154,6 +154,47 @@ async def test_settled_day_that_failed_is_retried(config):
     assert ("nfl", ymd(settled)) in espn.requests and ("mlb", ymd(settled)) in espn.requests
 
 
+async def test_day_cached_mid_game_is_refetched_until_it_is_final(config):
+    """A day older than yesterday was "settled" by age alone. A copy taken
+    mid-game and then cut off by a day-long outage kept its game `in` — the
+    30 s cadence and the followed-game pin — until the day left the window."""
+    espn, collector = Espn(), SportsCollector(config)
+    await refresh(collector, espn)
+    old_day = espn.today - timedelta(days=2)
+    key = ("baseball/mlb", old_day)
+    finals = [collector._parse_event(e, MLB) for e in load_json("espn_mlb_20260924.json")["events"]]
+    stuck = copy.deepcopy(finals)
+    stuck[0].update(state="in", detail="Top 7th")  # as cached before the outage
+    collector._window_days[key] = stuck
+    espn.by_day[("mlb", old_day)] = "espn_mlb_20260924.json"  # ESPN has the finals now
+
+    espn.requests.clear()
+    collector._window_at = 0.0
+    await refresh(collector, espn)
+    assert ("mlb", ymd(old_day)) in espn.requests
+    assert ("nfl", ymd(old_day)) not in espn.requests  # that league's day really is settled
+    assert [g["state"] for g in collector._window_days[key]] == ["post"] * len(finals)
+    assert not any(g["state"] == "in" for g in collector._window)
+
+    espn.requests.clear()
+    collector._window_at = 0.0
+    await refresh(collector, espn)
+    assert ("mlb", ymd(old_day)) not in espn.requests  # all final: cached from here on
+
+
+async def test_old_day_with_a_game_still_to_play_is_not_settled(config):
+    espn, collector = Espn(), SportsCollector(config)
+    await refresh(collector, espn)
+    old_day = espn.today - timedelta(days=2)
+    pre = collector._parse_event(load_json("espn_mlb_20260925.json")["events"][0], MLB)
+    assert pre["state"] == "pre"
+    collector._window_days[("baseball/mlb", old_day)] = [pre]
+    espn.requests.clear()
+    collector._window_at = 0.0
+    await refresh(collector, espn)
+    assert ("mlb", ymd(old_day)) in espn.requests
+
+
 async def test_partial_failure_is_recorded(config):
     espn, collector = Espn(), SportsCollector(config)
     bad = espn.today + timedelta(days=1)
@@ -251,6 +292,29 @@ async def test_slow_window_does_not_hold_up_the_scores(http, config, monkeypatch
     collector.shape(games)
     assert collector.interval == collector.idle_interval
     assert collector._window_task.done()
+
+
+async def test_hung_window_refresh_is_abandoned_and_backs_off(http, config, monkeypatch):
+    monkeypatch.setattr(sports_module, "WINDOW_WAIT_SECONDS", 0.01)
+    monkeypatch.setattr(sports_module, "WINDOW_JOB_SECONDS", 0.05)
+    espn = Espn()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("dates"):
+            await asyncio.Event().wait()  # trickles forever: no request timeout fires
+        return espn(request)
+
+    http.handler = handler
+    collector = SportsCollector(config)
+    games = await asyncio.wait_for(collector.fetch(), timeout=2)
+    assert games  # the scores went out without it
+    await asyncio.wait_for(collector._window_task, timeout=2)  # it used to never finish
+    assert collector._window == [] and collector._window_retry_at > 0
+    espn.requests.clear()
+    await asyncio.wait_for(collector.fetch(), timeout=2)
+    assert espn.dated() == []  # backing off, not restarted on the next poll
+    collector.shape(games)
+    assert collector.interval == collector.idle_interval  # and no longer holding the live cadence
 
 
 async def test_stopping_the_collector_cancels_a_window_refresh(http, config, monkeypatch):
@@ -448,6 +512,47 @@ def test_shape_live_game_tightens_the_poll(shape_config):
     assert item.text == "TB 1 – PHI 0 (Top 3rd)" and item.accent == "alert"
 
 
+SHAPED_AT = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)  # every recorded `pre` game is hours off
+
+
+def pre_game_starting(collector: SportsCollector, monkeypatch, offset: timedelta) -> list[dict]:
+    """The recorded games as of SHAPED_AT, with TB @ PHI scheduled `offset` from then."""
+    monkeypatch.setattr(sports_module, "_now", lambda: SHAPED_AT)
+    games = fixture_games(collector)
+    game = next(g for g in games if g["id"] == "401817078")
+    game["start"] = (SHAPED_AT + offset).strftime("%Y-%m-%dT%H:%MZ")  # ESPN's format
+    return games
+
+
+def test_idle_poll_wakes_for_the_next_start(shape_config, monkeypatch):
+    collector = SportsCollector(shape_config)
+    collector.shape(pre_game_starting(collector, monkeypatch, timedelta(hours=3)))
+    assert collector.interval == collector.idle_interval == 600
+    # First pitch in 4 minutes: not 10 minutes from now, 6 minutes into the game.
+    collector.shape(pre_game_starting(collector, monkeypatch, timedelta(minutes=4)))
+    assert collector.interval == 240 + sports_module.START_WAKE_MARGIN_SECONDS
+
+
+def test_game_past_its_start_but_not_yet_live_is_watched_closely(shape_config, monkeypatch):
+    collector = SportsCollector(shape_config)
+    # ESPN flips a game to `in` at the first pitch, a few minutes after the
+    # listed time: the wake-up poll sees `pre` and must not sleep 10 minutes.
+    collector.shape(pre_game_starting(collector, monkeypatch, timedelta(minutes=-3)))
+    assert collector.interval == collector.live_interval
+    # A game that never started (postponed, still listed `pre`) is not chased.
+    late = timedelta(seconds=-sports_module.START_GRACE_SECONDS - 60)
+    collector.shape(pre_game_starting(collector, monkeypatch, late))
+    assert collector.interval == collector.idle_interval
+
+
+def test_unparseable_start_leaves_the_idle_cadence(shape_config, monkeypatch):
+    collector = SportsCollector(shape_config)
+    games = pre_game_starting(collector, monkeypatch, timedelta(minutes=4))
+    next(g for g in games if g["id"] == "401817078")["start"] = "TBD"
+    collector.shape(games)
+    assert collector.interval == collector.idle_interval
+
+
 def test_shape_drops_games_beyond_the_horizon(shape_config):
     collector = SportsCollector(shape_config)
     games = fixture_games(collector)
@@ -544,11 +649,97 @@ async def test_opponent_scores_and_idle_games_do_not_celebrate(http, config, clo
     await celebrate(collector, [live_game("hockey", "h1", 0, 0)])
     clock.now += 60
     await celebrate(collector, [live_game("hockey", "h1", 2, 0)])  # opponent scored
-    final = live_game("hockey", "h1", 2, 1)
+    final = live_game("hockey", "h1", 3, 0)  # and again, to end it
     final["state"] = "post"
     clock.now += 60
     await celebrate(collector, [final])
+    upcoming = live_game("hockey", "h2", 0, 1)
+    upcoming["state"] = "pre"
+    await celebrate(collector, [final, upcoming])
+    clock.now += 60
+    upcoming["home"]["score"] = "2"
+    await celebrate(collector, [final, upcoming])
     assert bus.of_type("sport_event") == []
+
+
+def ended(game: dict) -> dict:
+    return {**game, "state": "post"}
+
+
+async def test_score_that_ends_the_game_celebrates_once(http, config, clock):
+    """A walk-off homer arrives in the same poll that shows the game final; the
+    diff only looked at games still `in`, so the biggest score of the night
+    was the one never celebrated."""
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    await celebrate(collector, [live_game("baseball", "g1", 4, 4)])
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("baseball", "g1", 4, 5))])
+    [message] = bus.of_type("sport_event")
+    assert message["event"]["team"]["abbrev"] == "TB"
+    assert (message["event"]["away_score"], message["event"]["home_score"]) == ("4", "5")
+    # Later polls of the finished game — even a scoring correction — stay quiet.
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("baseball", "g1", 4, 5))])
+    clock.now += 600
+    await celebrate(collector, [ended(live_game("baseball", "g1", 4, 6))])
+    assert len(bus.of_type("sport_event")) == 1
+
+
+async def test_game_ending_without_a_new_score_does_not_celebrate(http, config, clock):
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    await celebrate(collector, [live_game("baseball", "g1", 2, 5)])
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("baseball", "g1", 2, 5))])
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("baseball", "g1", 3, 5))])  # opponent's run, corrected
+    assert bus.of_type("sport_event") == []
+
+
+async def test_games_first_seen_final_never_celebrate(http, config, clock):
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    # Startup: last night's final is on the board.
+    await celebrate(collector, [ended(live_game("baseball", "old", 1, 3)), live_game("hockey", "h1", 0, 0)])
+    clock.now += 30
+    # A correction to it, and a final that appears from nowhere (the slate rolled).
+    await celebrate(collector, [
+        ended(live_game("baseball", "old", 1, 4)),
+        ended(live_game("football", "new", 0, 27)),
+        live_game("hockey", "h1", 0, 0),
+    ])
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("football", "new", 0, 30)), live_game("hockey", "h1", 0, 0)])
+    assert bus.of_type("sport_event") == []
+
+
+async def test_game_ending_score_survives_one_league_failing_a_poll(http, config, clock):
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    await celebrate(collector, [live_game("hockey", "h1", 2, 2), live_game("baseball", "rays", 0, 0)])
+    clock.now += 30
+    await celebrate(collector, [live_game("baseball", "rays", 0, 0)])  # the NHL board failed
+    clock.now += 30
+    await celebrate(collector, [ended(live_game("hockey", "h1", 2, 3)), live_game("baseball", "rays", 0, 0)])
+    [message] = bus.of_type("sport_event")
+    assert message["event"]["sport"] == "hockey"
+
+
+async def test_game_ending_score_keeps_the_sport_cooldown(http, config, clock):
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    await celebrate(collector, [live_game("basketball", "nba1", 98, 98)])
+    clock.now += 30
+    await celebrate(collector, [live_game("basketball", "nba1", 98, 100)])
+    clock.now += 30  # inside basketball's 180 s
+    await celebrate(collector, [ended(live_game("basketball", "nba1", 98, 102))])
+    assert len(bus.of_type("sport_event")) == 1
 
 
 async def test_score_history_survives_one_league_failing_a_poll(http, config, clock):

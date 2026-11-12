@@ -189,7 +189,6 @@ class HABridge:
 
     async def _session(self, ws_url: str) -> None:
         async with websockets.connect(ws_url, max_size=MAX_MESSAGE_BYTES) as ws:
-            self._ws = ws
             try:
                 first = json.loads(await ws.recv())
                 if first.get("type") == "auth_required":
@@ -197,6 +196,11 @@ class HABridge:
                     reply = json.loads(await ws.recv())
                     if reply.get("type") != "auth_ok":
                         raise RuntimeError("HA auth failed — check HA_TOKEN")
+                # Not before auth_ok: _command() sends on whatever socket is
+                # here, and a tile tap landing mid-handshake went out ahead of
+                # (or instead of) the auth message, which HA answers by closing
+                # the connection. Until now callers get "not connected".
+                self._ws = ws
                 await self._set_status("connected")
 
                 reader = asyncio.create_task(self._reader(ws))
@@ -337,7 +341,21 @@ class HABridge:
         data = event.get("data", {})
         entity_id = data.get("entity_id")
         new_state = data.get("new_state")
-        if not entity_id or new_state is None:
+        if not entity_id:
+            return
+        if new_state is None:
+            # Removed from HA (deleted, or renamed: the new id follows as its
+            # own event). It used to stay listed until the next reconnect.
+            if self.all_states.pop(entity_id, None) is not None and entity_id in self._mapped_ids():
+                # `ha_state` can only add or update, so displays get the
+                # mapped set again — what a mapping change in config sends.
+                await self.bus.broadcast(
+                    {
+                        "type": "ha_states",
+                        "status": self.status,
+                        "states": self.mapped_states(),
+                    }
+                )
             return
         trimmed = self._trim(new_state)
         self.all_states[entity_id] = trimmed
