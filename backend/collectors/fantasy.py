@@ -7,10 +7,12 @@ scoreboard, and per-team weekly results. Win probability is computed locally
 Private leagues need the browser cookies ESPN_S2 + ESPN_SWID in the env; public
 leagues read with no auth. All parsing is isolated in shape()/_side so an
 upstream format change degrades to a stale module, never a crash. Poll rate
-tightens automatically while my matchup is live.
+tightens automatically while my matchup is live — while an NFL game one of its
+starters plays in is on, per the pro schedule's kickoffs.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 import os
@@ -67,10 +69,19 @@ UNAVAILABLE = {"OUT", "D", "SUS", "IR"}
 # auth-free, changes rarely → cached. Shared by the collector and the API.
 _PRO_TTL_SECONDS = 6 * 3600.0
 _pro_cache: dict[int, tuple[float, dict]] = {}
+# season -> why its last schedule refresh failed (cleared by a success), so the
+# collector can report the lookup as degraded instead of only logging it.
+_pro_errors: dict[int, str] = {}
+
+# A matchup is live while an NFL game one of its starters plays in is: from
+# kickoff for this long (overtime and delays included). "Any points on the
+# board and no winner yet" held from Thursday night until ESPN settled the
+# matchup on Tuesday — 4.5 days of 30 s polling and of the display pinned.
+GAME_WINDOW_SECONDS = 4 * 3600.0
 
 
 def _now() -> datetime:
-    return datetime.now()  # host-local: only the month matters below
+    return datetime.now()  # host-local; .timestamp() gives the epoch for kickoffs
 
 
 def current_season(now: datetime | None = None) -> int:
@@ -95,26 +106,30 @@ async def pro_teams(season: int) -> dict:
             r = await client.get(url, params={"view": "proTeamSchedules_wl"})
             r.raise_for_status()
             data = r.json()
+        # Parsed inside the try: a format change here used to fail the whole
+        # fantasy poll, though the schedule is only enrichment.
+        proteams = (data.get("settings") or {}).get("proTeams") or []
+        abbrev_by_id = {t.get("id"): (t.get("abbrev") or "").upper() for t in proteams}
+        out: dict[int, dict] = {}
+        for t in proteams:
+            tid = t.get("id")
+            games: dict[int, dict] = {}
+            for wk, glist in (t.get("proGamesByScoringPeriod") or {}).items():
+                g = (glist or [{}])[0]
+                is_home = g.get("homeProTeamId") == tid
+                opp_id = g.get("awayProTeamId") if is_home else g.get("homeProTeamId")
+                games[int(wk)] = {
+                    "oppId": opp_id,
+                    "oppAbbrev": abbrev_by_id.get(opp_id, ""),
+                    "home": is_home,
+                    "date": g.get("date"),
+                }
+            out[tid] = {"abbrev": abbrev_by_id.get(tid), "byeWeek": t.get("byeWeek"), "games": games}
     except Exception as exc:  # best-effort: enrichment degrades to no opp/bye
         log.warning("pro_teams fetch failed: %s", exc)
+        _pro_errors[season] = f"{type(exc).__name__}: {exc}"
         return cached[1] if cached else {}
-    proteams = (data.get("settings") or {}).get("proTeams") or []
-    abbrev_by_id = {t.get("id"): (t.get("abbrev") or "").upper() for t in proteams}
-    out: dict[int, dict] = {}
-    for t in proteams:
-        tid = t.get("id")
-        games: dict[int, dict] = {}
-        for wk, glist in (t.get("proGamesByScoringPeriod") or {}).items():
-            g = (glist or [{}])[0]
-            is_home = g.get("homeProTeamId") == tid
-            opp_id = g.get("awayProTeamId") if is_home else g.get("homeProTeamId")
-            games[int(wk)] = {
-                "oppId": opp_id,
-                "oppAbbrev": abbrev_by_id.get(opp_id, ""),
-                "home": is_home,
-                "date": g.get("date"),
-            }
-        out[tid] = {"abbrev": abbrev_by_id.get(tid), "byeWeek": t.get("byeWeek"), "games": games}
+    _pro_errors.pop(season, None)
     _pro_cache[season] = (now, out)
     return out
 
@@ -185,10 +200,20 @@ class FantasyCollector(Collector):
         self._pro: dict = {}  # per-season NFL schedule (abbrev/bye/opponent)
         self._side_points: dict[str, float] = {}  # teamId -> last live points (for celebrations)
         self._celebrated_at: dict[str, float] = {}
+        # The event loop holds only weak references to tasks: an unreferenced
+        # broadcast could be garbage-collected before it ran.
+        self._event_tasks: set[asyncio.Task] = set()
 
     async def start(self, bus: Bus) -> None:
         self._bus = bus
-        await super().start(bus)
+        try:
+            await super().start(bus)
+        finally:
+            # The manager stops a collector by cancelling this task, and every
+            # config save that touches fantasy restarts it — each restart used
+            # to leak the old instance's client and its open connections.
+            if self._client is not None:
+                await self._client.aclose()
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -223,6 +248,14 @@ class FantasyCollector(Collector):
             raise RuntimeError("fantasy: 401 — private league needs ESPN_S2/ESPN_SWID cookies")
         response.raise_for_status()
         self._pro = await pro_teams(self.season)
+        # The schedule feeds opponents, byes and which matchups are live; a
+        # failed lookup was only logged while health said ok.
+        error = _pro_errors.get(self.season)
+        self.degraded = (
+            f"NFL schedule: {error}" if error
+            else "NFL schedule: empty" if not self._pro
+            else None
+        )
         return response.json()
 
     # ---- shaping -----------------------------------------------------------
@@ -268,7 +301,10 @@ class FantasyCollector(Collector):
         settings = raw.get("settings") or {}
         status = raw.get("status") or {}
         week = int(status.get("currentMatchupPeriod") or raw.get("scoringPeriodId") or 1)
+        # The NFL week being scored now (a playoff matchup can span two).
+        period = int(raw.get("scoringPeriodId") or week)
         season_active = bool(status.get("isActive"))
+        now = _now().timestamp()
 
         schedule = raw.get("schedule") or []
         my_id = self._resolve_my_team_id(teams)
@@ -276,6 +312,7 @@ class FantasyCollector(Collector):
         # This week's matchups (the scoreboard) + my matchup.
         scoreboard: list[dict] = []
         my_matchup: dict | None = None
+        my_kickoffs: list[float] = []
         for m in schedule:
             if int(m.get("matchupPeriodId") or 0) != week:
                 continue
@@ -289,10 +326,20 @@ class FantasyCollector(Collector):
                 self._side(away_raw, teams_by_id, members_by_id, decided, week)
                 if away_raw else None
             )
-            entry = _matchup_entry(home, away, winner, decided, season_active, my_id)
+            kickoffs = (
+                _kickoffs(self._pro, _starter_pro_teams(home_raw) | _starter_pro_teams(away_raw), period)
+                if self._pro
+                else None  # no NFL schedule to go by
+            )
+            playing = (
+                None if kickoffs is None
+                else any(k <= now < k + GAME_WINDOW_SECONDS for k in kickoffs)
+            )
+            entry = _matchup_entry(home, away, winner, decided, season_active, my_id, playing)
             scoreboard.append(entry)
             if my_id in (home.get("teamId"), away.get("teamId") if away else None):
                 my_matchup = entry
+                my_kickoffs = kickoffs or []
         if my_matchup and my_matchup.get("mineSide") in ("home", "away"):
             my_matchup["attention"] = _attention_count(my_matchup[my_matchup["mineSide"]])
 
@@ -315,13 +362,18 @@ class FantasyCollector(Collector):
             "trend": trend,
         }
 
-        self._set_interval(my_matchup)
+        self._set_interval(my_matchup, my_kickoffs, now)
         self._maybe_celebrate(my_matchup, away_lookup=teams_by_id)
         return ModulePayload(module=self.name, stage=stage, tape=_tape(stage))
 
-    def _set_interval(self, my_matchup: dict | None) -> None:
+    def _set_interval(self, my_matchup: dict | None, kickoffs: list[float], now: float) -> None:
         live = bool(my_matchup and my_matchup.get("state") == "in")
         self.interval = self.live_interval if live else self.idle_interval
+        ahead = [k - now for k in kickoffs if k > now]
+        if my_matchup and my_matchup.get("state") == "pre" and ahead:
+            # Wake for the next kickoff rather than up to an idle interval
+            # (30 min) after it, unwatched.
+            self.interval = min(self.interval, min(ahead) + 1)
 
     # ---- celebrations ------------------------------------------------------
 
@@ -362,9 +414,9 @@ class FantasyCollector(Collector):
             "team_is_home": mine == "home",
             "scorer": scorer,
         }
-        import asyncio
-
-        asyncio.create_task(self._bus.broadcast({"type": "fantasy_event", "event": event}))
+        task = asyncio.create_task(self._bus.broadcast({"type": "fantasy_event", "event": event}))
+        self._event_tasks.add(task)
+        task.add_done_callback(self._event_tasks.discard)
         log.info("fantasy celebration: %s +%.1f", side.get("abbrev"), delta)
 
 
@@ -429,6 +481,35 @@ def _starters(raw_side: dict, pro: dict, week: int) -> list[dict]:
     return out
 
 
+def _starter_pro_teams(raw_side: dict) -> set:
+    """NFL team ids of a side's starters (empty when ESPN sent no roster)."""
+    roster = (
+        raw_side.get("rosterForCurrentMatchupPeriod")
+        or raw_side.get("rosterForMatchupPeriod")
+        or {}
+    )
+    teams = set()
+    for e in roster.get("entries") or []:
+        if e.get("lineupSlotId") in BENCH_SLOTS:
+            continue
+        team = ((e.get("playerPoolEntry") or {}).get("player") or {}).get("proTeamId")
+        if team:
+            teams.add(team)
+    return teams
+
+
+def _kickoffs(pro: dict, team_ids: set, period: int) -> list[float]:
+    """Kickoffs (epoch seconds) of `team_ids`' NFL games in scoring period
+    `period` — every team's when no starter is known (no roster sent)."""
+    teams = [pro[t] for t in team_ids if t in pro] or list(pro.values())
+    out = []
+    for team in teams:
+        kickoff = ((team.get("games") or {}).get(period) or {}).get("date")  # epoch ms
+        if isinstance(kickoff, (int, float)):
+            out.append(kickoff / 1000.0)
+    return out
+
+
 def _attention_count(side: dict) -> int:
     """Starters that look like they need a swap: out/doubtful/IR/suspended/bye."""
     return sum(
@@ -469,8 +550,11 @@ def _top_scorer(side: dict) -> dict | None:
 
 
 def _matchup_entry(
-    home: dict, away: dict | None, winner: str, decided: bool, season_active: bool, my_id
+    home: dict, away: dict | None, winner: str, decided: bool, season_active: bool, my_id,
+    playing: bool | None = None,
 ) -> dict:
+    """`playing`: whether an NFL game a starter is in is on right now; None
+    when there is no NFL schedule to tell."""
     if away is None:  # bye week
         state = "post" if decided else "pre"
         return {"home": home, "away": None, "state": state, "winner": winner,
@@ -478,10 +562,16 @@ def _matchup_entry(
     any_points = (home["points"] or 0) > 0 or (away["points"] or 0) > 0
     if decided:
         state = "post"
-    elif any_points and season_active:
-        state = "in"
-    else:
+    elif not season_active:
         state = "pre"
+    elif playing is None:
+        # Without kickoffs, points on the board are the only clue — but they
+        # stay there between game windows (see GAME_WINDOW_SECONDS).
+        state = "in" if any_points else "pre"
+    else:
+        # Between game windows a matchup is neither live nor final: "pre",
+        # which the display draws as the week's matchup without the LIVE tag.
+        state = "in" if playing else "pre"
 
     def proj_rem(side):
         cur = side["points"] or 0.0

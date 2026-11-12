@@ -243,6 +243,10 @@ async def game_detail(sport: str, league: str, event: str):
             )
             response.raise_for_status()
             summary = response.json()
+            # A non-object body got past this try and failed on .get() below
+            # as an uncached 500.
+            if not isinstance(summary, dict):
+                raise ValueError("summary is not a JSON object")
     except Exception as exc:
         return JSONResponse({"error": f"summary fetch failed: {exc}"}, status_code=502)
 

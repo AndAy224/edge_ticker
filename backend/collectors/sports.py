@@ -39,6 +39,19 @@ SPORT_COOLDOWN_SECONDS = {"basketball": 180.0, "football": 90.0}
 
 # Per-day window fetches in flight at once (per poll, across all leagues).
 WINDOW_CONCURRENCY = 4
+# A window refresh that fetched nothing retries after this long, doubling up to
+# poll_seconds_schedule. It used to retry every poll: through ESPN's September
+# window outage that was ~36 failing day requests every 30 s live poll.
+WINDOW_RETRY_SECONDS = 60.0
+# The window refreshes in its own task; once the scoreboards have answered, a
+# poll waits this long for a refresh still in flight, then goes out with the
+# cached window — fresh scores must not queue behind ~36 slow day requests.
+WINDOW_WAIT_SECONDS = 10.0
+# Per-event state (score history, celebration and predictor stamps) for a game
+# unseen this long is dropped. Long enough to ride out one league's scoreboard
+# outage: its games' score history has to survive it, or the first score after
+# the outage diffs against nothing and never celebrates.
+EVENT_MEMORY_SECONDS = 6 * 3600.0
 
 FOOTBALL_DELTA_LABELS = {6: "TOUCHDOWN", 3: "FIELD GOAL", 2: "TWO-POINT", 1: "EXTRA POINT"}
 
@@ -397,6 +410,7 @@ class SportsCollector(Collector):
         self.max_prob_games = int(self.module_config.get("max_prob_games", 4))
         self._bus: Bus | None = None
         self._side_scores: dict[str, tuple[int, int]] = {}  # game id -> (away, home)
+        self._scores_seen: dict[str, float] = {}  # game id -> monotonic stamp of its last poll
         self._celebrated_at: dict[str, float] = {}
         self._window: list[dict] = []  # cached dated-window games
         # (league key, day) -> that day's games; settled days are reused
@@ -405,20 +419,31 @@ class SportsCollector(Collector):
         self._predictor: dict[str, tuple[float, dict | None]] = {}  # event id -> (stamp, prob)
         self._window_at: float = 0.0  # monotonic stamp of the last window fetch
         self._window_day: str = ""  # local date the window was built for
+        self._window_task: asyncio.Task | None = None  # refresh in flight, if any
+        self._window_retry_at: float = 0.0  # monotonic; no refresh before this
+        self._window_backoff: float = WINDOW_RETRY_SECONDS
 
     async def start(self, bus: Bus) -> None:
         self._bus = bus  # kept for score-event broadcasts
-        await super().start(bus)
+        try:
+            await super().start(bus)
+        finally:
+            if self._window_task is not None:
+                self._window_task.cancel()
 
     async def fetch(self) -> list[dict]:
+        # Slow lane: refreshed on its own cadence in its own task, never
+        # allowed to fail (or hold up) the poll.
+        window = self._start_window_refresh()
         async with httpx.AsyncClient(timeout=15) as client:
             results = await asyncio.gather(
                 *(self._league(client, league) for league in self.leagues),
                 return_exceptions=True,
             )
-            # Slow lane, same client: refreshed on its own cadence, never
-            # allowed to fail the poll.
-            await self._refresh_window(client)
+        if window is not None and not window.done():
+            # A short grace, then the scores go out with the cached window;
+            # shape() brings the next poll forward so the refresh lands soon.
+            await asyncio.wait({window}, timeout=WINDOW_WAIT_SECONDS)
         games: list[dict] = []
         failures = 0
         now = datetime.now(timezone.utc).isoformat()
@@ -473,6 +498,39 @@ class SportsCollector(Collector):
 
     # ---- dated schedule window ---------------------------------------------
 
+    def _window_due(self) -> bool:
+        now = time.monotonic()
+        if now < self._window_retry_at:
+            return False  # backing off after a refresh that fetched nothing
+        return not (
+            self._window_at
+            and self._window_day == date.today().isoformat()
+            and now - self._window_at < self.schedule_interval
+        )
+
+    def _start_window_refresh(self) -> asyncio.Task | None:
+        """The refresh in flight (a new one if the window is due), else None."""
+        if self._window_task is not None and not self._window_task.done():
+            return self._window_task
+        if not self._window_due():
+            return None
+        self._window_task = asyncio.create_task(self._window_job(), name="sports-window")
+        return self._window_task
+
+    async def _window_job(self) -> None:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                await self._refresh_window(client)
+        except Exception as exc:  # per-day failures are handled inside; this is a bug
+            log.warning("sports window refresh failed: %s", exc)
+            self._window_back_off()
+
+    def _window_back_off(self) -> None:
+        self._window_retry_at = time.monotonic() + self._window_backoff
+        self._window_backoff = min(
+            self._window_backoff * 2, max(self.schedule_interval, WINDOW_RETRY_SECONDS)
+        )
+
     async def _refresh_window(self, client: httpx.AsyncClient) -> None:
         """Re-fetch the days_back..days_ahead window when it goes stale or the
         local date rolls. Failures keep the previous window — a missing window
@@ -482,14 +540,9 @@ class SportsCollector(Collector):
         `dates=YYYYMMDD-YYYYMMDD` ranges with a 400 (Sep 2026), while single
         days still work. A day that ended before yesterday is settled, so it is
         cached until it scrolls out of the window rather than re-fetched."""
-        today = date.today()
-        fresh = (
-            self._window_at
-            and self._window_day == today.isoformat()
-            and time.monotonic() - self._window_at < self.schedule_interval
-        )
-        if fresh:
+        if not self._window_due():
             return
+        today = date.today()
         days = [
             today + timedelta(days=offset)
             for offset in range(-self.days_back, self.days_ahead + 1)
@@ -540,7 +593,12 @@ class SportsCollector(Collector):
             "error": last_error,
         }
         if to_fetch and failed == len(to_fetch) and not self._window_days:
-            return  # nothing at all yet; retry on the next poll, not in 30 min
+            # Nothing at all yet: retry sooner than the schedule cadence, but
+            # backing off (WINDOW_RETRY_SECONDS) rather than every poll.
+            self._window_back_off()
+            return
+        self._window_retry_at = 0.0
+        self._window_backoff = WINDOW_RETRY_SECONDS
         self._window = [
             game
             for key in wanted
@@ -575,6 +633,12 @@ class SportsCollector(Collector):
             previous = merged.get(key)
             if previous:
                 for field in self._CARRY_OVER:
+                    if field == "win_prob" and game.get("state") == "in":
+                        # The window's probability is a pre-game one (moneyline
+                        # or ESPN's projection): carried onto a live game it
+                        # showed the opening odds as the live chances whenever
+                        # the live lane had nothing for it.
+                        continue
                     if game.get(field) is None and previous.get(field) is not None:
                         game[field] = previous[field]
                 for side in ("home", "away"):
@@ -630,9 +694,13 @@ class SportsCollector(Collector):
                 "followed": self._is_followed(teams),
                 "odds": odds,
                 # A book's line is itself a win forecast — free, and available
-                # earlier than any of ESPN's model endpoints. The dedicated
-                # probability lane overwrites this for live games.
-                "win_prob": _prob_from_moneyline(odds) if self.win_probability else None,
+                # earlier than any of ESPN's model endpoints — but only before
+                # the game: ESPN keeps the line on live games, and a live game
+                # the probability lane didn't answer for (unfollowed, over the
+                # cap, a failed request) showed the opening odds as its chances.
+                "win_prob": _prob_from_moneyline(odds)
+                if self.win_probability and state != "in"
+                else None,
                 "situation": _parse_situation(competition, state),
                 "broadcast": competition.get("broadcast")
                 or next(
@@ -822,7 +890,12 @@ class SportsCollector(Collector):
                 continue
             self._celebrated_at[gid] = now
             scored.append((g, delta))
-        self._side_scores = new_scores
+        # Merged, not replaced: `games` holds only the leagues that answered
+        # this poll, so one league's failed poll used to wipe its games' score
+        # history, and the next score in them diffed against nothing.
+        self._side_scores.update(new_scores)
+        self._scores_seen.update(dict.fromkeys(new_scores, now))
+        self._forget_old_events(now)
         if not self.celebrations or self._bus is None:
             return
         for game, delta in scored:
@@ -832,6 +905,25 @@ class SportsCollector(Collector):
                 log.info("score celebration: %s %s", event["team"]["abbrev"], event["label"])
             except Exception as exc:
                 log.warning("could not build score event: %s", exc)
+
+    def _forget_old_events(self, now: float) -> None:
+        """Per-event state is keyed by ESPN event id, and nothing else ever
+        removed it: these dicts grew by every game seen for the collector's
+        lifetime."""
+        for gid, seen in list(self._scores_seen.items()):
+            if now - seen > EVENT_MEMORY_SECONDS:
+                del self._scores_seen[gid]
+                self._side_scores.pop(gid, None)
+        longest_cooldown = max(CELEBRATION_COOLDOWN_SECONDS, *SPORT_COOLDOWN_SECONDS.values())
+        self._celebrated_at = {
+            gid: at for gid, at in self._celebrated_at.items() if now - at < longest_cooldown
+        }
+        # A predictor answer older than the schedule cadence is re-fetched anyway.
+        self._predictor = {
+            gid: entry
+            for gid, entry in self._predictor.items()
+            if now - entry[0] < self.schedule_interval
+        }
 
     async def _build_live_event(self, game: dict, delta: int) -> dict:
         summary: dict = {}
@@ -915,6 +1007,10 @@ class SportsCollector(Collector):
             if any(g["state"] == "in" for g in games)
             else self.idle_interval
         )
+        if self._window_task is not None and not self._window_task.done():
+            # This payload went out without the window refresh still in
+            # flight; poll again soon so it lands, not an idle interval later.
+            self.interval = min(self.interval, self.live_interval)
         horizon = (
             datetime.now(timezone.utc) + timedelta(days=self.days_ahead)
         ).isoformat()

@@ -14,6 +14,8 @@ radar stale for the remaining 22 hours — so it is no longer the default either
 A hosted provider that fails hands the poll to the next one (FALLBACK_ORDER),
 and is skipped for a while: a 429 until its ``Retry-After`` /
 ``x-ratelimit-reset``, a 403 for an hour, anything else for two minutes.
+While a stand-in with a daily budget (adsb.lol) serves, the poll slows to what
+that budget allows (DAILY_BUDGET) until the configured provider is back.
 
 The hosted providers all return an ADSBexchange-v2 shape (an ``ac`` array of
 dump1090-style aircraft) and take their radius in nautical miles. ``local``
@@ -53,6 +55,13 @@ RATE_LIMIT_DEFAULT = timedelta(minutes=15)  # a 429 that names no reset time
 RATE_LIMIT_MAX = timedelta(hours=24)
 FORBIDDEN_SKIP = timedelta(hours=1)
 FAILED_SKIP = timedelta(minutes=2)
+# Per-IP daily request budgets of the providers that enforce one. Standing in
+# for a failed adsb.fi at the normal 15 s poll, adsb.lol spent its 500 in about
+# two hours, and the radar had no source at all until 00:00 UTC. A stand-in
+# with a budget polls no faster than spending STAND_IN_BUDGET_SHARE of it over
+# a whole day (the rest is headroom for whatever else shares the IP).
+DAILY_BUDGET = {"adsblol": 500}
+STAND_IN_BUDGET_SHARE = 0.75
 
 # provider -> (skip until, why). Module-level on purpose (the opnsense
 # precedent): a config save restarts the collector, and a fresh instance would
@@ -119,6 +128,7 @@ class AdsbCollector(Collector):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.interval = float(self.module_config.get("poll_seconds", 15))
+        self.poll_seconds = self.interval  # the cadence while the configured provider serves
         self.provider = (self.module_config.get("provider") or "adsbfi").lower()
         weather = config.get("modules", {}).get("weather", {})
         self.latitude = self.module_config.get("latitude") or weather.get("latitude", 27.9659)
@@ -147,6 +157,16 @@ class AdsbCollector(Collector):
         if self.provider == "local":
             return ["local"]
         return [self.provider] + [p for p in FALLBACK_ORDER if p != self.provider]
+
+    def _interval_for(self, provider: str) -> float:
+        """Poll cadence while `provider` serves. A configured provider keeps
+        poll_seconds (the user chose it); a stand-in with a daily budget is
+        slowed until the configured one is back."""
+        budget = DAILY_BUDGET.get(provider)
+        if provider == self.provider or not budget:
+            return self.poll_seconds
+        floor = timedelta(days=1).total_seconds() / (budget * STAND_IN_BUDGET_SHARE)
+        return max(self.poll_seconds, floor)
 
     async def fetch(self) -> dict:
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
@@ -184,6 +204,7 @@ class AdsbCollector(Collector):
                 self.degraded = (
                     f"{'; '.join(problems)} — using {label}" if provider != self.provider else None
                 )
+                self.interval = self._interval_for(provider)
                 return raw
         self.degraded = None  # the error says it all
         if error is None:  # every provider is still inside its skip window

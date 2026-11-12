@@ -21,11 +21,13 @@ base-class backoff — never a crash.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
+import random
 import time
-from datetime import date
+from datetime import datetime, timedelta
 
 import httpx
 import websockets
@@ -50,6 +52,7 @@ FINNHUB_WS_URL = "wss://ws.finnhub.io"
 COINBASE_STATS_URL = "https://api.exchange.coinbase.com/products/{symbol}/stats"
 COINBASE_CANDLES_URL = "https://api.exchange.coinbase.com/products/{symbol}/candles"
 STREAM_PUBLISH_INTERVAL = 2.0
+STREAM_BACKOFF = (1.0, 60.0)  # seconds: first and longest reconnect delay
 
 # Self-built sparkline history: Finnhub's free tier has no candles and Yahoo
 # (which includes intraday closes) rate-limits some networks, so we accumulate
@@ -59,7 +62,18 @@ HISTORY_WINDOW_SECONDS = 8 * 3600
 HISTORY_STREAM_INTERVAL = 60.0  # min spacing for stream-sourced points
 SPARK_POINTS = 48
 EARNINGS_FETCH_URL = "https://finnhub.io/api/v1/calendar/earnings"
-EARNINGS_REFRESH_SECONDS = 12 * 3600
+# Within a day the calendar is re-checked this often; a new local date always
+# refreshes it (a 12 h timer alone kept yesterday's "reports earnings today"
+# on the tape until mid-morning and missed today's pre-market reporters).
+EARNINGS_REFRESH = timedelta(hours=12)
+EARNINGS_RETRY = timedelta(minutes=15)  # after a failed calendar fetch
+
+
+def _now() -> datetime:
+    return datetime.now().astimezone()  # a function so tests can pin the clock
+
+
+_sleep = asyncio.sleep  # module attribute so tests can see (and skip) the reconnect delay
 
 
 class MarketsCollector(Collector):
@@ -85,7 +99,9 @@ class MarketsCollector(Collector):
         self._history: dict[str, list[list[float]]] = self._load_history()
         self._history_at: dict[str, float] = {}  # last stream-sourced point per symbol
         self._earnings_today: set[str] = set()
-        self._earnings_checked = 0.0
+        self._earnings_checked: datetime | None = None  # last successful fetch
+        self._earnings_retry_at: datetime | None = None
+        self._earnings_error: str | None = None
 
     @staticmethod
     def _stream_symbol(symbol: str) -> str:
@@ -131,18 +147,24 @@ class MarketsCollector(Collector):
         return [prices[round(i * step)] for i in range(SPARK_POINTS)]
 
     async def start(self, bus: Bus) -> None:
-        if not self.finnhub_key:
-            await super().start(bus)
-            return
-        stream = asyncio.create_task(self._stream(bus), name="markets-stream")
+        stream = None
+        if self.finnhub_key:
+            stream = asyncio.create_task(self._stream(bus), name="markets-stream")
         try:
             await super().start(bus)
         finally:
-            stream.cancel()
-            await asyncio.gather(stream, return_exceptions=True)
+            if stream is not None:
+                stream.cancel()
+                await asyncio.gather(stream, return_exceptions=True)
+            # The persistent client outlives every poll and Collector has no
+            # teardown hook, so it is closed here: each config save that
+            # restarted markets used to leak its connection pool.
+            if self._client is not None:
+                with contextlib.suppress(Exception):
+                    await self._client.aclose()
 
     async def _stream(self, bus: Bus) -> None:
-        backoff = 1.0
+        backoff = STREAM_BACKOFF[0]
         while True:
             try:
                 async with websockets.connect(
@@ -152,13 +174,17 @@ class MarketsCollector(Collector):
                         await ws.send(
                             json.dumps({"type": "subscribe", "symbol": stream_symbol})
                         )
-                    backoff = 1.0
                     pending: dict[str, float] = {}
                     last_publish = 0.0
                     async for raw in ws:
                         message = json.loads(raw)
                         if message.get("type") != "trade":
                             continue
+                        # Only a trade proves the socket is ours. Resetting
+                        # after the handshake let a socket that Finnhub accepts
+                        # and then closes (one per key — dev and prod fight
+                        # over it) reconnect flat out.
+                        backoff = STREAM_BACKOFF[0]
                         for trade in message.get("data", []):
                             symbol = self._stream_map.get(trade.get("s"))
                             if symbol and trade.get("p"):
@@ -171,12 +197,15 @@ class MarketsCollector(Collector):
                             if payload is not None:
                                 self._last_payload = payload
                                 await bus.publish(payload)
+                    # A normal close ends `async for` without an exception
+                    # (websockets 16), so this exit needs the delay below too.
+                    log.debug("markets stream closed by Finnhub: %s %s", ws.close_code, ws.close_reason)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 log.debug("markets stream error: %s", exc)
-                await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, 60.0)
+            await _sleep(backoff * random.uniform(1.0, 1.25))
+            backoff = min(backoff * 2, STREAM_BACKOFF[1])
 
     def _apply_live(self, prices: dict[str, float]) -> ModulePayload | None:
         """Fold streamed trade prices into the last polled quotes and reshape."""
@@ -231,10 +260,12 @@ class MarketsCollector(Collector):
             return_exceptions=True,
         )
         quotes = []
+        failed = []
         rate_limited = False
         for symbol, result in zip(self.symbols, results):
             if isinstance(result, BaseException):
                 log.debug("quote failed for %s: %s", symbol, result)
+                failed.append(symbol)
                 if (
                     isinstance(result, httpx.HTTPStatusError)
                     and result.response.status_code in (401, 429)
@@ -245,6 +276,7 @@ class MarketsCollector(Collector):
         if not quotes:
             if rate_limited:
                 self._warmed_up = False  # force a fresh warm-up next round
+            self.degraded = None  # the error says it all
             raise RuntimeError("all quote requests failed")
         now = time.time()
         for q in quotes:
@@ -253,18 +285,35 @@ class MarketsCollector(Collector):
                 q["spark"] = self._spark(q["symbol"])
         self._save_history()
         await self._refresh_earnings_today(client)
+        # A symbol whose quote failed (Coinbase down, Finnhub answering zeros)
+        # drops off the board; health used to keep saying ok meanwhile.
+        problems = []
+        if failed:
+            problems.append(f"no quote for {', '.join(failed)}")
+        if self._earnings_error:
+            problems.append(f"earnings calendar: {self._earnings_error}")
+        self.degraded = "; ".join(problems) or None
         return quotes
 
     async def _refresh_earnings_today(self, client: httpx.AsyncClient) -> None:
-        """Which configured symbols report earnings today (refreshed ~12h)."""
+        """Which configured symbols report earnings today: fetched once per
+        local date (re-checked after EARNINGS_REFRESH), and EARNINGS_RETRY
+        after a failed fetch."""
         if not self.finnhub_key:
             return
-        now = time.monotonic()
-        if now - self._earnings_checked < EARNINGS_REFRESH_SECONDS:
+        now = _now()
+        checked = self._earnings_checked
+        if checked is not None and checked.date() == now.date():
+            if now - checked < EARNINGS_REFRESH:
+                return
+        else:
+            # Yesterday's reporters leave the tape at midnight, whether or not
+            # today's calendar can be fetched yet.
+            self._earnings_today = set()
+        if self._earnings_retry_at is not None and now < self._earnings_retry_at:
             return
-        self._earnings_checked = now
         try:
-            today = str(date.today())
+            today = now.date().isoformat()
             response = await client.get(
                 EARNINGS_FETCH_URL,
                 params={"from": today, "to": today},
@@ -272,14 +321,26 @@ class MarketsCollector(Collector):
             )
             response.raise_for_status()
             calendar = response.json().get("earningsCalendar") or []
-            watched = set(self.symbols)
-            self._earnings_today = {
-                e["symbol"] for e in calendar if e.get("symbol") in watched
-            }
-            if self._earnings_today:
-                log.info("earnings today: %s", sorted(self._earnings_today))
         except Exception as exc:
             log.debug("earnings calendar fetch failed: %s", exc)
+            # The check time used to be stamped before the request, so a
+            # failure also waited the full 12 h.
+            self._earnings_retry_at = now + EARNINGS_RETRY
+            self._earnings_error = (
+                f"HTTP {exc.response.status_code}"
+                if isinstance(exc, httpx.HTTPStatusError)
+                else type(exc).__name__
+            )
+            return
+        watched = set(self.symbols)
+        self._earnings_today = {
+            e["symbol"] for e in calendar if e.get("symbol") in watched
+        }
+        self._earnings_checked = now
+        self._earnings_retry_at = None
+        self._earnings_error = None
+        if self._earnings_today:
+            log.info("earnings today: %s", sorted(self._earnings_today))
 
     async def _yahoo_quote(self, client: httpx.AsyncClient, symbol: str) -> dict:
         if not self._warmed_up:

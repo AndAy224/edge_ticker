@@ -135,6 +135,8 @@ async def _week_points(client, league_id: str, season: int, wk: int, player_id: 
         data = r.json()
     except Exception:
         return None
+    if not isinstance(data, dict):
+        return None  # one week's odd body must not fail the whole player card
     for m in data.get("schedule") or []:
         if int(m.get("matchupPeriodId") or 0) != wk:
             continue
@@ -197,6 +199,10 @@ async def fantasy_detail(league_id: str, season: int, week: int, team_id: int):
             )
             response.raise_for_status()
             data = response.json()
+            # A non-object body got past this try and failed on .get() below
+            # as an uncached 500.
+            if not isinstance(data, dict):
+                raise ValueError("boxscore is not a JSON object")
             pro = await pro_teams(season)
     except Exception as exc:
         return JSONResponse({"error": f"boxscore fetch failed: {exc}"}, status_code=502)

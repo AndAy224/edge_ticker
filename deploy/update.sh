@@ -7,9 +7,10 @@
 # Nothing live changes until the new code has passed its checks: the backend
 # must import, the frontend must typecheck, and the bundle is built beside the
 # live one and swapped in whole. After the switch the backend has to pass a
-# health check, or the previous commit and bundle are put back. Changed
-# systemd units and the udev rule are synced (install.sh used to be the only
-# thing that copied them, so unit fixes never reached the appliance).
+# health check, or the previous commit, its bundle and its own systemd units
+# and udev rule are put back — as they are when any step of the switch itself
+# fails. Changed systemd units and the udev rule are synced (install.sh used to
+# be the only thing that copied them, so unit fixes never reached the appliance).
 # The whole script is one { … } block: bash reads a script as it runs, and the
 # `git reset` below rewrites this very file — bash must have parsed all of it
 # before that happens.
@@ -35,6 +36,8 @@ sync_system_files() {
   say "system units"
   local changed=0
   for unit in ticker-backend.service kiosk.service ticker-watchdog.service ticker-watchdog.timer; do
+    # Rolling back past the commit that added a unit: nothing to put back.
+    [ -f "$APP_DIR/deploy/$unit" ] || continue
     if ! cmp -s "$APP_DIR/deploy/$unit" "$ETC/systemd/system/$unit"; then
       cp "$APP_DIR/deploy/$unit" "$ETC/systemd/system/"
       echo "    updated $unit"
@@ -106,14 +109,6 @@ npx tsc --noEmit
 rm -rf dist.new
 npx vite build --outDir dist.new --emptyOutDir --logLevel warn
 cd "$APP_DIR"
-trap - ERR
-
-say "switching"
-rm -rf "$STATE/dist.prev"
-if [ -d "$FRONTEND/dist" ]; then mv "$FRONTEND/dist" "$STATE/dist.prev"; fi
-mv "$FRONTEND/dist.new" "$FRONTEND/dist"
-
-sync_system_files
 
 healthy() {
   for _ in $(seq 1 30); do
@@ -123,22 +118,54 @@ healthy() {
   return 1
 }
 
-say "restarting backend"
-systemctl restart ticker-backend.service
-if ! healthy; then
-  echo "!! backend unhealthy after the switch — rolling back to $(git rev-parse --short "$prev")"
+# From here the live system changes. The ERR trap used to be disarmed at this
+# point, so a failing mv, cp into /etc or a backend that no longer started left
+# the switch half done with nothing restored; and the failed-health rollback
+# put the old code back under the NEW units — if the unit change was what broke
+# it, the rollback failed too. Any failure from here on, and an unhealthy
+# backend, restores the previous commit, its bundle and its own units and rule.
+live_moved=0 new_placed=0
+roll_back() {
+  # A failure inside $(…) runs the inherited trap in a subshell: fail just
+  # that, and let the command that used it roll back from the real shell.
+  [ "$BASHPID" = "$$" ] || exit 1
+  trap - ERR
+  set +e  # best effort: every restore step has to be tried
+  echo "!! $1 — rolling back to $(git rev-parse --short "$prev")"
   git reset --quiet --hard "$prev"
-  rm -rf "$FRONTEND/dist"
-  if [ -d "$STATE/dist.prev" ]; then mv "$STATE/dist.prev" "$FRONTEND/dist"; fi
+  if [ "$live_moved" = 1 ]; then
+    rm -rf "$FRONTEND/dist"
+    mv "$STATE/dist.prev" "$FRONTEND/dist"
+  elif [ "$new_placed" = 1 ]; then
+    rm -rf "$FRONTEND/dist"  # there was no bundle before this update
+  fi
+  rm -rf "$FRONTEND/dist.new"
+  sync_system_files  # the previous commit's units and udev rule, now checked out
   python_deps
   systemctl restart ticker-backend.service
   healthy && echo "    previous version is back up" || echo "!! previous version is not healthy either"
   journalctl -u ticker-backend.service -n 30 --no-pager
   exit 1
-fi
+}
+trap 'roll_back "update failed during the switch"' ERR
+
+say "switching"
+rm -rf "$STATE/dist.prev"
+if [ -d "$FRONTEND/dist" ]; then mv "$FRONTEND/dist" "$STATE/dist.prev"; live_moved=1; fi
+mv "$FRONTEND/dist.new" "$FRONTEND/dist"
+new_placed=1
+
+sync_system_files
+
+say "restarting backend"
+systemctl restart ticker-backend.service
+healthy || roll_back "backend unhealthy after the switch"
 # Recorded only once the new version is up, so a failed attempt can't make
 # --rollback point at the version it is already running.
 echo "$prev" > "$STATE/prev-commit"
+# The new version is up: a kiosk restart or reload failing below is no reason
+# to take it down again.
+trap - ERR
 
 if [ "$KIOSK_CHANGED" = 1 ]; then
   say "kiosk.service changed — restarting the kiosk"

@@ -52,8 +52,13 @@ async def check_scheduler() -> None:
     )
     await scheduler._tick("23:00")
     await scheduler._tick("04:00")
-    assert bus.messages[0] == {"type": "night", "mode": "dim", "level": 10}, bus.messages
-    assert bus.messages[1] == {"type": "control", "action": "reload"}, bus.messages
+    # method=software: the display draws the dim itself, so the message says so
+    # (`software`); the 04:00 tick is still inside the window at the same level,
+    # so it sends only the nightly reload, not a second night message.
+    assert bus.messages == [
+        {"type": "night", "mode": "dim", "level": 10, "software": True},
+        {"type": "control", "action": "reload"},
+    ], bus.messages
     print("SCHEDULER OK:", bus.messages)
 
 

@@ -166,7 +166,34 @@ async def test_fetch_skips_recent_results_while_live(http, monkeypatch, defaults
         results() if request.url.path.endswith("/upcoming/") else {"results": []}
     )
     collector = LaunchesCollector(defaults_config)
-    collector._recent = [{"name": "cached"}]
+    collector._recent, collector._recent_tried = [{"name": "cached"}], True
     for _ in range(6):
         await collector.fetch()
     assert all(r.url.path.endswith("/upcoming/") for r in http.requests)
+
+
+@pytest.mark.parametrize(
+    "previous",
+    [lambda: httpx.Response(500), lambda: json_response({"results": []})],
+    ids=["failing", "empty"],
+)
+@pytest.mark.parametrize("now, upcoming_calls, previous_calls", [
+    ("2026-09-25T12:00:00", 5, 2),  # idle: the 1st poll, then every 4th
+    ("2026-10-01T15:00:00", 6, 1),  # live: only the startup attempt
+])
+async def test_failing_or_empty_recent_results_keep_their_cadence(
+    http, monkeypatch, defaults_config, previous, now, upcoming_calls, previous_calls
+):
+    """Recent results that fail or come back empty used to be re-requested on
+    every poll — two calls per poll, over Launch Library's ~15/hr when live."""
+    pin(monkeypatch, now)
+    http.handler = lambda request: (
+        json_response(results()) if request.url.path.endswith("/upcoming/") else previous()
+    )
+    collector = LaunchesCollector(defaults_config)
+    for _ in range(upcoming_calls):
+        await collector.fetch()
+    paths = [r.url.path.rsplit("/", 2)[-2] for r in http.requests]
+    assert paths.count("upcoming") == upcoming_calls
+    assert paths.count("previous") == previous_calls
+    assert collector._recent == []

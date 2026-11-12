@@ -6,6 +6,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Iterable
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,6 +29,10 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 # httpx logs every request URL at INFO: ~1k journal lines an hour that bury the
 # real warnings, and any credential carried in a query string along with them.
 logging.getLogger("httpx").setLevel(logging.WARNING)
+# websockets logs each handshake request line at DEBUG, and Finnhub's socket
+# carries its key in the URL (`> GET /?token=…`): LOG_LEVEL=DEBUG would put the
+# key in the journal.
+logging.getLogger("websockets").setLevel(logging.WARNING)
 log = logging.getLogger("ticker")
 
 from fastapi import FastAPI, Request  # noqa: E402
@@ -51,6 +56,7 @@ from .manager import CollectorManager  # noqa: E402
 from .origin import UNSAFE_METHODS, cross_site  # noqa: E402
 from .scheduler import NightScheduler  # noqa: E402
 from .state import Bus  # noqa: E402
+from .tasks import failed, spawn  # noqa: E402
 from .webrtc import WebRTCRelay  # noqa: E402
 from . import ws as ws_channels  # noqa: E402
 from .ws import router as ws_router  # noqa: E402
@@ -109,10 +115,13 @@ async def lifespan(app: FastAPI):
     app.state.webrtc = webrtc
 
     await manager.apply(bus, config)
+    # spawn(): a failure is logged when it happens, not when shutdown gathers
+    # it, and /api/health lists the task under `problems`.
     background = [] if FIXTURE else [
-        asyncio.create_task(bridge.run(), name="ha-bridge"),
-        asyncio.create_task(scheduler.run(), name="night-scheduler"),
+        spawn(bridge.run(), "ha-bridge"),
+        spawn(scheduler.run(), "night-scheduler"),
     ]
+    app.state.background = background
     yield
     for task in background:
         task.cancel()
@@ -157,12 +166,21 @@ def health(request: Request) -> dict:
         # listed in `stuck`; everything else worth a look is in `problems`.
         "ok": True,
         "stuck": [c["name"] for c in collectors if c.get("stuck")],
-        "problems": _problems(collectors),
+        "problems": _problems(
+            collectors,
+            [
+                *getattr(request.app.state, "background", []),
+                *filter(None, [getattr(scheduler, "watcher", None)]),
+            ],
+        ),
         "collectors": collectors,
         "ha": bridge.status,
         "night": scheduler.state() | {"method_used": scheduler.method_used},
         "ws_clients": bus.subscriber_count,
         "display_clients": ws_channels.display_clients,
+        # Display sockets from this machine, i.e. the kiosk itself — what the
+        # watchdog checks (a /display tab elsewhere doesn't prove the panel is up).
+        "kiosk_clients": ws_channels.kiosk_clients,
         "dropped_messages": bus.dropped,
         "fixture": bool(FIXTURE),
         "revision": REVISION,
@@ -170,8 +188,12 @@ def health(request: Request) -> dict:
     }
 
 
-def _problems(collectors: list[dict]) -> list[str]:
-    out = []
+def _problems(collectors: list[dict], background: Iterable[asyncio.Task] = ()) -> list[str]:
+    out = [
+        f"{task.get_name()}: background task has died ({task.exception()!r})"
+        for task in background
+        if failed(task)
+    ]
     for c in collectors:
         name = c["name"]
         if c.get("state") == "error":

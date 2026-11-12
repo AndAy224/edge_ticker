@@ -13,7 +13,14 @@ from typing import Awaitable, Callable
 
 import websockets
 
+from .tasks import Lane, spawn
+
 log = logging.getLogger(__name__)
+
+# get_states arrives as one frame, and websockets refuses frames over 1 MiB by
+# default (close 1009): a growing install (UniFi Protect alone adds dozens of
+# entities per camera) would cross that and the bridge would reconnect forever.
+MAX_MESSAGE_BYTES = 32 * 1024 * 1024
 
 ATTRIBUTE_WHITELIST = {
     "friendly_name",
@@ -68,6 +75,11 @@ CONTROL_SERVICES: dict[str, dict[str, set[str]]] = {
 }
 TARGET_KEYS = {"entity_id", "device_id", "area_id", "floor_id", "label_id"}
 
+
+class HAError(RuntimeError):
+    """Home Assistant answered a command with an error result."""
+
+
 class HABridge:
     def __init__(self, bus, get_config: Callable[[], dict]) -> None:
         self.bus = bus
@@ -83,6 +95,8 @@ class HABridge:
         # Subscription id -> callback for its events (e.g. a WebRTC offer's
         # answer and ICE candidates). Unclaimed events are state_changed.
         self._subscriptions: dict[int, Callable[[dict], Awaitable[None]]] = {}
+        # ...and the lane each subscription's events are delivered through.
+        self._lanes: dict[int, Lane] = {}
 
     # -- public surface -----------------------------------------------------
 
@@ -174,7 +188,7 @@ class HABridge:
             backoff = min(backoff * 2, 60.0)
 
     async def _session(self, ws_url: str) -> None:
-        async with websockets.connect(ws_url) as ws:
+        async with websockets.connect(ws_url, max_size=MAX_MESSAGE_BYTES) as ws:
             self._ws = ws
             try:
                 first = json.loads(await ws.recv())
@@ -209,13 +223,12 @@ class HABridge:
                     if not fut.done():
                         fut.set_exception(RuntimeError("HA connection closed"))
                 self._pending.clear()
-                # Subscriptions die with the connection; tell their owners.
-                subscriptions, self._subscriptions = self._subscriptions, {}
-                for callback in subscriptions.values():
-                    try:
-                        await callback({"type": "error", "message": "HA connection closed"})
-                    except Exception:
-                        pass
+                # Subscriptions die with the connection; tell their owners
+                # (behind whatever events they still have on their way).
+                for sub_id in list(self._subscriptions):
+                    self._dispatch(sub_id, {"type": "error", "message": "HA connection closed"})
+                self._subscriptions.clear()
+                self._lanes.clear()
 
     async def _reader(self, ws) -> None:
         async for raw in ws:
@@ -227,18 +240,34 @@ class HABridge:
                     if message.get("success"):
                         fut.set_result(message.get("result"))
                     else:
-                        fut.set_exception(RuntimeError(str(message.get("error"))))
+                        fut.set_exception(HAError(str(message.get("error"))))
             elif kind == "event":
-                callback = self._subscriptions.get(message.get("id"))
-                if callback is not None:
-                    # Awaited in order: a WebRTC answer must reach the display
-                    # before the ICE candidates that follow it.
-                    try:
-                        await callback(message.get("event") or {})
-                    except Exception as exc:
-                        log.warning("HA subscription callback: %s", exc)
+                if message.get("id") in self._subscriptions:
+                    self._dispatch(message["id"], message.get("event") or {})
                 else:
                     await self._on_event(message.get("event", {}))
+
+    def _dispatch(self, sub_id: int, event: dict) -> None:
+        """Hand a subscription event to its callback without waiting for it.
+
+        The reader used to await callbacks inline, but a callback that sends an
+        HA command (the WebRTC relay forwarding early ICE candidates) waits for
+        a result only this reader can deliver: the reader sat out the full
+        command timeout, every other command's result and event behind it.
+        Each subscription's lane keeps its events in order — a WebRTC answer
+        must reach the display before the candidates that follow it."""
+        callback = self._subscriptions.get(sub_id)
+        lane = self._lanes.get(sub_id)
+        if callback is None or lane is None:
+            return
+
+        async def deliver() -> None:
+            try:
+                await callback(event)
+            except Exception as exc:
+                log.warning("HA subscription callback: %s", exc)
+
+        lane.run(deliver())
 
     async def _command(self, payload: dict, cmd_id: int | None = None):
         ws = self._ws
@@ -265,17 +294,32 @@ class HABridge:
         self._next_id += 1
         sub_id = self._next_id
         self._subscriptions[sub_id] = on_event
+        self._lanes[sub_id] = Lane(f"ha-subscription-{sub_id}")
         try:
             await self._command(payload, cmd_id=sub_id)
-        except Exception:
-            self._subscriptions.pop(sub_id, None)
+        except HAError:
+            self._forget(sub_id)  # refused: HA holds nothing to end
+            raise
+        except BaseException:
+            # Timed out or cancelled with the command already sent: HA may
+            # have opened the subscription (for a WebRTC offer, a camera
+            # session) and nothing else would ever end it.
+            if self._forget(sub_id) and self._ws is not None:
+                spawn(self._end_subscription(sub_id), f"ha-unsubscribe-{sub_id}")
             raise
         return sub_id
 
+    def _forget(self, sub_id: int) -> bool:
+        self._lanes.pop(sub_id, None)
+        return self._subscriptions.pop(sub_id, None) is not None
+
     async def unsubscribe(self, sub_id: int) -> None:
         """End a subscription (for a WebRTC offer, HA closes the session)."""
-        if self._subscriptions.pop(sub_id, None) is None or self._ws is None:
+        if not self._forget(sub_id) or self._ws is None:
             return
+        await self._end_subscription(sub_id)
+
+    async def _end_subscription(self, sub_id: int) -> None:
         try:
             await self._command({"type": "unsubscribe_events", "subscription": sub_id})
         except Exception as exc:

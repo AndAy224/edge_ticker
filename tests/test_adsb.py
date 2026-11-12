@@ -147,6 +147,7 @@ async def test_rate_limited_provider_falls_back_until_reset(http, defaults_confi
     assert [r.url.host for r in http.requests] == ["api.adsb.lol", "opendata.adsb.fi"]
     # x-ratelimit-reset is seconds from now: the daily window ends at 00:00 UTC.
     assert collector.degraded == "adsb.lol rate-limited until 00:00 UTC — using adsb.fi"
+    assert collector.interval == 15  # adsb.fi has no daily budget to protect
 
     # Inside the window adsb.lol isn't asked again, even by a restarted collector.
     collector = AdsbCollector(defaults_config)
@@ -171,6 +172,10 @@ async def test_transient_failure_skips_provider_briefly(http, collector, clock):
     })
     await collector.fetch()
     assert collector.degraded == "adsb.fi failed: ReadTimeout — using adsb.lol"
+    # Standing in, adsb.lol is polled slowly enough for its 500/day to last
+    # a whole outage (at 15 s it was gone in two hours).
+    assert collector.interval >= 180
+    assert timedelta(days=1).total_seconds() / collector.interval <= adsb.DAILY_BUDGET["adsblol"]
 
     clock["t"] = NOW + timedelta(minutes=1)
     await collector.fetch()
@@ -180,6 +185,15 @@ async def test_transient_failure_skips_provider_briefly(http, collector, clock):
     clock["t"] = NOW + timedelta(minutes=3)
     await collector.fetch()
     assert http.requests[-1].url.host == "opendata.adsb.fi" and collector.degraded is None
+    assert collector.interval == 15  # the primary is back: normal cadence
+
+
+def test_stand_in_cadence_never_speeds_up_a_slow_poll(defaults_config):
+    defaults_config["modules"]["adsb"]["poll_seconds"] = 600
+    collector = AdsbCollector(defaults_config)
+    assert collector._interval_for("adsblol") == 600
+    defaults_config["modules"]["adsb"].update(provider="adsblol", poll_seconds=15)
+    assert AdsbCollector(defaults_config)._interval_for("adsblol") == 15  # chosen by the user
 
 
 async def test_every_provider_down_raises_with_each_reason(http, collector, clock):

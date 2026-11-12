@@ -152,6 +152,37 @@ def test_proxmox_pdu_feeds(pve_env, defaults_config, watts, state, alert):
     assert any("PSU 2 not drawing" in t for t in texts) is alert
 
 
+async def test_proxmox_down_pdu_is_degraded_not_silent(pve_env, defaults_config, http, monkeypatch):
+    monkeypatch.setenv("UNIFI_URL", "https://unifi.invalid")
+    monkeypatch.setenv("UNIFI_API_KEY", "not-a-key")
+    collector = ProxmoxCollector(defaults_config)
+    assert collector.pdu_enabled
+    device = {"outlet_table": [
+        {"index": 10, "outlet_power": "180.0", "relay_state": True},
+        {"index": 16, "outlet_power": "175.0", "relay_state": True},
+    ]}
+    unifi = {"answer": httpx.Response(503)}
+
+    def handler(request):
+        if request.url.host == "pve.invalid":
+            return json_response({"data": RESOURCES[:1]})
+        return unifi["answer"]
+
+    http.handler = handler
+    raw = await collector.fetch()
+    assert raw["pdu"] is None  # nothing cached yet: no power card, but the module is up
+    assert collector.degraded == "PDU unavailable: HTTP 503"
+
+    unifi["answer"] = json_response({"data": [device]})
+    raw = await collector.fetch()
+    assert raw["pdu"]["stale"] is False and collector.degraded is None
+
+    unifi["answer"] = json_response({"data": []})
+    raw = await collector.fetch()
+    assert raw["pdu"]["stale"] is True  # last good reading, marked stale
+    assert collector.degraded == "PDU unavailable: ValueError: PDU 1c:6a:1b:50:a1:b7 not found on site default"
+
+
 # ---- fantasy ----------------------------------------------------------------------------------
 
 

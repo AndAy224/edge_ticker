@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Coroutine
 
 from .camera_alert import allowed_cameras
 
@@ -75,27 +75,53 @@ class WebRTCRelay:
         self, owner, request: str, camera: str, sdp: str, send: Callable[[dict], None],
         wall: bool = False,
     ) -> None:
+        """Open a session and wait until HA has taken the offer."""
+        pending = self.open(owner, request, camera, sdp, send, wall)
+        if pending is not None:
+            await pending
+
+    def open(
+        self, owner, request: str, camera: str, sdp: str, send: Callable[[dict], None],
+        wall: bool = False,
+    ) -> Coroutine[Any, Any, None] | None:
+        """Register the session now; return HA's round trip for the caller to
+        run (None when the offer is refused — the display has been told).
+
+        Split from offer() so the display socket can run the round trip in a
+        task of its own (awaited there, it stalled the connection's pings and
+        closes) while the candidates and close behind the offer still find
+        their session."""
         def fail(message: str) -> None:
             send({"type": "webrtc", "request": request, "event": {"type": "error", "message": message}})
 
         if not isinstance(request, str) or not request or not isinstance(sdp, str) or not sdp:
             fail("malformed offer")
-            return
+            return None
         entity_id = allowed_cameras(self.get_config()).get(str(camera))
         if entity_id is None:
             fail("unknown camera")
-            return
+            return None
         # The allowlist is checked on the configured camera; its medium channel
         # is the same device.
         entity_id = self._stream_entity(entity_id, wall)
         if len(self._sessions) >= MAX_SESSIONS:
             fail("too many sessions")
-            return
+            return None
         key = (id(owner), request)
-        if key in self._sessions:
-            await self.close(owner, request)
+        replaced = self._sessions.pop(key, None)
+        if replaced is not None:
+            replaced.closed = True
         session = _Session(owner=owner, request=request, entity_id=entity_id, send=send)
         self._sessions[key] = session
+        return self._subscribe(key, session, sdp, fail, replaced)
+
+    async def _subscribe(
+        self, key, session: _Session, sdp: str, fail: Callable[[str], None],
+        replaced: _Session | None,
+    ) -> None:
+        if replaced is not None:
+            await self._end(replaced)
+        request, send = session.request, session.send
 
         async def on_event(event: dict) -> None:
             if session.closed:
@@ -109,13 +135,17 @@ class WebRTCRelay:
 
         try:
             session.sub_id = await self.bridge.subscribe(
-                {"type": "camera/webrtc/offer", "entity_id": entity_id, "offer": sdp}, on_event
+                {"type": "camera/webrtc/offer", "entity_id": session.entity_id, "offer": sdp}, on_event
             )
-        except Exception as exc:
-            self._sessions.pop(key, None)
-            log.info("webrtc offer %s: %s", entity_id, exc)
-            fail(str(exc))
-            return
+        except BaseException as exc:
+            if self._sessions.get(key) is session:  # not a newer offer under the same request
+                del self._sessions[key]
+            session.closed = True
+            if isinstance(exc, Exception):
+                log.info("webrtc offer %s: %s", session.entity_id, exc)
+                fail(str(exc))
+                return
+            raise  # cancelled with its connection: the bridge ends HA's side
         if session.closed:  # closed while the offer was in flight
             await self.bridge.unsubscribe(session.sub_id)
 
@@ -144,6 +174,9 @@ class WebRTCRelay:
         if session is None:
             return
         session.closed = True
+        await self._end(session)
+
+    async def _end(self, session: _Session) -> None:
         if session.sub_id is not None:
             await self.bridge.unsubscribe(session.sub_id)
 

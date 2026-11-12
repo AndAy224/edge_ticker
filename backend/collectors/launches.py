@@ -84,6 +84,7 @@ class LaunchesCollector(Collector):
         self.interval = self.idle_interval
         self._recent: list[dict] = []  # last-fetched copy, reused between refreshes
         self._polls_since_recent = 0
+        self._recent_tried = False
 
     async def fetch(self) -> dict:
         now = datetime.now(timezone.utc)
@@ -98,9 +99,14 @@ class LaunchesCollector(Collector):
                 _in_live_window(e.get("net"), (e.get("status") or {}).get("abbrev"), now)
                 for e in upcoming.get("results", [])
             )
-            # Recent results ride along on every Nth idle poll (rate budget).
+            # Recent results ride along on every Nth idle poll (rate budget),
+            # plus once at startup. Not "whenever none are cached": a previous-
+            # results call that kept failing or coming back empty made every
+            # poll two calls — ~20/hr in the live window, over the ~15/hr limit.
             self._polls_since_recent += 1
-            if (not live and self._polls_since_recent >= RECENT_EVERY_N_POLLS) or not self._recent:
+            due = not live and self._polls_since_recent >= RECENT_EVERY_N_POLLS
+            if due or not self._recent_tried:
+                self._recent_tried = True
                 self._polls_since_recent = 0
                 try:
                     prev = await client.get(

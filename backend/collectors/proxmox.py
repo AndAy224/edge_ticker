@@ -110,9 +110,17 @@ class ProxmoxCollector(Collector):
             device = devices[0]
         except Exception as exc:
             log.debug("proxmox: PDU poll failed (%s: %s)", type(exc).__name__, exc)
+            # A down PDU used to be only logged: health said ok while the
+            # power card went stale or vanished.
+            self.degraded = "PDU unavailable: " + (
+                f"HTTP {exc.response.status_code}"
+                if isinstance(exc, httpx.HTTPStatusError)
+                else f"{type(exc).__name__}: {exc}"
+            )
             if self._pdu_cache is None:
                 return None
             return {**self._pdu_cache, "stale": True}
+        self.degraded = None
 
         outlets = {}
         for outlet in device.get("outlet_table") or []:

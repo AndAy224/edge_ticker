@@ -388,9 +388,17 @@ class HurricanesCollector(Collector):
             except Exception as exc:  # a missing product must not kill the poll
                 failed = True
                 log.warning("hurricanes: %s %s fetch/parse failed: %s", storm_id, key, exc)
+                if cached:
+                    # The previous advisory's product until this one loads.
+                    # KMZs often publish minutes after CurrentStorms.json: an
+                    # empty cone there dropped home_in_cone/threat, so the
+                    # display released its pin (forgetting a user's dismissal)
+                    # and the cone and its tape line vanished meanwhile.
+                    geometry[out] = cached[1][out]
         if failed:
-            # Not cached: caching a failure kept the cone off the map until the
-            # next advisory, 3-6 hours later. Retried on the next poll instead.
+            # Not cached (the cache keeps the last complete advisory): caching
+            # a failure kept the cone off the map until the next advisory,
+            # 3-6 hours later. Retried on the next poll instead.
             self._kmz_failures += 1
         else:
             self._geometry_cache[storm_id] = (adv, geometry)

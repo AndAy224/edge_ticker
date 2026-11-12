@@ -37,6 +37,14 @@ def _airport(node: dict | None) -> dict | None:
     }
 
 
+def _flightroute(body) -> dict:
+    if not isinstance(body, dict):
+        raise ValueError("adsbdb answered with something other than a JSON object")
+    response = body.get("response")
+    route = response.get("flightroute") if isinstance(response, dict) else None
+    return route if isinstance(route, dict) else {}
+
+
 @router.get("/adsb/route")
 async def adsb_route(callsign: str):
     callsign = callsign.strip().upper()
@@ -57,7 +65,7 @@ async def adsb_route(callsign: str):
         ) as client:
             response = await client.get(f"{ADSBDB}/callsign/{callsign}")
         if response.status_code == 200:
-            route = (response.json().get("response") or {}).get("flightroute") or {}
+            route = _flightroute(response.json())
             origin = _airport(route.get("origin"))
             destination = _airport(route.get("destination"))
             if origin or destination:
@@ -72,7 +80,9 @@ async def adsb_route(callsign: str):
                     }
                 }
                 ttl = CACHE_TTL_SECONDS
-    except httpx.HTTPError:
+    except (httpx.HTTPError, ValueError):
+        # ValueError: a 200 whose body isn't JSON (an error page from a proxy
+        # in front of adsbdb) escaped as an uncached 500 on every tap.
         ttl = ERROR_TTL_SECONDS
 
     if len(_cache) >= CACHE_MAX_ENTRIES:

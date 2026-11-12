@@ -166,8 +166,12 @@ class CameraAlertHub:
         if self.scheduler is not None:
             # Hardware dim is a backend concern: with method=ddc the display is
             # never told about night at all, so only the scheduler can undo it.
+            # boost() only starts the scheduler's worker. This runs inside the
+            # HA bridge's reader, and awaiting ddcutil here (up to 20 s) held
+            # back the WebRTC answers the display's tiles were waiting for
+            # until their offers timed out.
             try:
-                await self.scheduler.boost(event["duration_seconds"] + 5)
+                self.scheduler.boost(event["duration_seconds"] + 5)
             except Exception as exc:  # a brightness failure must not kill the alert
                 log.warning("camera alert brightness boost: %s", exc)
         return event

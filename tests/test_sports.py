@@ -2,6 +2,7 @@
 ranges), parsing/shaping of recorded ESPN scoreboards, and score celebrations."""
 from __future__ import annotations
 
+import asyncio
 import copy
 import re
 from datetime import date, datetime, timedelta
@@ -17,7 +18,7 @@ from backend.collectors.sports import (
     _prob_from_moneyline,
     latest_scoring_play,
 )
-from helpers import FakeBus, json_response, load_json
+from helpers import FakeBus, json_response, load_json, until
 
 NFL = {"sport": "football", "league": "nfl"}
 MLB = {"sport": "baseball", "league": "mlb"}
@@ -178,15 +179,99 @@ async def test_failed_day_keeps_its_cached_copy(config):
     assert {g["id"] for g in collector._window} == all_fixture_ids()
 
 
-async def test_total_failure_without_cache_retries_next_poll(config):
+async def test_total_failure_without_cache_retries_with_backoff(config, clock):
     espn, collector = Espn(), SportsCollector(config)
     espn.fail_days = {espn.today + timedelta(days=d) for d in range(-2, 2)}
     await refresh(collector, espn)
     assert collector.window_status["failed"] == 8 and collector.window_status["fetched"] == 0
     assert collector._window == [] and collector._window_at == 0.0
+    # Retried every poll, an ESPN window outage cost all day requests every 30 s.
+    clock.now += 30
+    await refresh(collector, espn)
+    assert len(espn.requests) == 8
+    clock.now += sports_module.WINDOW_RETRY_SECONDS - 30  # first retry is due
+    await refresh(collector, espn)
+    assert len(espn.requests) == 16  # failed again: the next wait doubles
+    clock.now += sports_module.WINDOW_RETRY_SECONDS
+    await refresh(collector, espn)
+    assert len(espn.requests) == 16
     espn.fail_days = set()
-    await refresh(collector, espn)  # not "fresh": tries again straight away
-    assert collector.window_status["fetched"] == 8
+    clock.now += sports_module.WINDOW_RETRY_SECONDS
+    await refresh(collector, espn)
+    assert collector.window_status["fetched"] == 8 and collector._window_at > 0
+    assert collector._window_backoff == sports_module.WINDOW_RETRY_SECONDS  # reset by success
+
+
+async def test_window_backoff_caps_at_the_schedule_cadence(config, clock):
+    espn, collector = Espn(), SportsCollector(config)
+    espn.fail_days = {espn.today + timedelta(days=d) for d in range(-2, 2)}
+    for _ in range(8):
+        clock.now += collector.schedule_interval
+        await refresh(collector, espn)
+    assert collector._window_retry_at - clock.now <= collector.schedule_interval
+
+
+async def test_fetch_during_window_backoff_polls_only_the_scoreboards(http, config, clock):
+    espn = Espn()
+    espn.fail_days = {espn.today + timedelta(days=d) for d in range(-2, 2)}
+    http.handler = espn
+    collector = SportsCollector(config)
+    await collector.fetch()
+    assert len(espn.dated()) == 8
+    for _ in range(3):  # live polls 30 s apart, inside the first backoff
+        espn.requests.clear()
+        clock.now += 15
+        games = await collector.fetch()
+        assert sorted(espn.requests) == [("mlb", None), ("nfl", None)]
+        assert games  # the fast lane still publishes
+    assert collector.degraded == "schedule window: 8/8 days failing"
+
+
+async def test_slow_window_does_not_hold_up_the_scores(http, config, monkeypatch):
+    monkeypatch.setattr(sports_module, "WINDOW_WAIT_SECONDS", 0.05)
+    espn, gate = Espn(), asyncio.Event()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("dates"):
+            await gate.wait()  # the window hangs (an ESPN outage timing out)
+        return espn(request)
+
+    http.handler = handler
+    collector = SportsCollector(config)
+    games = await asyncio.wait_for(collector.fetch(), timeout=2)
+    undated_ids = {g["id"] for g in games}
+    assert undated_ids >= {"401872948", "401817078"} and collector._window == []
+    collector.shape(games)
+    # Nothing live, but the window is still in flight: poll again soon.
+    assert collector.interval == collector.live_interval
+    gate.set()
+    await asyncio.wait_for(collector._window_task, timeout=2)
+    games = await asyncio.wait_for(collector.fetch(), timeout=2)
+    assert {g["id"] for g in games} == all_fixture_ids()  # the window landed
+    collector.shape(games)
+    assert collector.interval == collector.idle_interval
+    assert collector._window_task.done()
+
+
+async def test_stopping_the_collector_cancels_a_window_refresh(http, config, monkeypatch):
+    monkeypatch.setattr(sports_module, "WINDOW_WAIT_SECONDS", 0.05)
+    gate = asyncio.Event()
+    espn = Espn()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("dates"):
+            await gate.wait()
+        return espn(request)
+
+    http.handler = handler
+    collector = SportsCollector(config)
+    collector.interval = collector.live_interval = 3600
+    task = asyncio.create_task(collector.start(FakeBus()))
+    await until(lambda: collector._window_task is not None and collector.last_success is not None)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    await asyncio.sleep(0)
+    assert collector._window_task.cancelled()
 
 
 async def test_window_drops_days_that_scroll_out(config):
@@ -247,6 +332,30 @@ def test_merge_window_prefers_fresh_scores_but_keeps_window_only_fields(config):
     assert game["odds"] == window_game["odds"]
     assert game["home"]["probable"] == window_game["home"]["probable"]
     assert game["home"]["records"] == window_game["home"]["records"]
+
+
+def test_live_game_never_shows_a_pregame_probability(config):
+    collector = SportsCollector(config)
+    event = load_json("espn_mlb_20260925.json")["events"][0]  # TB @ PHI, moneyline
+    window_game = collector._parse_event(event, MLB)
+    assert window_game["win_prob"]["source"] == "moneyline"
+    # The undated scoreboard's live copy: no odds (the MLB board returns null).
+    live = copy.deepcopy(window_game)
+    live.update(state="in", odds=None, win_prob=None)
+    collector._window = [window_game]
+    [game] = collector._merge_window([live])
+    assert game["odds"] == window_game["odds"]  # the line still rides along
+    assert game["win_prob"] is None  # but not as the live chances
+    # Nor from the live game's own odds block, which ESPN keeps after kickoff.
+    live_event = copy.deepcopy(event)
+    live_event["status"]["type"]["state"] = "in"
+    parsed = collector._parse_event(live_event, MLB)
+    assert parsed["odds"] and parsed["win_prob"] is None
+    # A game still to start keeps the window's line-implied probability.
+    pre = copy.deepcopy(window_game)
+    pre.update(odds=None, win_prob=None)
+    [game] = collector._merge_window([pre])
+    assert game["win_prob"] == window_game["win_prob"]
 
 
 # ---- parsing + shape against the recordings ------------------------------------------
@@ -374,7 +483,8 @@ def test_prob_from_moneyline_removes_the_vig():
 def live_game(sport: str, gid: str, away: int, home: int, followed_side: str = "home") -> dict:
     teams = {"away": "Visitors", "home": "Visitors"}
     teams[followed_side] = {"baseball": "Tampa Bay Rays", "basketball": "Tampa Bay Rays",
-                            "hockey": "Tampa Bay Lightning"}[sport]
+                            "hockey": "Tampa Bay Lightning",
+                            "football": "Tampa Bay Buccaneers"}[sport]
     return {
         "id": gid,
         "sport": sport,
@@ -439,6 +549,39 @@ async def test_opponent_scores_and_idle_games_do_not_celebrate(http, config, clo
     clock.now += 60
     await celebrate(collector, [final])
     assert bus.of_type("sport_event") == []
+
+
+async def test_score_history_survives_one_league_failing_a_poll(http, config, clock):
+    bus = FakeBus()
+    collector = SportsCollector(config)
+    collector._bus = bus
+    await celebrate(collector, [live_game("football", "bucs", 0, 0), live_game("baseball", "rays", 0, 0)])
+    clock.now += 30
+    await celebrate(collector, [live_game("baseball", "rays", 0, 0)])  # the NFL board failed
+    clock.now += 30
+    await celebrate(collector, [live_game("football", "bucs", 0, 6), live_game("baseball", "rays", 0, 0)])
+    [message] = bus.of_type("sport_event")
+    assert message["event"]["sport"] == "football" and message["event"]["label"] == "TOUCHDOWN"
+
+
+async def test_per_event_state_is_forgotten(http, config, clock):
+    collector = SportsCollector(config)
+    collector._bus = FakeBus()
+    await celebrate(collector, [live_game("hockey", "old", 0, 0)])
+    clock.now += 30
+    await celebrate(collector, [live_game("hockey", "old", 0, 1)])
+    assert "old" in collector._celebrated_at
+    collector._predictor = {"stale": (clock.now - collector.schedule_interval - 1, None),
+                            "fresh": (clock.now, None)}
+    clock.now += max(sports_module.SPORT_COOLDOWN_SECONDS.values()) + 1
+    await celebrate(collector, [live_game("hockey", "new", 0, 0)])
+    assert set(collector._predictor) == {"fresh"}
+    assert collector._celebrated_at == {}  # past every cooldown: nothing left to throttle
+    assert set(collector._side_scores) == {"old", "new"}  # history outlives a short outage
+    clock.now += sports_module.EVENT_MEMORY_SECONDS
+    await celebrate(collector, [live_game("hockey", "new", 0, 0)])
+    assert set(collector._side_scores) == set(collector._scores_seen) == {"new"}
+    assert collector._predictor == {}
 
 
 async def test_celebrations_can_be_disabled(http, config, clock):

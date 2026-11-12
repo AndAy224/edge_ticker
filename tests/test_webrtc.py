@@ -101,6 +101,66 @@ async def test_failed_subscribe_is_not_left_registered(bridge):
     with pytest.raises(RuntimeError):
         await sub
     assert bridge._subscriptions == {}
+    await asyncio.sleep(0.01)
+    assert len(ws.sent) == 1  # HA refused it: there is nothing to end
+    await ws.incoming.put(None)
+    await reader
+
+
+async def test_a_subscribe_abandoned_in_flight_is_ended_at_ha(bridge):
+    # Timed out or cancelled with the offer already sent: HA may have opened
+    # the camera session, and nothing used to unsubscribe it.
+    ws = bridge._ws
+    reader = asyncio.create_task(bridge._reader(ws))
+
+    async def on_event(event):
+        pass
+
+    sub = asyncio.create_task(bridge.subscribe({"type": "camera/webrtc/offer"}, on_event))
+    await until(lambda: ws.sent)
+    sub_id = ws.sent[0]["id"]
+    sub.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await sub
+    assert bridge._subscriptions == {}
+    await until(lambda: len(ws.sent) == 2)
+    assert ws.sent[1]["type"] == "unsubscribe_events" and ws.sent[1]["subscription"] == sub_id
+    await ws.incoming.put({"id": ws.sent[1]["id"], "type": "result", "success": True, "result": None})
+    await ws.incoming.put(None)
+    await reader
+
+
+class AnsweringWs(FakeWs):
+    """Plays HA: every command gets a success result — delivered, as HA's
+    are, only through the bridge's reader loop."""
+
+    async def send(self, raw: str) -> None:
+        await super().send(raw)
+        command = json.loads(raw)
+        await self.incoming.put({"id": command["id"], "type": "result", "success": True, "result": None})
+
+
+async def test_flushing_early_candidates_does_not_stall_the_reader():
+    # The relay forwards candidates held for HA's session id from inside the
+    # subscription callback, and the reader awaited that callback: the
+    # candidate command's result sat unread behind it for the full 10 s
+    # timeout, and the answer with it. FakeBridge answers commands itself,
+    # which hid this.
+    bridge = HABridge(FakeBus(), lambda: {})
+    ws = bridge._ws = AnsweringWs()
+    reader = asyncio.create_task(bridge._reader(ws))
+    relay = relay_with(bridge)
+    owner, sent = object(), []
+    await relay.offer(owner, "r1", camera_token(DOORBELL), "v=0 offer", sent.append)
+    sub_id = ws.sent[0]["id"]
+    await relay.candidate(owner, "r1", {"candidate": "a=candidate:1"})  # before HA named the session
+    await ws.incoming.put({"id": sub_id, "type": "event", "event": {"type": "session", "session_id": "S"}})
+    await ws.incoming.put({"id": sub_id, "type": "event", "event": {"type": "answer", "answer": "v=0 answer"}})
+    await until(lambda: [m["event"]["type"] for m in sent] == ["session", "answer"])
+    assert [c["type"] for c in ws.sent] == ["camera/webrtc/offer", "camera/webrtc/candidate"]
+    assert ws.sent[1]["session_id"] == "S"
+    await relay.close(owner, "r1")
+    assert ws.sent[-1]["type"] == "unsubscribe_events"
     await ws.incoming.put(None)
     await reader
 
